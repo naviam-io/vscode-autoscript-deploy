@@ -1,4 +1,7 @@
 # Release Notes
+## 1.21.3
+- Fixed issue with deployment script for adding a table domain.
+  
 ## 1.21.2
 - Fixed table domain handling and property refreshing.
   
