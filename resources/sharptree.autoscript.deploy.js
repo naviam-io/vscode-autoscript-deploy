@@ -591,7 +591,7 @@ function deployScript(scriptSource, language) {
                             ) {
                                 scriptLaunchPoint.setValue(
                                     'ATTRIBUTEEVENT',
-                                    '0'
+                                    '1' // Fix https://github.com/sharptree/vscode-autoscript-deploy/issues/28
                                 );
                             } else if (
                                 typeof element.initializeValue !==
@@ -600,7 +600,7 @@ function deployScript(scriptSource, language) {
                             ) {
                                 scriptLaunchPoint.setValue(
                                     'ATTRIBUTEEVENT',
-                                    '1'
+                                    '0' // Fix https://github.com/sharptree/vscode-autoscript-deploy/issues/28
                                 );
                             } else if (
                                 typeof element.validate !== 'undefined' &&

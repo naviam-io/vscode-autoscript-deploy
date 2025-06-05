@@ -468,10 +468,12 @@ function extractScriptConfiguration(autoScript) {
                     scriptLaunchPoint.getString('ATTRIBUTENAME');
 
                 switch (scriptLaunchPoint.getInt('ATTRIBUTEEVENT')) {
-                    case 0:
+                    // Fix https://github.com/sharptree/vscode-autoscript-deploy/issues/28
+                    case 1:
                         launchPoint.initializeAccessRestriction = true;
                         break;
-                    case 1:
+                    // Fix https://github.com/sharptree/vscode-autoscript-deploy/issues/28
+                    case 0:
                         launchPoint.initializeValue = true;
                         break;
                     case 2:
