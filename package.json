@@ -11,7 +11,7 @@
     "icon": "app-icon.png",
     "author": {
         "name": "Jason VenHuizen",
-        "email": "jason@sharptree.io"
+        "email": "jason.venhuizen@naviam.io"
     },
     "bugs": {
         "url": "https://github.com/sharptree/vscode-autoscript-deploy/issues"
@@ -25,18 +25,9 @@
         "Other"
     ],
     "engines": {
-        "vscode": "^1.73.0"
+        "vscode": "^1.75.0"
     },
     "activationEvents": [
-        "onCommand:maximo-script-deploy.extract",
-        "onCommand:maximo-script-deploy.extractOne",
-        "onCommand:maximo-script-deploy.deploy",
-        "onCommand:maximo-script-deploy.screens",
-        "onCommand:maximo-script-deploy.screensOne",
-        "onCommand:maximo-script-deploy.compare",
-        "onCommand:maximo-script-deploy.forms",
-        "onCommand:maximo-script-deploy.formsOne",
-        "onCommand:maximo-script-deploy.selectEnvironment",
         "onStartupFinished"
     ],
     "main": "./dist/extension",
@@ -54,127 +45,127 @@
         "configuration": {
             "title": "Maximo",
             "properties": {
-                "sharptree.maximo.customCA": {
+                "naviam.maximo.customCA": {
                     "type": "string",
                     "default": null,
                     "editPresentation": "multilineText",
                     "description": "The full CA chain in PEM format."
                 },
-                "sharptree.maximo.host": {
+                "naviam.maximo.host": {
                     "type": "string",
                     "default": null,
                     "description": "The Maximo host name."
                 },
-                "sharptree.maximo.user": {
+                "naviam.maximo.user": {
                     "type": "string",
                     "default": null,
                     "description": "The Maximo user name."
                 },
-                "sharptree.maximo.context": {
+                "naviam.maximo.context": {
                     "type": "string",
                     "default": "maximo",
                     "description": "The Maximo URL context."
                 },
-                "sharptree.maximo.extractLocation": {
+                "naviam.maximo.extractLocation": {
                     "type": "string",
                     "default": "",
                     "description": "The Maximo script extraction location."
                 },
-                "sharptree.maximo.extractScreenLocation": {
+                "naviam.maximo.extractScreenLocation": {
                     "type": "string",
                     "default": "",
                     "description": "The Maximo screens extraction location."
                 },
-                "sharptree.maximo.extractInspectionFormsLocation": {
+                "naviam.maximo.extractInspectionFormsLocation": {
                     "type": "string",
                     "default": "",
                     "description": "The Maximo inspection forms extraction location."
                 },
-                "sharptree.maximo.extractReportsLocation": {
+                "naviam.maximo.extractReportsLocation": {
                     "type": "string",
                     "default": "",
                     "description": "The Maximo BIRT reports extraction location."
                 },
-                "sharptree.maximo.port": {
+                "naviam.maximo.port": {
                     "type": "number",
                     "default": 443,
                     "description": "The Maximo port number."
                 },
-                "sharptree.maximo.useSSL": {
+                "naviam.maximo.useSSL": {
                     "type": "boolean",
                     "default": true,
                     "description": "Connect to Maximo using SSL?"
                 },
-                "sharptree.maximo.timeout": {
+                "naviam.maximo.timeout": {
                     "type": "number",
                     "default": 30,
                     "description": "The timeout in seconds.",
                     "minimum": 0,
                     "maximum": 300
                 },
-                "sharptree.maximo.allowUntrustedCerts": {
+                "naviam.maximo.allowUntrustedCerts": {
                     "type": "boolean",
                     "default": false,
                     "description": "Allow untrusted SSL certificates."
                 },
-                "sharptree.maximo.maxauthOnly": {
+                "naviam.maximo.maxauthOnly": {
                     "type": "boolean",
                     "default": false,
                     "description": "Do not send Basic authentication header."
                 },
-                "sharptree.maximo.apiKey": {
+                "naviam.maximo.apiKey": {
                     "type": "string",
                     "default": "",
                     "description": "The Maximo API Key."
                 },
-                "sharptree.maximo.configurationTimeout": {
+                "naviam.maximo.configurationTimeout": {
                     "type": "number",
                     "default": 5,
                     "description": "The Maximo script configuration timeout in minutes.",
                     "minimum": 0,
                     "maximum": 60
                 },
-                "sharptree.maximo.logging.outputFile": {
+                "naviam.maximo.logging.outputFile": {
                     "type": "string",
                     "default": "maximo.log",
                     "description": "The relative or absolute output log file path."
                 },
-                "sharptree.maximo.logging.openEditorOnStart": {
+                "naviam.maximo.logging.openEditorOnStart": {
                     "type": "boolean",
                     "default": true,
                     "description": "Open an editor to display the log file on start of log streaming."
                 },
-                "sharptree.maximo.logging.append": {
+                "naviam.maximo.logging.append": {
                     "type": "boolean",
                     "default": false,
                     "description": "Append to the current log file."
                 },
-                "sharptree.maximo.logging.follow": {
+                "naviam.maximo.logging.follow": {
                     "type": "boolean",
                     "default": true,
                     "description": "Follow the log file when displayed in an editor."
                 },
-                "sharptree.maximo.logging.timeout": {
+                "naviam.maximo.logging.timeout": {
                     "type": "number",
                     "default": 30,
                     "description": "Number of seconds between logging requests. The value should be no more than 30 seconds, to avoid server side timeouts."
                 },
-                "sharptree.maximo.proxy.host": {
+                "naviam.maximo.proxy.host": {
                     "type": "string",
                     "default": "",
                     "description": "The proxy host name."
                 },
-                "sharptree.maximo.proxy.port": {
+                "naviam.maximo.proxy.port": {
                     "type": "number",
                     "default": 3128,
                     "description": "The proxy port number."
                 },
-                "sharptree.maximo.proxy.user": {
+                "naviam.maximo.proxy.user": {
                     "type": "string",
                     "default": "",
                     "description": "The proxy username for proxy authentication."
                 },
-                "sharptree.maximo.proxy.password": {
+                "naviam.maximo.proxy.password": {
                     "type": "string",
                     "default": "",
                     "description": "The proxy password for proxy authentication."
@@ -260,13 +251,13 @@
         "@types/glob": "^7.1.4",
         "@types/mocha": "^9.1.1",
         "@types/node": "^14.18.48",
-        "@types/vscode": "^1.57",
+        "@types/vscode": "^1.102.0",
         "@vscode/test-electron": "^1.4.6",
-        "eslint": "^8.41.0",
+        "eslint": "^8.57.1",
         "glob": "^7.2.3",
         "mocha": "^9.2.2",
         "typescript": "^4.9.5",
-        "webpack": "^5.84.1",
+        "webpack": "^5.100.2",
         "webpack-cli": "^4.10.0"
     },
     "dependencies": {
@@ -276,7 +267,7 @@
         "axios-token-interceptor": "^0.2.0",
         "is-valid-hostname": "^1.0.2",
         "readline": "^1.3.0",
-        "semver": "^7.5.1",
+        "semver": "^7.7.2",
         "temp": "^0.9.4",
         "text-encoding": "^0.7.0",
         "tough-cookie": "^4.1.2",
@@ -284,6 +275,6 @@
         "webpack-node-externals": "^3.0.0",
         "xml-formatter": "^2.6.1",
         "xml2js": "^0.6.0",
-        "yauzl": "^3.1.3"
+        "yauzl": "^3.2.0"
     }
 }

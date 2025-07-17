@@ -69,7 +69,7 @@ steps:
 
   - bash: |
       git config --local user.name "Jason VenHuizen"
-      git config --local user.email "jason@sharptree.io"
+      git config --local user.email "jason.venhuizen@naviam.io"
 
       git remote add github https://jvenhuizen:$(github_pat)@github.com/sharptree/vscode-autoscript-deploy.git
       git push github HEAD:main
