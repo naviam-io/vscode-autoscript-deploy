@@ -3,6 +3,7 @@
 /* eslint-disable no-redeclare */
 import axios from 'axios';
 import https from 'https';
+// @ts-ignore
 import { CookieJar, Cookie } from 'tough-cookie';
 
 import * as semver from 'semver';
@@ -137,6 +138,7 @@ export default class MaximoClient {
                 // @ts-ignore
                 this.jar.getCookiesSync(
                     request.baseURL,
+                    // @ts-ignore
                     function (err, cookies) {
                         request.headers['cookie'] = cookies.join('; ');
                     }
@@ -144,6 +146,7 @@ export default class MaximoClient {
                 if (this.config.proxyConfigured) {
                     this.jar.getCookiesSync(
                         this.config.baseProxyURL,
+                        // @ts-ignore
                         function (err, cookies) {
                             request.headers['cookie'] = cookies.join('; ');
                         }
@@ -180,14 +183,17 @@ export default class MaximoClient {
                         // If we are using a stand alone version of Maximo Manage it will return a secure cookie flag when not secure.
                         // To allow the session cookie to be used we need to force it to not be secure.
                         if (
+                            // @ts-ignore
                             cookie.secure &&
                             response.request.protocol == 'http:' &&
                             version &&
                             version.startsWith('V8') &&
                             !appSecurity
                         ) {
+                            // @ts-ignore
                             cookie.secure = false;
                         }
+                        // @ts-ignore
                         this.jar.setCookieSync(
                             cookie,
                             response.request.protocol +
@@ -347,6 +353,7 @@ export default class MaximoClient {
             // This is from specific observation and may need review/revision
             var wasPostParamName = 'WASPostParam';
             var wasPostParamCookie = parsedCookies.filter((c) =>
+                // @ts-ignore
                 c.key.toLowerCase().startsWith(wasPostParamName.toLowerCase())
             );
             return wasPostParamCookie || wasPostParamCookie.length > 0;
@@ -383,6 +390,7 @@ export default class MaximoClient {
             // This is from specific observation and may need review/revision
             var oidcStateCookieNamePrefix = 'WASOidcState';
             var oidcStateCookie = parsedCookies.filter((c) =>
+                // @ts-ignore
                 c.key
                     .toLowerCase()
                     .startsWith(oidcStateCookieNamePrefix.toLowerCase())
@@ -390,6 +398,7 @@ export default class MaximoClient {
             if (!oidcStateCookie || oidcStateCookie.length == 0) return false;
 
             // determine the identifier for the corresponding req url cookie name.
+            // @ts-ignore
             var stateIdentifier = oidcStateCookie[0].key.substring(
                 oidcStateCookieNamePrefix.length
             );
@@ -399,6 +408,7 @@ export default class MaximoClient {
             // ensure we have a matching req url cookie
             return (
                 parsedCookies.filter(
+                    // @ts-ignore
                     (c) => c.key.toLowerCase() == targetCookieName.toLowerCase()
                 ).length > 0
             );
@@ -451,7 +461,7 @@ export default class MaximoClient {
 
         const options = {
             url:
-                'script/sharptree.autoscript.deploy/source/' +
+                'script/naviam.autoscript.deploy/source/' +
                 (isPython ? 'python' : ''),
             method: MaximoClient.Method.POST,
             headers: {
@@ -484,7 +494,7 @@ export default class MaximoClient {
         const headers = new Map();
         headers['Content-Type'] = 'application/json';
         const options = {
-            url: 'script/sharptree.autoscript.admin/configdbrequired',
+            url: 'script/naviam.autoscript.admin/configdbrequired',
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -517,7 +527,7 @@ export default class MaximoClient {
         const headers = new Map();
         headers['Content-Type'] = 'application/json';
         const options = {
-            url: 'script/sharptree.autoscript.admin/configdbrequiresadminmode',
+            url: 'script/naviam.autoscript.admin/configdbrequiresadminmode',
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -552,7 +562,7 @@ export default class MaximoClient {
         const headers = new Map();
         headers['Content-Type'] = 'application/json';
         const options = {
-            url: 'script/sharptree.autoscript.admin/adminmodeon',
+            url: 'script/naviam.autoscript.admin/adminmodeon',
             method: MaximoClient.Method.POST,
             headers: { common: headers },
         };
@@ -586,7 +596,7 @@ export default class MaximoClient {
         const headers = new Map();
         headers['Content-Type'] = 'application/json';
         const options = {
-            url: 'script/sharptree.autoscript.admin/adminmodeoff',
+            url: 'script/naviam.autoscript.admin/adminmodeoff',
             method: MaximoClient.Method.POST,
             headers: { common: headers },
         };
@@ -620,7 +630,7 @@ export default class MaximoClient {
         const headers = new Map();
         headers['Content-Type'] = 'application/json';
         const options = {
-            url: 'script/sharptree.autoscript.admin/adminmodeon',
+            url: 'script/naviam.autoscript.admin/adminmodeon',
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -652,7 +662,7 @@ export default class MaximoClient {
         const headers = new Map();
         headers['Content-Type'] = 'application/json';
         const options = {
-            url: 'script/sharptree.autoscript.admin/configuring',
+            url: 'script/naviam.autoscript.admin/configuring',
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -685,7 +695,7 @@ export default class MaximoClient {
         const headers = new Map();
         headers['Content-Type'] = 'application/json';
         const options = {
-            url: 'script/sharptree.autoscript.admin/configmessages',
+            url: 'script/naviam.autoscript.admin/configmessages',
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -714,7 +724,7 @@ export default class MaximoClient {
         const headers = new Map();
         headers['Content-Type'] = 'application/json';
         const options = {
-            url: 'script/sharptree.autoscript.admin/applyconfigdb',
+            url: 'script/naviam.autoscript.admin/applyconfigdb',
             method: MaximoClient.Method.POST,
             headers: { common: headers },
         };
@@ -746,7 +756,7 @@ export default class MaximoClient {
         }
 
         const configOptions = {
-            url: 'script/sharptree.autoscript.deploy/config',
+            url: 'script/naviam.autoscript.deploy/config',
             method: MaximoClient.Method.POST,
             headers: {
                 'Content-Type': 'text/plain',
@@ -782,7 +792,7 @@ export default class MaximoClient {
         if (deployScript) {
             const deployOptions = {
                 url:
-                    'script/sharptree.autoscript.deploy' +
+                    'script/naviam.autoscript.deploy' +
                     (isPython ? '/python' : ''),
                 method: MaximoClient.Method.POST,
                 headers: {
@@ -797,8 +807,7 @@ export default class MaximoClient {
 
         const options = {
             url:
-                'script/sharptree.autoscript.deploy' +
-                (isPython ? '/python' : ''),
+                'script/naviam.autoscript.deploy' + (isPython ? '/python' : ''),
             method: MaximoClient.Method.POST,
             headers: {
                 'Content-Type': 'text/plain',
@@ -822,7 +831,7 @@ export default class MaximoClient {
             cancelToken.onCancellationRequested(async () => {
                 if (deployId != null) {
                     const cancelOptions = {
-                        url: 'script/sharptree.autoscript.deploy',
+                        url: 'script/naviam.autoscript.deploy',
                         method: MaximoClient.Method.PUT,
                         headers: {
                             Accept: 'application/json',
@@ -853,7 +862,7 @@ export default class MaximoClient {
             });
 
             const checkOptions = {
-                url: 'script/sharptree.autoscript.deploy',
+                url: 'script/naviam.autoscript.deploy',
                 method: MaximoClient.Method.GET,
                 headers: {
                     'Content-Type': 'text/plain',
@@ -924,7 +933,7 @@ export default class MaximoClient {
         });
 
         const options = {
-            url: 'script/sharptree.autoscript.screens',
+            url: 'script/naviam.autoscript.screens',
             method: MaximoClient.Method.POST,
             headers: {
                 'Content-Type': 'text/plain',
@@ -959,7 +968,7 @@ export default class MaximoClient {
         });
 
         const options = {
-            url: 'script/sharptree.autoscript.report',
+            url: 'script/naviam.autoscript.report',
             method: MaximoClient.Method.POST,
             headers: {
                 'Content-Type': 'text/plain',
@@ -994,7 +1003,7 @@ export default class MaximoClient {
         });
 
         const options = {
-            url: 'script/sharptree.autoscript.form',
+            url: 'script/naviam.autoscript.form',
             method: MaximoClient.Method.POST,
             headers: {
                 'Content-Type': 'text/plain',
@@ -1026,7 +1035,7 @@ export default class MaximoClient {
         const headers = new Map();
         headers['Content-Type'] = 'application/json';
         const options = {
-            url: `os/${this.scriptEndpoint}?oslc.select=autoscript&oslc.where=autoscript="SHARPTREE.AUTOSCRIPT.DEPLOY"`,
+            url: `os/${this.scriptEndpoint}?oslc.select=autoscript&oslc.where=autoscript="NAVIAM.AUTOSCRIPT.DEPLOY"`,
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -1045,7 +1054,12 @@ export default class MaximoClient {
 
             return response.data.member.length !== 0;
         } catch (e) {
-            if (e.reasonCode && e.reasonCode === 'BMXAA9301E') {
+            // If the response is BMXAA9301E the MXSCRIPT endpoint is not available.
+            // If the response is BMXAA0024E the MXSCRIPT endpoint is not configured with security.
+            if (
+                e.reasonCode &&
+                (e.reasonCode === 'BMXAA9301E' || e.reasonCode === 'BMXAA0024E')
+            ) {
                 this.scriptEndpoint = 'mxapiautoscript';
                 return await this.installed();
             }
@@ -1060,7 +1074,7 @@ export default class MaximoClient {
         const headers = new Map();
         headers['Content-Type'] = 'application/json';
         const options = {
-            url: 'script/SHARPTREE.AUTOSCRIPT.DEPLOY/version',
+            url: 'script/NAVIAM.AUTOSCRIPT.DEPLOY/version',
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -1157,6 +1171,45 @@ export default class MaximoClient {
         }
     }
 
+    async sharptreeInstalled() {
+        if (!this._isConnected) {
+            await this.connect();
+        }
+
+        const headers = new Map();
+        headers['Content-Type'] = 'application/json';
+        const options = {
+            url: `os/${this.scriptEndpoint}?oslc.select=autoscript&oslc.where=autoscript="SHARPTREE.AUTOSCRIPT.DEPLOY"`,
+            method: MaximoClient.Method.GET,
+            headers: { common: headers },
+        };
+
+        try {
+            // @ts-ignore
+            const response = await this.client.request(options);
+            if (
+                !response ||
+                response.headers['content-type'] !== 'application/json'
+            ) {
+                throw new MaximoError(
+                    'Received an unexpected response from the server. Content-Type header is not application/json.'
+                );
+            }
+
+            return response.data.member.length !== 0;
+        } catch (e) {
+            // If the response is BMXAA9301E the MXSCRIPT endpoint is not available.
+            // If the response is BMXAA0024E the MXSCRIPT endpoint is not configured with security.
+            if (
+                e.reasonCode &&
+                (e.reasonCode === 'BMXAA9301E' || e.reasonCode === 'BMXAA0024E')
+            ) {
+                this.scriptEndpoint = 'mxapiautoscript';
+                return await this.sharptreeInstalled();
+            }
+        }
+    }
+
     async installOrUpgrade(progress, bootstrap) {
         if (!this._isConnected) {
             throw new MaximoError('Maximo client is not connected.');
@@ -1185,13 +1238,13 @@ export default class MaximoClient {
             .readFileSync(
                 path.resolve(
                     __dirname,
-                    '../resources/sharptree.autoscript.store.js'
+                    '../resources/naviam.autoscript.store.js'
                 )
             )
             .toString();
         await this._installOrUpdateScript(
-            'sharptree.autoscript.store',
-            'Sharptree Automation Script Storage Script',
+            'naviam.autoscript.store',
+            'Naviam Automation Script Storage Script',
             source,
             progress,
             increment
@@ -1201,13 +1254,13 @@ export default class MaximoClient {
             .readFileSync(
                 path.resolve(
                     __dirname,
-                    '../resources/sharptree.autoscript.extract.js'
+                    '../resources/naviam.autoscript.extract.js'
                 )
             )
             .toString();
         await this._installOrUpdateScript(
-            'sharptree.autoscript.extract',
-            'Sharptree Automation Script Extract Script',
+            'naviam.autoscript.extract',
+            'Naviam Automation Script Extract Script',
             source,
             progress,
             increment
@@ -1217,13 +1270,13 @@ export default class MaximoClient {
             .readFileSync(
                 path.resolve(
                     __dirname,
-                    '../resources/sharptree.autoscript.logging.js'
+                    '../resources/naviam.autoscript.logging.js'
                 )
             )
             .toString();
         await this._installOrUpdateScript(
-            'sharptree.autoscript.logging',
-            'Sharptree Automation Script Log Streaming',
+            'naviam.autoscript.logging',
+            'Naviam Automation Script Log Streaming',
             source,
             progress,
             increment
@@ -1240,13 +1293,13 @@ export default class MaximoClient {
             .readFileSync(
                 path.resolve(
                     __dirname,
-                    '../resources/sharptree.autoscript.deploy.js'
+                    '../resources/naviam.autoscript.deploy.js'
                 )
             )
             .toString();
         await this._installOrUpdateScript(
-            'sharptree.autoscript.deploy',
-            'Sharptree Automation Script Deploy Script',
+            'naviam.autoscript.deploy',
+            'Naviam Automation Script Deploy Script',
             source,
             progress,
             increment
@@ -1256,13 +1309,13 @@ export default class MaximoClient {
             .readFileSync(
                 path.resolve(
                     __dirname,
-                    '../resources/sharptree.autoscript.screens.js'
+                    '../resources/naviam.autoscript.screens.js'
                 )
             )
             .toString();
         await this._installOrUpdateScript(
-            'sharptree.autoscript.screens',
-            'Sharptree Screens Script',
+            'naviam.autoscript.screens',
+            'Naviam Screens Script',
             source,
             progress,
             increment
@@ -1272,13 +1325,13 @@ export default class MaximoClient {
             .readFileSync(
                 path.resolve(
                     __dirname,
-                    '../resources/sharptree.autoscript.form.js'
+                    '../resources/naviam.autoscript.form.js'
                 )
             )
             .toString();
         await this._installOrUpdateScript(
-            'sharptree.autoscript.form',
-            'Sharptree Inspection Forms Script',
+            'naviam.autoscript.form',
+            'Naviam Inspection Forms Script',
             source,
             progress,
             increment
@@ -1288,13 +1341,13 @@ export default class MaximoClient {
             .readFileSync(
                 path.resolve(
                     __dirname,
-                    '../resources/sharptree.autoscript.library.js'
+                    '../resources/naviam.autoscript.library.js'
                 )
             )
             .toString();
         await this._installOrUpdateScript(
-            'sharptree.autoscript.library',
-            'Sharptree Deployment Library Script',
+            'naviam.autoscript.library',
+            'Naviam Deployment Library Script',
             source,
             progress,
             increment
@@ -1304,13 +1357,13 @@ export default class MaximoClient {
             .readFileSync(
                 path.resolve(
                     __dirname,
-                    '../resources/sharptree.autoscript.admin.js'
+                    '../resources/naviam.autoscript.admin.js'
                 )
             )
             .toString();
         await this._installOrUpdateScript(
-            'sharptree.autoscript.admin',
-            'Sharptree Admin Script',
+            'naviam.autoscript.admin',
+            'Naviam Admin Script',
             source,
             progress,
             increment
@@ -1320,12 +1373,12 @@ export default class MaximoClient {
             .readFileSync(
                 path.resolve(
                     __dirname,
-                    '../resources/sharptree.autoscript.report.js'
+                    '../resources/naviam.autoscript.report.js'
                 )
             )
             .toString();
         await this._installOrUpdateScript(
-            'sharptree.autoscript.report',
+            'naviam.autoscript.report',
             'Report Automation Script for Exporting and Importing Reports',
             source,
             progress,
@@ -1334,6 +1387,129 @@ export default class MaximoClient {
 
         await this._fixInspectionFormData();
         progress.report({ increment: 100 });
+
+        if (await this.sharptreeInstalled()) {
+            progress.report({
+                message: 'Migrating Sharptree configuration to Naviam.',
+            });
+
+            await this._migrateSharptree();
+
+            progress.report({
+                message: 'Migration from Sharptree to Naviam complete.',
+            });
+        }
+    }
+
+    async _migrateSharptree() {
+        if (!this._isConnected) {
+            throw new MaximoError('Maximo client is not connected.');
+        }
+
+        let refUri;
+
+        let activeStatus = await this._synonymdomainToExternalDefaultValue(
+            'AUTOSCRPHASE',
+            'Production',
+            'Active'
+        );
+        try {
+            const headers = new Map();
+            headers['Content-Type'] = 'application/json';
+
+            if (this._csrfToken) {
+                headers['csrftoken'] = this._csrfToken;
+            }
+
+            // eslint-disable-next-line no-undef
+            let source = fs
+                .readFileSync(
+                    path.resolve(
+                        __dirname,
+                        '../resources/naviam.autoscript.migrate.js'
+                    )
+                )
+                .toString();
+
+            let options = {
+                url: `os/${this.scriptEndpoint}?oslc.select=autoscript&oslc.where=autoscript="NAVIAM.AUTOSCRIPT.MIGRATE"`,
+                method: MaximoClient.Method.GET,
+                headers: { common: headers },
+            };
+
+            // @ts-ignore
+            let response = await this.client.request(options);
+            let href;
+            if (response.data.member.length === 1) {
+                href = response.data.member[0].href;
+            }
+
+            if (href) {
+                let deployScript = {
+                    description: 'Naviam AutoScript Migrate from Sharptree',
+                    status: activeStatus,
+                    version: this.currentScriptVersion,
+                    scriptlanguage: 'javascript',
+                    source: source,
+                };
+                headers['x-method-override'] = 'PATCH';
+                options = {
+                    url: href,
+                    method: MaximoClient.Method.POST,
+                    headers: { common: headers },
+                    data: deployScript,
+                };
+            } else {
+                let deployScript = {
+                    autoscript: 'naviam.autoscript.migrate',
+                    description: 'Naviam AutoScript Migrate from Sharptree',
+                    status: activeStatus,
+                    version: '1.0.0',
+                    scriptlanguage: 'javascript',
+                    source: source,
+                };
+                options = {
+                    url: `os/${this.scriptEndpoint}`,
+                    method: MaximoClient.Method.POST,
+                    headers: { common: headers },
+                    data: deployScript,
+                };
+            }
+
+            // @ts-ignore
+            response = await this.client.request(options);
+            refUri = response.headers.location;
+
+            if (href && !refUri) {
+                refUri = href;
+            }
+
+            options = {
+                url: 'script/naviam.autoscript.migrate',
+                method: MaximoClient.Method.POST,
+                headers: { common: headers },
+            };
+
+            // @ts-ignore
+            var result = await this.client.request(options);
+            return result.data;
+        } finally {
+            if (refUri) {
+                const headers = new Map();
+                headers['Content-Type'] = 'application/json';
+                if (this._csrfToken) {
+                    headers['csrftoken'] = this._csrfToken;
+                }
+                let options = {
+                    url: refUri,
+                    headers: { common: headers },
+                    method: MaximoClient.Method.DELETE,
+                };
+
+                // @ts-ignore
+                await this.client.request(options);
+            }
+        }
     }
 
     // @ts-ignore
@@ -1348,7 +1524,7 @@ export default class MaximoClient {
         headers['Content-Type'] = 'application/json';
 
         let options = {
-            url: `script/sharptree.autoscript.logging?timeout=${timeout}`,
+            url: `script/naviam.autoscript.logging?timeout=${timeout}`,
             method: MaximoClient.Method.GET,
             responseType: 'stream',
             headers: { common: headers },
@@ -1529,7 +1705,7 @@ export default class MaximoClient {
             let response = await this.client.request(options);
             if (response.data.member.length !== 0) {
                 response.data.member.forEach((member) => {
-                    if (!member.autoscript.startsWith('SHARPTREE.AUTOSCRIPT')) {
+                    if (!member.autoscript.startsWith('NAVIAM.AUTOSCRIPT')) {
                         scriptNames.push(member.autoscript.toLowerCase());
                     }
                 });
@@ -1551,7 +1727,7 @@ export default class MaximoClient {
         headers['Content-Type'] = 'application/json';
 
         let options = {
-            url: 'script/sharptree.autoscript.screens',
+            url: 'script/naviam.autoscript.screens',
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -1570,7 +1746,7 @@ export default class MaximoClient {
         headers['Content-Type'] = 'application/json';
 
         let options = {
-            url: 'script/sharptree.autoscript.form',
+            url: 'script/naviam.autoscript.form',
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -1589,7 +1765,7 @@ export default class MaximoClient {
         headers['Content-Type'] = 'application/json';
 
         let options = {
-            url: 'script/sharptree.autoscript.report',
+            url: 'script/naviam.autoscript.report',
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -1608,7 +1784,7 @@ export default class MaximoClient {
         headers['Content-Type'] = 'application/json';
 
         let options = {
-            url: `script/sharptree.autoscript.report/${reportId}`,
+            url: `script/naviam.autoscript.report/${reportId}`,
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -1636,7 +1812,7 @@ export default class MaximoClient {
         headers['Content-Type'] = 'application/json';
 
         let options = {
-            url: `script/sharptree.autoscript.extract/${scriptName}`,
+            url: `script/naviam.autoscript.extract/${scriptName}`,
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -1656,7 +1832,7 @@ export default class MaximoClient {
         headers['Content-Type'] = 'application/json';
 
         let options = {
-            url: `script/sharptree.autoscript.screens/${screenName}`,
+            url: `script/naviam.autoscript.screens/${screenName}`,
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -1676,7 +1852,7 @@ export default class MaximoClient {
         headers['Content-Type'] = 'application/json';
 
         let options = {
-            url: `script/sharptree.autoscript.form/${formId}`,
+            url: `script/naviam.autoscript.form/${formId}`,
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -1696,7 +1872,7 @@ export default class MaximoClient {
         headers['Content-Type'] = 'application/json';
 
         let options = {
-            url: 'script/sharptree.autoscript.logging?initialize=true',
+            url: 'script/naviam.autoscript.logging?initialize=true',
             method: MaximoClient.Method.GET,
             headers: { common: headers },
         };
@@ -1711,7 +1887,7 @@ export default class MaximoClient {
         headers['Content-Type'] = 'application/json';
 
         let options = {
-            url: 'script/sharptree.autoscript.form?fix=true',
+            url: 'script/naviam.autoscript.form?fix=true',
             method: MaximoClient.Method.POST,
             headers: { common: headers },
         };
@@ -1869,13 +2045,13 @@ export default class MaximoClient {
                 .readFileSync(
                     path.resolve(
                         __dirname,
-                        '../resources/sharptree.autoscript.install.js'
+                        '../resources/naviam.autoscript.install.js'
                     )
                 )
                 .toString();
 
             let options = {
-                url: `os/${this.scriptEndpoint}?oslc.select=autoscript&oslc.where=autoscript="SHARPTREE.AUTOSCRIPT.INSTALL"`,
+                url: `os/${this.scriptEndpoint}?oslc.select=autoscript&oslc.where=autoscript="NAVIAM.AUTOSCRIPT.INSTALL"`,
                 method: MaximoClient.Method.GET,
                 headers: { common: headers },
             };
@@ -1891,7 +2067,7 @@ export default class MaximoClient {
 
             if (href) {
                 let deployScript = {
-                    description: 'Sharptree AutoScript Deploy Bootstrap',
+                    description: 'Naviam AutoScript Deploy Bootstrap',
                     status: activeStatus,
                     version: this.currentScriptVersion,
                     scriptlanguage: 'javascript',
@@ -1906,8 +2082,8 @@ export default class MaximoClient {
                 };
             } else {
                 let deployScript = {
-                    autoscript: 'sharptree.autoscript.install',
-                    description: 'Sharptree AutoScript Deploy Bootstrap',
+                    autoscript: 'naviam.autoscript.install',
+                    description: 'Naviam AutoScript Deploy Bootstrap',
                     status: activeStatus,
                     version: '1.0.0',
                     scriptlanguage: 'javascript',
@@ -1932,7 +2108,7 @@ export default class MaximoClient {
             }
 
             options = {
-                url: 'script/sharptree.autoscript.install',
+                url: 'script/naviam.autoscript.install',
                 method: MaximoClient.Method.POST,
                 headers: { common: headers },
             };

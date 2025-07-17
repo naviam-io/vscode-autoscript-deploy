@@ -10,12 +10,12 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-  - group: vscode-autoscript-deploy
+  - group: VSCode.Autoscript.Deploy
 
 steps:
   - task: NodeTool@0
     inputs:
-      versionSpec: '16.x'
+      versionSpec: '20.x'
     displayName: 'Install Node.js'
 
   - script: npm install
@@ -29,8 +29,8 @@ steps:
 
   - script: npm run vsce:package
     displayName: Create VSIX
-    env:
-      GITHUB_PAT: $(github_pat)
+    # env:
+    #   GITHUB_PAT: $(github_pat)
 
   # For releasable builds, we'll want the branch
   # Expects that a 'version.txt' has been laid down by a previous step
@@ -67,18 +67,18 @@ steps:
 
     displayName: 'Publish to Marketplace'
 
-  - bash: |
-      git config --local user.name "Jason VenHuizen"
-      git config --local user.email "jason@sharptree.io"
+  # - bash: |
+  #     git config --local user.name "Jason VenHuizen"
+  #     git config --local user.email "jason.venhuizen@naviam.io"
 
-      git remote add github https://jvenhuizen:$(github_pat)@github.com/sharptree/vscode-autoscript-deploy.git
-      git push github HEAD:main
+  #     git remote add github https://jvenhuizen:$(github_pat)@github.com/sharptree/vscode-autoscript-deploy.git
+  #     git push github HEAD:main
 
-      PACKAGE_VERSION=$(cat version.txt)
-      if [ ! $(git tag -l "release/$PACKAGE_VERSION") ]; then
-        git tag "release/$PACKAGE_VERSION"
-      fi
+  #     PACKAGE_VERSION=$(cat version.txt)
+  #     if [ ! $(git tag -l "release/$PACKAGE_VERSION") ]; then
+  #       git tag "release/$PACKAGE_VERSION"
+  #     fi
 
-      git push github release/$PACKAGE_VERSION
+  #     git push github release/$PACKAGE_VERSION
 
-    displayName: 'Publish GitHub'
+  #   displayName: 'Publish GitHub'
