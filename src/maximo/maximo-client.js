@@ -1390,7 +1390,7 @@ export default class MaximoClient {
 
         if (await this.sharptreeInstalled()) {
             progress.report({
-                message: 'Migrating Sharptree configuration to Naviam.',
+                message: 'Migrating Sharptree configurations to Naviam.',
             });
 
             await this._migrateSharptree();
