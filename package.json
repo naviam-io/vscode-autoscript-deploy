@@ -1,11 +1,11 @@
 {
     "name": "maximo-script-deploy",
     "displayName": "Maximo Development Tools",
-    "description": "An extension for developing and deploying Maximo automation scripts and screens from Visual Studio Code.",
+    "description": "An extension for developing and deploying Maximo automation scripts, forms, reports and screens from Visual Studio Code.",
     "publisher": "Sharptree",
     "version": "1.20.3",
     "galleryBanner": {
-        "color": "#372063",
+        "color": "#18242C",
         "theme": "dark"
     },
     "icon": "app-icon.png",
