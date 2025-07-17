@@ -571,14 +571,12 @@ async function toggleLog() {
 
 function _onConfigurationChange(e) {
     if (this) {
-        if (e.affectsConfiguration('sharptree.maximo.logging.follow')) {
+        if (e.affectsConfiguration('naviam.maximo.logging.follow')) {
             if (currentFollow) {
                 currentFollow.dispose();
             }
 
-            if (
-                this.getConfiguration('sharptree').get('maximo.logging.follow')
-            ) {
+            if (this.getConfiguration('naviam').get('maximo.logging.follow')) {
                 currentFollow = this.onDidChangeTextDocument((e) => {
                     let document = e.document;
 
@@ -625,7 +623,7 @@ export async function getMaximoConfig() {
             }
         }
 
-        let settings = workspace.getConfiguration('sharptree');
+        let settings = workspace.getConfiguration('naviam');
 
         let host = selectedConfig.host ?? settings.get('maximo.host');
         let userName = selectedConfig.username ?? settings.get('maximo.user');
@@ -827,7 +825,7 @@ async function setupEnvironmentSelection() {
 }
 
 function getLoggingConfig() {
-    let settings = workspace.getConfiguration('sharptree');
+    let settings = workspace.getConfiguration('naviam');
     let outputFile = settings.get('maximo.logging.outputFile');
     let openEditorOnStart = settings.get('maximo.logging.openEditorOnStart');
     let append = settings.get('maximo.logging.append');

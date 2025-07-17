@@ -1,0 +1,3 @@
+[submodule "resources"]
+	path = resources
+	url = https://peluk@dev.azure.com/peluk/Maximo%20Developer%20Tools/_git/maximo-dev-tools-common
