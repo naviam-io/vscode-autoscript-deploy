@@ -1,4 +1,7 @@
 # Release Notes
+## 1.22.0
+- Migrated to Naviam branding and scripts.
+  
 ## 1.21.3
 - Fixed issue with deployment script for adding a table domain.
   

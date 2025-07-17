@@ -34,8 +34,8 @@ export default class MaximoClient {
         // keep a reference to the config for later use.
         this.config = config;
 
-        this.requiredScriptVersion = '1.49.0';
-        this.currentScriptVersion = '1.49.0';
+        this.requiredScriptVersion = '1.50.0';
+        this.currentScriptVersion = '1.50.0';
 
         this.scriptEndpoint = 'mxscript';
 
@@ -1390,7 +1390,7 @@ export default class MaximoClient {
 
         if (await this.sharptreeInstalled()) {
             progress.report({
-                message: 'Migrating Sharptree configuration to Naviam.',
+                message: 'Migrating Sharptree configurations to Naviam.',
             });
 
             await this._migrateSharptree();
