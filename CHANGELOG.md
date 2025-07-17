@@ -1,5 +1,5 @@
 # Release Notes
-## 1.3.0
+## 1.22.0
 - Migrated to Naviam branding and scripts.
   
 ## 1.21.3
