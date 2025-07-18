@@ -1,4 +1,9 @@
 # Release Notes
+## 1.22.1
+- Fixed issue where submodules were not included in the final package.
+- Fixed issue with incorrect mapping of launch point types.
+- Fixed issue with unbound xml variable deploying screens.
+  
 ## 1.22.0
 - Migrated to Naviam branding and scripts.
   
