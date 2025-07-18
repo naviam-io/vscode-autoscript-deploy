@@ -251,7 +251,7 @@
         "@types/glob": "^7.1.4",
         "@types/mocha": "^9.1.1",
         "@types/node": "^14.18.48",
-        "@types/vscode": "^1.102.0",
+        "@types/vscode": "^1.75.0",
         "@vscode/test-electron": "^1.4.6",
         "eslint": "^8.57.1",
         "glob": "^7.2.3",
