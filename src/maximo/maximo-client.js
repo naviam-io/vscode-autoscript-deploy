@@ -782,7 +782,7 @@ export default class MaximoClient {
             await this.connect();
         }
 
-        let isPython = fileName.endsWith('.py');
+        let isPython = fileName.endsWith('.py') || fileName.endsWith('.jy');
 
         progress.report({
             increment: 10,
