@@ -13,6 +13,10 @@ variables:
   - group: VSCode.Autoscript.Deploy
 
 steps:
+  - checkout: self
+    submodules: true
+    persistCredentials : true
+
   - task: NodeTool@0
     inputs:
       versionSpec: '20.x'
