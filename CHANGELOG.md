@@ -1,4 +1,8 @@
 # Release Notes
+## 1.22.2
+- Finally updated to Axios 1.10 to resolve security issues.
+- Restore GitHub publishing with new `naviam-io` organization.
+  
 ## 1.22.1
 - Fixed issue where submodules were not included in the final package.
 - Fixed issue with incorrect mapping of launch point types.

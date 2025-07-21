@@ -3,7 +3,7 @@
     "displayName": "Maximo Development Tools",
     "description": "An extension for developing and deploying Maximo automation scripts, forms, reports and screens from Visual Studio Code.",
     "publisher": "Sharptree",
-    "version": "1.22.1",
+    "version": "1.22.2",
     "galleryBanner": {
         "color": "#18242C",
         "theme": "dark"
