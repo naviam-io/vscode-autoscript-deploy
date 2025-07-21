@@ -71,18 +71,25 @@ steps:
 
     displayName: 'Publish to Marketplace'
 
-  # - bash: |
-  #     git config --local user.name "Jason VenHuizen"
-  #     git config --local user.email "jason.venhuizen@naviam.io"
+  - bash: |
+      git config --local user.name "Jason VenHuizen"
+      git config --local user.email "jason.venhuizen@naviam.io"
 
-  #     git remote add github https://jvenhuizen:$(github_pat)@github.com/sharptree/vscode-autoscript-deploy.git
-  #     git push github HEAD:main
+      git remote add github https://jvenhuizen:$(github_pat)@github.com/naviam-io/vscode-autoscript-deploy.git
 
-  #     PACKAGE_VERSION=$(cat version.txt)
-  #     if [ ! $(git tag -l "release/$PACKAGE_VERSION") ]; then
-  #       git tag "release/$PACKAGE_VERSION"
-  #     fi
+      git submodule deinit -f resources
+      git rm -f resources
+      git commit -m "Remove submodule link for resources"
+      git add resources
+      git commit -m "Embed content from resources"
 
-  #     git push github release/$PACKAGE_VERSION
+      git push github HEAD:main
 
-  #   displayName: 'Publish GitHub'
+      PACKAGE_VERSION=$(cat version.txt)
+      if [ ! $(git tag -l "release/$PACKAGE_VERSION") ]; then
+        git tag "release/$PACKAGE_VERSION"
+      fi
+
+      git push github release/$PACKAGE_VERSION
+
+    displayName: 'Publish GitHub'
