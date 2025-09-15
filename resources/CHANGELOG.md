@@ -1,4 +1,7 @@
 # Release Notes
+## 1.1.0 
+- Added log streaming for selected server pod.
+  
 ## 1.0.1
 - Fixed issue with launch point type mapping.
 - Fixed issue with undeclared `xml` variable.

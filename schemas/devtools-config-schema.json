@@ -1,0 +1,118 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/config.json",
+    "type": "array",
+    "title": "Naviam Maximo Developer Tools Configuration File",
+    "items": {
+        "$ref": "#/definitions/config"
+    },
+    "definitions": {
+        "config": {
+            "title": "Maximo Environment",
+            "description": "Connection details for a Maximo environment",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "Short name to identify the environment",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "Longer description of the configured environment",
+                    "type": "string"
+                },
+                "selected": {
+                    "description": "Optional attribute that indicates that the environment is currently selected when multiple configurations are available",
+                    "type": "boolean"
+                },
+                "host": {
+                    "description": "The Maximo host name or IP",
+                    "type": "string"
+                },
+                "port": {
+                    "description": "The port for the Maximo environment, defaults to 443 if useSSL is true, 80 if false",
+                    "type": "integer"
+                },
+                "useSSL": {
+                    "description": "Indicates if SSL should be used when connecting ot ",
+                    "type": "boolean",
+                    "default": true
+                },
+                "context": {
+                    "description": "The Maximo application context, defaults to maximo",
+                    "type": "string",
+                    "default": "maximo"
+                },
+                "username": {
+                    "description": "The Maximo user name that will be used to connect to Maximo",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "The Maximo user password, will be encrypted on save",
+                    "type": "string"
+                },
+                "apiKey": {
+                    "description": "A Maximo API key that will be used to authenticate the session instead of a username and password",
+                    "type": "string"
+                },
+                "allowUntrustedCerts": {
+                    "description": "Indicates if untrusted SSL certificates are allowed, useful when self-signed certificates are in use",
+                    "type": "boolean",
+                    "default": false
+                },
+                "configurationTimeout": {
+                    "description": "The amount of time out for a script configuration execution in minutes",
+                    "type": "integer",
+                    "default": 5
+                },
+                "timeout": {
+                    "description": "The time out connecting to Maximo in seconds",
+                    "type": "integer",
+                    "default": 30
+                },
+                "ca": {
+                    "description": "The full chain for the certificate authority in PEM format on a single line",
+                    "type": "string"
+                },
+                "maxauthOnly": {
+                    "description": "Indicate that only MAXAUTH authentication will be attempted. Useful in some legacy Maximo 7.6 environments",
+                    "type": "boolean",
+                    "default": false
+                },
+                "extractLocation": {
+                    "description": "Path to the script extract directory",
+                    "type": "string"
+                },
+                "extractLocationScreens": {
+                    "description": "Path to the screens extract directory",
+                    "type": "string"
+                },
+                "extractLocationForms": {
+                    "description": "Path to the forms extract directory",
+                    "type": "string"
+                },
+                "extractLocationReports": {
+                    "description": "Path to the reports extract directory",
+                    "type": "string"
+                },
+                "proxyHost": {
+                    "description": "The proxy host name",
+                    "type": "string"
+                },
+                "proxyPort": {
+                    "description": "The proxy port number",
+                    "type": "integer",
+                    "default": 3128
+                },
+                "proxyUsername": {
+                    "description": "The proxy authentication user name",
+                    "type": "string"
+                },
+                "proxyPassword": {
+                    "description": "The proxy authentication password",
+                    "type": "string"
+                }
+            },
+            "required": ["host", "name"]
+        }
+    }
+}

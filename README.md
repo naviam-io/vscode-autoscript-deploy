@@ -168,16 +168,9 @@ Currently Cron Tasks, Domains, Loggers, Maximo Objects, Messages and Properties 
 
 As of version `1.14.0` there is support for a JSON deploy file that is applied prior to deploying the automation script. To have the JSON deploy file applied prior to deploying the automation script, name the file the same as the primary script with `.predeploy.json` as the suffix. The extension will automatically find the file and apply it before deploying the automation script.
 
-For example if a script is contained in a file named `example.js` the pre-deploy JSON file will be named `example.predeploy.json`.
+As of version `1.23.0` support was added for deploy and predeploy file validation.
 
-| Object Type | Schema                                                                                                                                                                                               |
-| :---------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cron Task   | [https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/crontask.json](https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/crontask.json)   |
-| Domain      | [https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/domain.json](https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/domain.json)       |
-| Logger      | [https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/logger.json](https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/logger.json)       |
-| MaxObject   | [https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/maxobject.json](https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/maxobject.json) |
-| Message     | [https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/message.json](https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/message.json)     |
-| Property    | [https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/property.json](https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/property.json)   |
+For example if a script is contained in a file named `example.js` the pre-deploy JSON file will be named `example.predeploy.json`.
 
 #### Example Deploy JSON
 
@@ -428,6 +421,12 @@ To compare the current script or screen definition with the script or screen on 
 To stream the Maximo log to a local file click the `Maximo Log` status bar item to toggle streaming. The rotating status icon indicates that the log is currently streaming.
 
 ![Stream the Maximo Log](images/stream_maximo_log.gif)
+
+If you are streaming logs from a Maximo Application Suite environment with multiple pods, a list of pod names and IP addresses will be displayed so you can select the pod to stream the log from. The name of the pod will be displayed while the log is streaming. 
+
+![Select Server](images/logging_select_server.png)
+
+> This feature uses API keys to communicate with other pods in the cluster and will create a temporary API key for the user streaming the log if one does not exist. This temporary key is good for 24 hours and is removed when the user stops streaming.
 
 ## Insert Unique Id
 

@@ -7,17 +7,7 @@ import https from 'https';
 import { CookieJar, Cookie } from 'tough-cookie';
 
 import * as semver from 'semver';
-import {
-    InvalidApiKeyError,
-    LoginFailedError,
-    MaximoError,
-    MxAccessError,
-    MxAdminLogoutError,
-    MxDuplicateTransactionError,
-    PasswordExpiredError,
-    PasswordResetFailedError,
-    ResourceNotFoundError,
-} from './errors';
+import { InvalidApiKeyError, LoginFailedError, MaximoError, MxAccessError, MxAdminLogoutError, MxDuplicateTransactionError, PasswordExpiredError, PasswordResetFailedError, ResourceNotFoundError } from './errors';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -34,8 +24,8 @@ export default class MaximoClient {
         // keep a reference to the config for later use.
         this.config = config;
 
-        this.requiredScriptVersion = '1.50.0';
-        this.currentScriptVersion = '1.50.0';
+        this.requiredScriptVersion = '1.51.0';
+        this.currentScriptVersion = '1.51.0';
 
         this.scriptEndpoint = 'mxscript';
 
@@ -43,8 +33,7 @@ export default class MaximoClient {
             https.globalAgent.options.ca = config.ca;
         }
 
-        https.globalAgent.options.rejectUnauthorized =
-            !config.allowUntrustedCerts;
+        https.globalAgent.options.rejectUnauthorized = !config.allowUntrustedCerts;
 
         // This is the way it is supposed to be done, but in tested Axios seems to ignore the agent.
         // Allows untrusted certificates agent.
@@ -71,10 +60,7 @@ export default class MaximoClient {
                         port: this.config.proxyPort,
                     };
 
-                    if (
-                        this.config.proxyUsername &&
-                        this.config.proxyPassword
-                    ) {
+                    if (this.config.proxyUsername && this.config.proxyPassword) {
                         request.proxy.auth = {
                             username: this.config.proxyUsername,
                             password: this.config.proxyPassword,
@@ -113,9 +99,7 @@ export default class MaximoClient {
                     if (this.config.apiKey) {
                         if (request.params) {
                             request.params['apikey'] = config.apiKey;
-                            request.params['lean'] = this.config.lean
-                                ? 'true'
-                                : 'false';
+                            request.params['lean'] = this.config.lean ? 'true' : 'false';
                         } else {
                             request.params = {
                                 lean: this.config.lean ? 'true' : 'false',
@@ -124,9 +108,7 @@ export default class MaximoClient {
                         }
                     } else {
                         if (request.params) {
-                            request.params['lean'] = this.config.lean
-                                ? 'true'
-                                : 'false';
+                            request.params['lean'] = this.config.lean ? 'true' : 'false';
                         } else {
                             request.params = {
                                 lean: this.config.lean ? 'true' : 'false',
@@ -194,12 +176,7 @@ export default class MaximoClient {
                             cookie.secure = false;
                         }
                         // @ts-ignore
-                        this.jar.setCookieSync(
-                            cookie,
-                            response.request.protocol +
-                                '//' +
-                                response.request.host
-                        );
+                        this.jar.setCookieSync(cookie, response.request.protocol + '//' + response.request.host);
                     });
                 }
 
@@ -230,10 +207,7 @@ export default class MaximoClient {
         var maxRedirects = 5;
 
         var redirectUri = response.headers['location'];
-        if (
-            response.status == 302 &&
-            this._isOIDCAuthRedirectResponse(response)
-        ) {
+        if (response.status == 302 && this._isOIDCAuthRedirectResponse(response)) {
             for (var i = 0; i < maxRedirects; i++) {
                 if (redirectUri == null) {
                     break;
@@ -257,10 +231,7 @@ export default class MaximoClient {
                     break;
                 }
             }
-        } else if (
-            response.status == 302 &&
-            this._isLTPAFormRedirect(response)
-        ) {
+        } else if (response.status == 302 && this._isLTPAFormRedirect(response)) {
             for (var i = 0; i < maxRedirects; i++) {
                 if (redirectUri == null) {
                     break;
@@ -272,27 +243,21 @@ export default class MaximoClient {
                     };
                     const data = `j_username=${this.config.username}&j_password=${this.config.password}`;
 
-                    response = await this.client.post(
-                        this.config.formLoginURL,
-                        data,
-                        {
-                            maxRedirects: 0,
-                            headers: headers,
-                            withCredentials: true,
-                            validateStatus: function (status) {
-                                return status == 200 || status == 302;
-                            },
-                        }
-                    );
+                    response = await this.client.post(this.config.formLoginURL, data, {
+                        maxRedirects: 0,
+                        headers: headers,
+                        withCredentials: true,
+                        validateStatus: function (status) {
+                            return status == 200 || status == 302;
+                        },
+                    });
 
                     await this.client.get(redirectUri);
                     response = await this.client.post('login');
                     break;
                 } else if (redirectUri.includes('loginerror.jsp')) {
                     this._isConnected = false;
-                    throw new LoginFailedError(
-                        'You cannot log in at this time. Contact the system administrator.'
-                    );
+                    throw new LoginFailedError('You cannot log in at this time. Contact the system administrator.');
                 } else {
                     response = await this.client.post(redirectUri, {
                         maxRedirects: 0,
@@ -331,8 +296,7 @@ export default class MaximoClient {
         }
 
         // Check whether this is a redirect response
-        if (response.statusCode < 300 || response.statusCode >= 400)
-            return false;
+        if (response.statusCode < 300 || response.statusCode >= 400) return false;
 
         const cookies = response.headers['set-cookie'];
 
@@ -368,8 +332,7 @@ export default class MaximoClient {
         }
 
         // Check whether this is a redirect response
-        if (response.statusCode < 300 || response.statusCode >= 400)
-            return false;
+        if (response.statusCode < 300 || response.statusCode >= 400) return false;
 
         const cookies = response.headers['set-cookie'];
 
@@ -391,17 +354,13 @@ export default class MaximoClient {
             var oidcStateCookieNamePrefix = 'WASOidcState';
             var oidcStateCookie = parsedCookies.filter((c) =>
                 // @ts-ignore
-                c.key
-                    .toLowerCase()
-                    .startsWith(oidcStateCookieNamePrefix.toLowerCase())
+                c.key.toLowerCase().startsWith(oidcStateCookieNamePrefix.toLowerCase())
             );
             if (!oidcStateCookie || oidcStateCookie.length == 0) return false;
 
             // determine the identifier for the corresponding req url cookie name.
             // @ts-ignore
-            var stateIdentifier = oidcStateCookie[0].key.substring(
-                oidcStateCookieNamePrefix.length
-            );
+            var stateIdentifier = oidcStateCookie[0].key.substring(oidcStateCookieNamePrefix.length);
             var oidcReqUrlCookieNamePrefix = 'WASReqURLOidc';
             var targetCookieName = oidcReqUrlCookieNamePrefix + stateIdentifier;
 
@@ -426,9 +385,7 @@ export default class MaximoClient {
                 this._isConnected = true;
             } else if (response.status == 401) {
                 this._isConnected = false;
-                throw new LoginFailedError(
-                    'You cannot log in at this time. Contact the system administrator.'
-                );
+                throw new LoginFailedError('You cannot log in at this time. Contact the system administrator.');
             } else {
                 this._isConnected = false;
             }
@@ -441,9 +398,7 @@ export default class MaximoClient {
             try {
                 await this.client.post('logout', { withCredentials: true });
             } catch (error) {
-                console.error(
-                    'Warning disconnecting: ' + JSON.stringify(error)
-                );
+                console.error('Warning disconnecting: ' + JSON.stringify(error));
             }
         }
     }
@@ -460,9 +415,7 @@ export default class MaximoClient {
         });
 
         const options = {
-            url:
-                'script/naviam.autoscript.deploy/source/' +
-                (isPython ? 'python' : ''),
+            url: 'script/naviam.autoscript.deploy/source/' + (isPython ? 'python' : ''),
             method: MaximoClient.Method.POST,
             headers: {
                 'Content-Type': 'text/plain',
@@ -502,20 +455,14 @@ export default class MaximoClient {
         // @ts-ignore
         const response = await this.client.request(options);
 
-        if (
-            typeof response.data.status !== 'undefined' &&
-            response.data.status === 'ok'
-        ) {
+        if (typeof response.data.status !== 'undefined' && response.data.status === 'ok') {
             if (typeof response.data.configDBRequired !== 'undefined') {
                 return response.data.configDBRequired;
             } else {
                 return false;
             }
         } else {
-            throw new MaximoError(
-                'Error checking if database configuration is required: ' +
-                    response.data.error
-            );
+            throw new MaximoError('Error checking if database configuration is required: ' + response.data.error);
         }
     }
 
@@ -535,22 +482,14 @@ export default class MaximoClient {
         // @ts-ignore
         const response = await this.client.request(options);
 
-        if (
-            typeof response.data.status !== 'undefined' &&
-            response.data.status === 'ok'
-        ) {
-            if (
-                typeof response.data.configDBRequiresAdminMode !== 'undefined'
-            ) {
+        if (typeof response.data.status !== 'undefined' && response.data.status === 'ok') {
+            if (typeof response.data.configDBRequiresAdminMode !== 'undefined') {
                 return response.data.configDBRequiresAdminMode;
             } else {
                 return false;
             }
         } else {
-            throw new MaximoError(
-                'Error checking if database configuration requires admin mode: ' +
-                    response.data.error
-            );
+            throw new MaximoError('Error checking if database configuration requires admin mode: ' + response.data.error);
         }
     }
 
@@ -570,21 +509,14 @@ export default class MaximoClient {
         // @ts-ignore
         const response = await this.client.request(options);
 
-        if (
-            typeof response.data.status !== 'undefined' &&
-            response.data.status === 'ok'
-        ) {
-            if (
-                typeof response.data.configDBRequiresAdminMode !== 'undefined'
-            ) {
+        if (typeof response.data.status !== 'undefined' && response.data.status === 'ok') {
+            if (typeof response.data.configDBRequiresAdminMode !== 'undefined') {
                 return response.data.configDBRequiresAdminMode;
             } else {
                 return false;
             }
         } else {
-            throw new MaximoError(
-                'Error setting Admin Mode On: ' + response.data.error
-            );
+            throw new MaximoError('Error setting Admin Mode On: ' + response.data.error);
         }
     }
 
@@ -604,21 +536,14 @@ export default class MaximoClient {
         // @ts-ignore
         const response = await this.client.request(options);
 
-        if (
-            typeof response.data.status !== 'undefined' &&
-            response.data.status === 'ok'
-        ) {
-            if (
-                typeof response.data.configDBRequiresAdminMode !== 'undefined'
-            ) {
+        if (typeof response.data.status !== 'undefined' && response.data.status === 'ok') {
+            if (typeof response.data.configDBRequiresAdminMode !== 'undefined') {
                 return response.data.configDBRequiresAdminMode;
             } else {
                 return false;
             }
         } else {
-            throw new MaximoError(
-                'Error setting Admin Mode Off: ' + response.data.error
-            );
+            throw new MaximoError('Error setting Admin Mode Off: ' + response.data.error);
         }
     }
 
@@ -638,19 +563,14 @@ export default class MaximoClient {
         // @ts-ignore
         const response = await this.client.request(options);
 
-        if (
-            typeof response.data.status !== 'undefined' &&
-            response.data.status === 'ok'
-        ) {
+        if (typeof response.data.status !== 'undefined' && response.data.status === 'ok') {
             if (typeof response.data.adminModeOn !== 'undefined') {
                 return response.data.adminModeOn;
             } else {
                 return false;
             }
         } else {
-            throw new MaximoError(
-                'Error checking if admin mode is on: ' + response.data.error
-            );
+            throw new MaximoError('Error checking if admin mode is on: ' + response.data.error);
         }
     }
 
@@ -670,20 +590,14 @@ export default class MaximoClient {
         // @ts-ignore
         const response = await this.client.request(options);
 
-        if (
-            typeof response.data.status !== 'undefined' &&
-            response.data.status === 'ok'
-        ) {
+        if (typeof response.data.status !== 'undefined' && response.data.status === 'ok') {
             if (typeof response.data.configuring !== 'undefined') {
                 return response.data.configuring;
             } else {
                 return false;
             }
         } else {
-            throw new MaximoError(
-                'Error checking database configuration is in progress: ' +
-                    response.data.error
-            );
+            throw new MaximoError('Error checking database configuration is in progress: ' + response.data.error);
         }
     }
 
@@ -703,16 +617,10 @@ export default class MaximoClient {
         // @ts-ignore
         const response = await this.client.request(options);
 
-        if (
-            typeof response.data.status !== 'undefined' &&
-            response.data.status === 'ok'
-        ) {
+        if (typeof response.data.status !== 'undefined' && response.data.status === 'ok') {
             return response.data.messages;
         } else {
-            throw new MaximoError(
-                'Error checking database configuration is in progress: ' +
-                    response.data.error
-            );
+            throw new MaximoError('Error checking database configuration is in progress: ' + response.data.error);
         }
     }
 
@@ -732,21 +640,14 @@ export default class MaximoClient {
         // @ts-ignore
         const response = await this.client.request(options);
 
-        if (
-            typeof response.data.status !== 'undefined' &&
-            response.data.status === 'ok'
-        ) {
-            if (
-                typeof response.data.configDBRequiresAdminMode !== 'undefined'
-            ) {
+        if (typeof response.data.status !== 'undefined' && response.data.status === 'ok') {
+            if (typeof response.data.configDBRequiresAdminMode !== 'undefined') {
                 return response.data.configDBRequiresAdminMode;
             } else {
                 return false;
             }
         } else {
-            throw new MaximoError(
-                'Error applying database configuration: ' + response.data.error
-            );
+            throw new MaximoError('Error applying database configuration: ' + response.data.error);
         }
     }
 
@@ -767,13 +668,8 @@ export default class MaximoClient {
         // @ts-ignore
         const response = await this.client.request(configOptions);
 
-        if (
-            typeof response.data.status !== 'undefined' &&
-            response.data.status === 'error'
-        ) {
-            throw new MaximoError(
-                'Error applying JSON configuration: ' + response.data.message
-            );
+        if (typeof response.data.status !== 'undefined' && response.data.status === 'error') {
+            throw new MaximoError('Error applying JSON configuration: ' + response.data.message);
         }
     }
 
@@ -791,9 +687,7 @@ export default class MaximoClient {
 
         if (deployScript) {
             const deployOptions = {
-                url:
-                    'script/naviam.autoscript.deploy' +
-                    (isPython ? '/python' : ''),
+                url: 'script/naviam.autoscript.deploy' + (isPython ? '/python' : ''),
                 method: MaximoClient.Method.POST,
                 headers: {
                     'Content-Type': 'text/plain',
@@ -806,8 +700,7 @@ export default class MaximoClient {
         }
 
         const options = {
-            url:
-                'script/naviam.autoscript.deploy' + (isPython ? '/python' : ''),
+            url: 'script/naviam.autoscript.deploy' + (isPython ? '/python' : ''),
             method: MaximoClient.Method.POST,
             headers: {
                 'Content-Type': 'text/plain',
@@ -848,11 +741,7 @@ export default class MaximoClient {
             });
         }
 
-        if (
-            result.data &&
-            result.data.status == 'success' &&
-            typeof result.data.deployid !== 'undefined'
-        ) {
+        if (result.data && result.data.status == 'success' && typeof result.data.deployid !== 'undefined') {
             nextProgress = 25;
             deployId = result.data.deployid;
 
@@ -886,21 +775,10 @@ export default class MaximoClient {
                 checkResult = await this.client.request(checkOptions);
                 if (checkCount * 5000 > this.config.configurationTimeout) {
                     var minutes = this.config.configurationTimeout / 60000;
-                    throw new MaximoError(
-                        `The script deployed, but the configuration script exceed the time out of ${minutes} minute${
-                            minutes > 1 ? 's' : ''
-                        }. The configuration script may continue to execute in the background.`
-                    );
+                    throw new MaximoError(`The script deployed, but the configuration script exceed the time out of ${minutes} minute${minutes > 1 ? 's' : ''}. The configuration script may continue to execute in the background.`);
                 } else {
-                    if (
-                        typeof checkResult.data.progress !== 'undefined' &&
-                        Array.isArray(checkResult.data.progress) &&
-                        checkResult.data.progress.length > 0
-                    ) {
-                        const lastMessage =
-                            checkResult.data.progress[
-                                checkResult.data.progress.length - 1
-                            ];
+                    if (typeof checkResult.data.progress !== 'undefined' && Array.isArray(checkResult.data.progress) && checkResult.data.progress.length > 0) {
+                        const lastMessage = checkResult.data.progress[checkResult.data.progress.length - 1];
                         progress.report({
                             increment: 0,
                             message: `Waiting for ${fileName} post deploy configuration to complete: ${lastMessage.message}`,
@@ -1043,23 +921,15 @@ export default class MaximoClient {
         try {
             // @ts-ignore
             const response = await this.client.request(options);
-            if (
-                !response ||
-                response.headers['content-type'] !== 'application/json'
-            ) {
-                throw new MaximoError(
-                    'Received an unexpected response from the server. Content-Type header is not application/json.'
-                );
+            if (!response || response.headers['content-type'] !== 'application/json') {
+                throw new MaximoError('Received an unexpected response from the server. Content-Type header is not application/json.');
             }
 
             return response.data.member.length !== 0;
         } catch (e) {
             // If the response is BMXAA9301E the MXSCRIPT endpoint is not available.
             // If the response is BMXAA0024E the MXSCRIPT endpoint is not configured with security.
-            if (
-                e.reasonCode &&
-                (e.reasonCode === 'BMXAA9301E' || e.reasonCode === 'BMXAA0024E')
-            ) {
+            if (e.reasonCode && (e.reasonCode === 'BMXAA9301E' || e.reasonCode === 'BMXAA0024E')) {
                 this.scriptEndpoint = 'mxapiautoscript';
                 return await this.installed();
             }
@@ -1083,10 +953,7 @@ export default class MaximoClient {
         const response = await this.client.request(options);
         if (typeof response.data.version !== 'undefined') {
             return semver.lt(response.data.version, this.requiredScriptVersion);
-        } else if (
-            typeof response.data.status !== 'undefined' &&
-            response.data.status === 'error'
-        ) {
+        } else if (typeof response.data.status !== 'undefined' && response.data.status === 'error') {
             throw new MaximoError(response.data.message);
         } else {
             return true;
@@ -1119,10 +986,7 @@ export default class MaximoClient {
             // @ts-ignore
             response = await this.client.request(options).catch((error) => {
                 // if the user doesn't have access to check the Java version then just skip it.
-                if (
-                    typeof error.reasonCode !== 'undefined' &&
-                    error.reasonCode === 'BMXAA9051E'
-                ) {
+                if (typeof error.reasonCode !== 'undefined' && error.reasonCode === 'BMXAA9051E') {
                     return 'no-permission';
                 } else {
                     throw error;
@@ -1149,11 +1013,7 @@ export default class MaximoClient {
             await this.connect();
         }
 
-        if (
-            typeof this.maxVersion !== 'undefined' &&
-            this.maxVersion !== 'unknown' &&
-            this.maxVersion !== 'undefined'
-        ) {
+        if (typeof this.maxVersion !== 'undefined' && this.maxVersion !== 'unknown' && this.maxVersion !== 'undefined') {
             return this.maxVersion;
         } else {
             const headers = new Map();
@@ -1187,23 +1047,15 @@ export default class MaximoClient {
         try {
             // @ts-ignore
             const response = await this.client.request(options);
-            if (
-                !response ||
-                response.headers['content-type'] !== 'application/json'
-            ) {
-                throw new MaximoError(
-                    'Received an unexpected response from the server. Content-Type header is not application/json.'
-                );
+            if (!response || response.headers['content-type'] !== 'application/json') {
+                throw new MaximoError('Received an unexpected response from the server. Content-Type header is not application/json.');
             }
 
             return response.data.member.length !== 0;
         } catch (e) {
             // If the response is BMXAA9301E the MXSCRIPT endpoint is not available.
             // If the response is BMXAA0024E the MXSCRIPT endpoint is not configured with security.
-            if (
-                e.reasonCode &&
-                (e.reasonCode === 'BMXAA9301E' || e.reasonCode === 'BMXAA0024E')
-            ) {
+            if (e.reasonCode && (e.reasonCode === 'BMXAA9301E' || e.reasonCode === 'BMXAA0024E')) {
                 this.scriptEndpoint = 'mxapiautoscript';
                 return await this.sharptreeInstalled();
             }
@@ -1234,53 +1086,14 @@ export default class MaximoClient {
             await new Promise((resolve) => setTimeout(resolve, 500));
         }
 
-        let source = fs
-            .readFileSync(
-                path.resolve(
-                    __dirname,
-                    '../resources/naviam.autoscript.store.js'
-                )
-            )
-            .toString();
-        await this._installOrUpdateScript(
-            'naviam.autoscript.store',
-            'Naviam Automation Script Storage Script',
-            source,
-            progress,
-            increment
-        );
+        let source = fs.readFileSync(path.resolve(__dirname, '../resources/naviam.autoscript.store.js')).toString();
+        await this._installOrUpdateScript('naviam.autoscript.store', 'Naviam Automation Script Storage Script', source, progress, increment);
 
-        source = fs
-            .readFileSync(
-                path.resolve(
-                    __dirname,
-                    '../resources/naviam.autoscript.extract.js'
-                )
-            )
-            .toString();
-        await this._installOrUpdateScript(
-            'naviam.autoscript.extract',
-            'Naviam Automation Script Extract Script',
-            source,
-            progress,
-            increment
-        );
+        source = fs.readFileSync(path.resolve(__dirname, '../resources/naviam.autoscript.extract.js')).toString();
+        await this._installOrUpdateScript('naviam.autoscript.extract', 'Naviam Automation Script Extract Script', source, progress, increment);
 
-        source = fs
-            .readFileSync(
-                path.resolve(
-                    __dirname,
-                    '../resources/naviam.autoscript.logging.js'
-                )
-            )
-            .toString();
-        await this._installOrUpdateScript(
-            'naviam.autoscript.logging',
-            'Naviam Automation Script Log Streaming',
-            source,
-            progress,
-            increment
-        );
+        source = fs.readFileSync(path.resolve(__dirname, '../resources/naviam.autoscript.logging.js')).toString();
+        await this._installOrUpdateScript('naviam.autoscript.logging', 'Naviam Automation Script Log Streaming', source, progress, increment);
 
         // initialize the logging security.
         result = this._initLogStreamSecurity();
@@ -1289,101 +1102,23 @@ export default class MaximoClient {
             throw new MaximoError(result.message);
         }
 
-        source = fs
-            .readFileSync(
-                path.resolve(
-                    __dirname,
-                    '../resources/naviam.autoscript.deploy.js'
-                )
-            )
-            .toString();
-        await this._installOrUpdateScript(
-            'naviam.autoscript.deploy',
-            'Naviam Automation Script Deploy Script',
-            source,
-            progress,
-            increment
-        );
+        source = fs.readFileSync(path.resolve(__dirname, '../resources/naviam.autoscript.deploy.js')).toString();
+        await this._installOrUpdateScript('naviam.autoscript.deploy', 'Naviam Automation Script Deploy Script', source, progress, increment);
 
-        source = fs
-            .readFileSync(
-                path.resolve(
-                    __dirname,
-                    '../resources/naviam.autoscript.screens.js'
-                )
-            )
-            .toString();
-        await this._installOrUpdateScript(
-            'naviam.autoscript.screens',
-            'Naviam Screens Script',
-            source,
-            progress,
-            increment
-        );
+        source = fs.readFileSync(path.resolve(__dirname, '../resources/naviam.autoscript.screens.js')).toString();
+        await this._installOrUpdateScript('naviam.autoscript.screens', 'Naviam Screens Script', source, progress, increment);
 
-        source = fs
-            .readFileSync(
-                path.resolve(
-                    __dirname,
-                    '../resources/naviam.autoscript.form.js'
-                )
-            )
-            .toString();
-        await this._installOrUpdateScript(
-            'naviam.autoscript.form',
-            'Naviam Inspection Forms Script',
-            source,
-            progress,
-            increment
-        );
+        source = fs.readFileSync(path.resolve(__dirname, '../resources/naviam.autoscript.form.js')).toString();
+        await this._installOrUpdateScript('naviam.autoscript.form', 'Naviam Inspection Forms Script', source, progress, increment);
 
-        source = fs
-            .readFileSync(
-                path.resolve(
-                    __dirname,
-                    '../resources/naviam.autoscript.library.js'
-                )
-            )
-            .toString();
-        await this._installOrUpdateScript(
-            'naviam.autoscript.library',
-            'Naviam Deployment Library Script',
-            source,
-            progress,
-            increment
-        );
+        source = fs.readFileSync(path.resolve(__dirname, '../resources/naviam.autoscript.library.js')).toString();
+        await this._installOrUpdateScript('naviam.autoscript.library', 'Naviam Deployment Library Script', source, progress, increment);
 
-        source = fs
-            .readFileSync(
-                path.resolve(
-                    __dirname,
-                    '../resources/naviam.autoscript.admin.js'
-                )
-            )
-            .toString();
-        await this._installOrUpdateScript(
-            'naviam.autoscript.admin',
-            'Naviam Admin Script',
-            source,
-            progress,
-            increment
-        );
+        source = fs.readFileSync(path.resolve(__dirname, '../resources/naviam.autoscript.admin.js')).toString();
+        await this._installOrUpdateScript('naviam.autoscript.admin', 'Naviam Admin Script', source, progress, increment);
 
-        source = fs
-            .readFileSync(
-                path.resolve(
-                    __dirname,
-                    '../resources/naviam.autoscript.report.js'
-                )
-            )
-            .toString();
-        await this._installOrUpdateScript(
-            'naviam.autoscript.report',
-            'Report Automation Script for Exporting and Importing Reports',
-            source,
-            progress,
-            increment
-        );
+        source = fs.readFileSync(path.resolve(__dirname, '../resources/naviam.autoscript.report.js')).toString();
+        await this._installOrUpdateScript('naviam.autoscript.report', 'Report Automation Script for Exporting and Importing Reports', source, progress, increment);
 
         await this._fixInspectionFormData();
         progress.report({ increment: 100 });
@@ -1408,11 +1143,7 @@ export default class MaximoClient {
 
         let refUri;
 
-        let activeStatus = await this._synonymdomainToExternalDefaultValue(
-            'AUTOSCRPHASE',
-            'Production',
-            'Active'
-        );
+        let activeStatus = await this._synonymdomainToExternalDefaultValue('AUTOSCRPHASE', 'Production', 'Active');
         try {
             const headers = new Map();
             headers['Content-Type'] = 'application/json';
@@ -1422,14 +1153,7 @@ export default class MaximoClient {
             }
 
             // eslint-disable-next-line no-undef
-            let source = fs
-                .readFileSync(
-                    path.resolve(
-                        __dirname,
-                        '../resources/naviam.autoscript.migrate.js'
-                    )
-                )
-                .toString();
+            let source = fs.readFileSync(path.resolve(__dirname, '../resources/naviam.autoscript.migrate.js')).toString();
 
             let options = {
                 url: `os/${this.scriptEndpoint}?oslc.select=autoscript&oslc.where=autoscript="NAVIAM.AUTOSCRIPT.MIGRATE"`,
@@ -1512,8 +1236,23 @@ export default class MaximoClient {
         }
     }
 
+    async getLoggingServers() {
+        const headers = new Map();
+        headers['Content-Type'] = 'application/json';
+
+        let options = {
+            url: 'script/naviam.autoscript.logging?list=true',
+            method: MaximoClient.Method.GET,
+            headers: { common: headers },
+        };
+
+        // @ts-ignore
+        const response = await this.client.request(options);
+        return response.data;
+    }
+
     // @ts-ignore
-    async startLogging(filePath, timeout) {
+    async startLogging(filePath, timeout, statusBar, host) {
         if (typeof timeout === 'undefined') {
             timeout = 30;
         }
@@ -1522,9 +1261,10 @@ export default class MaximoClient {
 
         const headers = new Map();
         headers['Content-Type'] = 'application/json';
+        headers['Accept'] = 'text/event-stream';
 
         let options = {
-            url: `script/naviam.autoscript.logging?timeout=${timeout}`,
+            url: `script/naviam.autoscript.logging?timeout=${timeout}${host !== undefined && host !== null && host !== '' ? `&host=${encodeURIComponent(host)}` : ''}`,
             method: MaximoClient.Method.GET,
             responseType: 'stream',
             headers: { common: headers },
@@ -1546,51 +1286,49 @@ export default class MaximoClient {
 
                 if (contentType === 'application/json') {
                     if (typeof response.data !== 'undefined') {
-                        var internalError = await new Promise(
-                            (resolve, reject) => {
-                                let completeData = '';
-                                response.data.on('data', (data) => {
-                                    if (!this._isLogging) {
-                                        resolve();
-                                    } else {
-                                        completeData += data;
-                                    }
-                                });
+                        var internalError = await new Promise((resolve, reject) => {
+                            let completeData = '';
+                            response.data.on('data', (data) => {
+                                if (!this._isLogging) {
+                                    resolve();
+                                } else {
+                                    completeData += data;
+                                }
+                            });
 
-                                response.data.on('end', () => {
-                                    if (completeData) {
-                                        try {
-                                            resolve(JSON.parse(completeData));
-                                        } catch (error) {
-                                            resolve();
-                                        }
-                                    } else {
+                            response.data.on('end', () => {
+                                if (completeData) {
+                                    try {
+                                        resolve(JSON.parse(completeData));
+                                    } catch (error) {
                                         resolve();
                                     }
-                                });
+                                } else {
+                                    resolve();
+                                }
+                            });
 
-                                response.data.on('error', () => {
-                                    this.stopLogging();
-                                    reject();
-                                });
-                            }
-                        );
+                            response.data.on('error', () => {
+                                this.stopLogging();
+                                reject();
+                            });
+                        });
                         if (internalError) {
                             throw new MaximoError(internalError.message);
                         } else {
-                            throw new MaximoError(
-                                'An unexpected JSON response was returned by the server.'
-                            );
+                            throw new MaximoError('An unexpected JSON response was returned by the server.');
                         }
                     } else {
-                        throw new MaximoError(
-                            'An unexpected JSON response was returned by the server.'
-                        );
+                        throw new MaximoError('An unexpected JSON response was returned by the server.');
                     }
                 } else if (contentType === 'text/event-stream') {
                     lkp = await new Promise((resolve, reject) => {
                         let internalLKP = undefined;
                         if (typeof response.data !== 'undefined') {
+                            var dataBuffer = '';
+                            var isSSE = true;
+                            var firstData = true;
+
                             response.data.on('data', (data) => {
                                 if (!this._isLogging) {
                                     resolve();
@@ -1599,22 +1337,51 @@ export default class MaximoClient {
                                         let decoder = new TextDecoder('utf-8');
                                         let sData = decoder.decode(data);
 
-                                        if (sData.startsWith('log-lkp=')) {
-                                            internalLKP = sData.substring(8);
-                                        } else if (
-                                            sData.indexOf(
-                                                'WARNING: Cannot set status. Response already committed.'
-                                            ) > 0
-                                        ) {
-                                            // do nothing.
-                                        } else if (sData === '') {
-                                            // do nothing on a blank line
-                                        } else {
-                                            sData = sData.replace(
-                                                /\s{50}/g,
-                                                ' '
-                                            );
-                                            fs.appendFileSync(filePath, sData);
+                                        // console.log(sData);
+                                        if (sData) {
+                                            if (firstData) {
+                                                if (sData.indexOf('data: ') <= 0 && sData.indexOf('id: ') <= 0) {
+                                                    isSSE = false;
+                                                }
+                                                firstData = false;
+                                            }
+
+                                            if (isSSE) {
+                                                dataBuffer += sData;
+
+                                                if (dataBuffer.indexOf('\n\n') > 0) {
+                                                    sData = dataBuffer.substring(0, dataBuffer.lastIndexOf('\n\n'));
+                                                    dataBuffer = dataBuffer.substring(dataBuffer.lastIndexOf('\n\n') + 2);
+
+                                                    var messages = sData.split('\n\n');
+                                                    messages.forEach((message) => {
+                                                        if (message.indexOf(': ') > 0) {
+                                                            var parts = message.split('\n');
+                                                            var event = {};
+                                                            parts.forEach((part) => {
+                                                                if (part.indexOf(': ') > 0) {
+                                                                    var key = part.substring(0, part.indexOf(': '));
+                                                                    var value = part.substring(part.indexOf(': ') + 2);
+                                                                    event[key] = value;
+                                                                }
+                                                            });
+
+                                                            if (typeof event.event !== 'undefined' && event.event === 'name' && typeof statusBar !== 'undefined' && statusBar !== null) {
+                                                                statusBar.text = '$(sync~spin) ' + event.data;
+                                                            } else if (typeof event.event !== 'undefined' && event.event === 'log' && typeof event.data !== 'undefined') {
+                                                                var logData = JSON.parse(event.data).join('\n') + '\n';
+                                                                fs.appendFileSync(filePath, logData);
+                                                            }
+
+                                                            if (typeof event.data !== 'undefined') {
+                                                                sData = event.data;
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                            } else {
+                                                fs.appendFileSync(filePath, sData);
+                                            }
                                         }
                                     }
                                 }
@@ -1631,9 +1398,7 @@ export default class MaximoClient {
                         }
                     });
                 } else {
-                    throw new Error(
-                        `Unexpected Content-Type ${contentType} was returned by the server.`
-                    );
+                    throw new Error(`Unexpected Content-Type ${contentType} was returned by the server.`);
                 }
             }
         } catch (error) {
@@ -1710,8 +1475,7 @@ export default class MaximoClient {
                     }
                 });
             }
-            hasMorePages =
-                typeof response.data.responseInfo.nextPage !== 'undefined';
+            hasMorePages = typeof response.data.responseInfo.nextPage !== 'undefined';
 
             if (hasMorePages) {
                 let pageNumber = response.data.responseInfo.pagenum + 1;
@@ -1897,20 +1661,10 @@ export default class MaximoClient {
         return response.data.status == true;
     }
 
-    async _installOrUpdateScript(
-        script,
-        description,
-        source,
-        progress,
-        increment
-    ) {
+    async _installOrUpdateScript(script, description, source, progress, increment) {
         let scriptURI = await this._getScriptURI(script);
 
-        let activeStatus = await this._synonymdomainToExternalDefaultValue(
-            'AUTOSCRPHASE',
-            'Production',
-            'Active'
-        );
+        let activeStatus = await this._synonymdomainToExternalDefaultValue('AUTOSCRPHASE', 'Production', 'Active');
 
         let headers = new Map();
         headers['Content-Type'] = 'application/json';
@@ -2009,11 +1763,7 @@ export default class MaximoClient {
         // @ts-ignore
         let response = await this.client.request(options);
         for (var i = 0; i < response.data.member[0].synonymdomain.length; i++) {
-            if (
-                response.data.member[0].synonymdomain[i].maxvalue ===
-                    maxvalue &&
-                response.data.member[0].synonymdomain[i].defaults === true
-            ) {
+            if (response.data.member[0].synonymdomain[i].maxvalue === maxvalue && response.data.member[0].synonymdomain[i].defaults === true) {
                 return response.data.member[0].synonymdomain[i].value;
             }
         }
@@ -2027,11 +1777,7 @@ export default class MaximoClient {
 
         let refUri;
 
-        let activeStatus = await this._synonymdomainToExternalDefaultValue(
-            'AUTOSCRPHASE',
-            'Production',
-            'Active'
-        );
+        let activeStatus = await this._synonymdomainToExternalDefaultValue('AUTOSCRPHASE', 'Production', 'Active');
         try {
             const headers = new Map();
             headers['Content-Type'] = 'application/json';
@@ -2041,14 +1787,7 @@ export default class MaximoClient {
             }
 
             // eslint-disable-next-line no-undef
-            let source = fs
-                .readFileSync(
-                    path.resolve(
-                        __dirname,
-                        '../resources/naviam.autoscript.install.js'
-                    )
-                )
-                .toString();
+            let source = fs.readFileSync(path.resolve(__dirname, '../resources/naviam.autoscript.install.js')).toString();
 
             let options = {
                 url: `os/${this.scriptEndpoint}?oslc.select=autoscript&oslc.where=autoscript="NAVIAM.AUTOSCRIPT.INSTALL"`,
@@ -2145,81 +1884,36 @@ export default class MaximoClient {
                 let reasonCode = data.Error.reasonCode;
                 let statusCode = data.Error.statusCode;
 
-                if (
-                    statusCode == 401 &&
-                    (reasonCode === 'BMXAA7901E' || reasonCode === 'BMXAA0021E')
-                ) {
+                if (statusCode == 401 && (reasonCode === 'BMXAA7901E' || reasonCode === 'BMXAA0021E')) {
                     // BMXAA7901E - You cannot log in at this time. Contact the system administrator.
-                    return Promise.reject(
-                        new LoginFailedError(message, reasonCode, statusCode)
-                    );
+                    return Promise.reject(new LoginFailedError(message, reasonCode, statusCode));
                 } else if (reasonCode === 'BMXAA2283E') {
                     // BMXAA2283E - Your password has expired.
-                    return Promise.reject(
-                        new PasswordExpiredError(
-                            message,
-                            reasonCode,
-                            statusCode
-                        )
-                    );
+                    return Promise.reject(new PasswordExpiredError(message, reasonCode, statusCode));
                 } else if (reasonCode === 'BMXAA7902E') {
                     // BMXAA7902E - You cannot reset your password at this time. Contact the system administrator.
-                    return Promise.reject(
-                        new PasswordResetFailedError(
-                            message,
-                            reasonCode,
-                            statusCode
-                        )
-                    );
-                } else if (
-                    reasonCode === 'BMXAA0024E' ||
-                    reasonCode === 'BMXAA9051E'
-                ) {
+                    return Promise.reject(new PasswordResetFailedError(message, reasonCode, statusCode));
+                } else if (reasonCode === 'BMXAA0024E' || reasonCode === 'BMXAA9051E') {
                     // BMXAA0024E - The action {0} is not allowed on object {1}}. Verify the business rules for the object and define the appropriate action for the object.
                     // BMXAA9051E - You are not authorized to view the management metrics that are identified by the URI path element {0}.
-                    return Promise.reject(
-                        new MxAccessError(message, reasonCode, statusCode)
-                    );
+                    return Promise.reject(new MxAccessError(message, reasonCode, statusCode));
                 } else if (statusCode == 404 && reasonCode === 'BMXAA8727E') {
                     // BMXAA8727E - The OSLC resource {0}} with the ID {1} was not found as it does not exist in the system. In the database, verify whether the resource for the ID exists.
-                    return Promise.reject(
-                        new ResourceNotFoundError(
-                            message,
-                            reasonCode,
-                            statusCode
-                        )
-                    );
+                    return Promise.reject(new ResourceNotFoundError(message, reasonCode, statusCode));
                 } else if (reasonCode === 'BMXAA9549E') {
                     // BMXAA9549E - The API key token is invalid. Either the token may have expired or the token has been revoked by the administrator.
-                    return Promise.reject(
-                        new InvalidApiKeyError(message, reasonCode, statusCode)
-                    );
-                } else if (
-                    reasonCode === 'BMXAA5646I' ||
-                    (message != null && message.includes('BMXAA5646I'))
-                ) {
+                    return Promise.reject(new InvalidApiKeyError(message, reasonCode, statusCode));
+                } else if (reasonCode === 'BMXAA5646I' || (message != null && message.includes('BMXAA5646I'))) {
                     // BMXAA5646I - You have been logged out by the system administrator.
                     // This sometimes returns with a null reason code, but the reason code is present in the message.
-                    return Promise.reject(
-                        new MxAdminLogoutError(message, reasonCode, statusCode)
-                    );
+                    return Promise.reject(new MxAdminLogoutError(message, reasonCode, statusCode));
                 } else if (statusCode == 409 && reasonCode === 'BMXAA9524E') {
                     // BMXAA9524E - The transaction ID {0} already exists in the OSLC transaction table with resource ID...
                     // TOOD Implement transaction ID handling.
-                    return Promise.reject(
-                        new MxDuplicateTransactionError(
-                            message,
-                            reasonCode,
-                            statusCode,
-                            error.response.config.url,
-                            -1
-                        )
-                    );
+                    return Promise.reject(new MxDuplicateTransactionError(message, reasonCode, statusCode, error.response.config.url, -1));
                 } else {
                     // Return the generic Maximo error
-                    return Promise.reject(
-                        new MaximoError(message, reasonCode, statusCode)
-                    );
+                    return Promise.reject(new MaximoError(message, reasonCode, statusCode));
                 }
             } else {
                 // If the error is not a Maximo error just pass on the error.

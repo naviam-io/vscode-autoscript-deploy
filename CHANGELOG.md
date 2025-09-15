@@ -1,4 +1,13 @@
 # Release Notes
+## 1.23.1
+- Fixed missing cases with json schemas
+- Updated logo
+  
+## 1.23.0
+- Add support for selecting the server to stream a log from.
+- Add support for schema validations for configuration and deployment JSON files.
+- Fixed bug in MAS 9 deployment when creating the logger.
+  
 ## 1.22.2
 - Finally updated to Axios 1.10 to resolve security issues.
 - Restore GitHub publishing with new `naviam-io` organization.

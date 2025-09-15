@@ -177,7 +177,7 @@ function addOrUpdateLogger(logger, level, parent) {
         // if the logkey does not exist create it, otherwise get the existing logger and update its level.
         if (loggerSet.isEmpty()) {
             child = parent.getMboSet('CHILDLOGGERS').add();
-            child.setValue('LOGGER', logger);
+            child.setValue('LOGGER', logger, MboConstants.NOVALIDATION);
             service.log_info(
                 'Added the logger ' +
                     logger +

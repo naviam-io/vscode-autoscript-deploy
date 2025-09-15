@@ -27,6 +27,7 @@ import extractFormCommand from './commands/extract-form-command';
 import extractReportCommand from './commands/extract-report-command';
 import extractReportsCommand from './commands/extract-reports-command';
 import selectEnvironment from './commands/select-environment';
+import * as schemaSupport from './schemas/schema-support';
 import { validateSettings } from './settings';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -62,6 +63,12 @@ export function activate(context) {
             _onConfigurationChange.bind(workspace)
         )
     );
+
+    context.subscriptions.push(schemaSupport.onDidCreateFiles);
+    context.subscriptions.push(schemaSupport.onFileRename);
+    context.subscriptions.push(schemaSupport.onDidOpenTextDocument);
+    context.subscriptions.push(schemaSupport.onFileDelete);
+
     currentWindow = window;
     const logCommandId = 'maximo-script-deploy.log';
     context.subscriptions.push(
@@ -376,6 +383,27 @@ async function toggleLog() {
 
         try {
             if (await login(logClient)) {
+                var servers = await logClient.getLoggingServers();
+
+                var server = null;
+                if (servers && Array.isArray(servers) && servers.length > 0) {
+                    server = await window.showQuickPick(
+                        servers.map((s) => {
+                            return {
+                                label: s.javajvmname,
+                                description: s.serverhost,
+                            };
+                        }),
+                        {
+                            title: 'Select Maximo Server to Stream Log',
+                        }
+                    );
+
+                    if (server === undefined) {
+                        return;
+                    }
+                }
+
                 let logConfig = getLoggingConfig();
 
                 let logFilePath = logConfig.outputFile;
@@ -499,39 +527,55 @@ async function toggleLog() {
                     timeout = responseTimeout / 1000;
                 }
 
-                logClient.startLogging(logFile, timeout).catch((error) => {
-                    if (
-                        typeof error !== 'undefined' &&
-                        typeof error.toJSON === 'function'
-                    ) {
-                        let jsonError = error.toJSON();
-                        if (typeof jsonError.message !== 'undefined') {
-                            window.showErrorMessage(jsonError.message, {
+                logClient
+                    .startLogging(
+                        logFile,
+                        timeout,
+                        statusBar,
+                        server !== undefined &&
+                            server !== null &&
+                            server.description !== ''
+                            ? server.description
+                            : null
+                    )
+                    .catch((error) => {
+                        if (
+                            typeof error !== 'undefined' &&
+                            typeof error.toJSON === 'function'
+                        ) {
+                            let jsonError = error.toJSON();
+                            if (typeof jsonError.message !== 'undefined') {
+                                window.showErrorMessage(jsonError.message, {
+                                    modal: true,
+                                });
+                            } else {
+                                window.showErrorMessage(
+                                    JSON.stringify(jsonError),
+                                    {
+                                        modal: true,
+                                    }
+                                );
+                            }
+                        } else if (
+                            typeof error !== 'undefined' &&
+                            typeof error.Error !== 'undefined' &&
+                            typeof error.Error.message !== 'undefined'
+                        ) {
+                            window.showErrorMessage(error.Error.message, {
+                                modal: true,
+                            });
+                        } else if (error instanceof Error) {
+                            window.showErrorMessage(error.message, {
                                 modal: true,
                             });
                         } else {
-                            window.showErrorMessage(JSON.stringify(jsonError), {
-                                modal: true,
-                            });
+                            window.showErrorMessage(error, { modal: true });
                         }
-                    } else if (
-                        typeof error !== 'undefined' &&
-                        typeof error.Error !== 'undefined' &&
-                        typeof error.Error.message !== 'undefined'
-                    ) {
-                        window.showErrorMessage(error.Error.message, {
-                            modal: true,
-                        });
-                    } else if (error instanceof Error) {
-                        window.showErrorMessage(error.message, { modal: true });
-                    } else {
-                        window.showErrorMessage(error, { modal: true });
-                    }
 
-                    if (logState) {
-                        toggleLog();
-                    }
-                });
+                        if (logState) {
+                            toggleLog();
+                        }
+                    });
                 logState = !logState;
             }
         } catch (error) {
