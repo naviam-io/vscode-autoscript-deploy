@@ -1,4 +1,7 @@
 # Release Notes
+## 1.27.3
+- Fixed issue where webpack had to be installed globally.
+
 ## 1.27.2
 - Push to fix pipeline publishing, no changes to the extension.
   
