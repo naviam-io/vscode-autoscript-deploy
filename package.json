@@ -3,7 +3,7 @@
     "displayName": "Maximo Development Tools",
     "description": "An extension for developing and deploying Maximo automation scripts, forms, reports and screens from Visual Studio Code.",
     "publisher": "Sharptree",
-    "version": "1.23.1",
+    "version": "1.27.2",
     "galleryBanner": {
         "color": "#18242C",
         "theme": "dark"
@@ -13,22 +13,31 @@
         "name": "Jason VenHuizen",
         "email": "jason.venhuizen@naviam.io"
     },
+    "contributors": [
+        {
+            "name": "Chris Brown",
+            "email": "chris.brown@naviam.io"
+        }
+    ],
     "bugs": {
-        "url": "https://github.com/sharptree/vscode-autoscript-deploy/issues"
+        "url": "https://github.com/naviam-io/vscode-autoscript-deploy/issues"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/sharptree/vscode-autoscript-deploy"
+        "url": "https://github.com/naviam-io/vscode-autoscript-deploy"
     },
     "categories": [
         "Programming Languages",
+        "Debuggers",
         "Other"
     ],
     "engines": {
-        "vscode": "^1.75.0"
+        "vscode": "^1.90.0"
     },
     "activationEvents": [
-        "onStartupFinished"
+        "onStartupFinished",
+        "onDebug",
+        "onDebugResolve:autoscript"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -86,10 +95,20 @@
                     "default": "",
                     "description": "The Maximo BIRT reports extraction location."
                 },
+                "naviam.maximo.extractDBCLocation": {
+                    "type": "string",
+                    "default": "",
+                    "description": "The Maximo DBC extraction location."
+                },
                 "naviam.maximo.port": {
                     "type": "number",
                     "default": 443,
                     "description": "The Maximo port number."
+                },
+                "naviam.maximo.debugPort": {
+                    "type": "number",
+                    "default": 4711,
+                    "description": "The port for debugging Maximo automation scripts"
                 },
                 "naviam.maximo.useSSL": {
                     "type": "boolean",
@@ -179,11 +198,7 @@
             },
             {
                 "command": "maximo-script-deploy.extract",
-                "title": "Extract All Automation Scripts"
-            },
-            {
-                "command": "maximo-script-deploy.extractOne",
-                "title": "Extract Automation Script"
+                "title": "Extract Automation Scripts"
             },
             {
                 "command": "maximo-script-deploy.compare",
@@ -191,11 +206,7 @@
             },
             {
                 "command": "maximo-script-deploy.screens",
-                "title": "Extract All Screen Definitions"
-            },
-            {
-                "command": "maximo-script-deploy.screensOne",
-                "title": "Extract Screen Definition"
+                "title": "Extract Screen Definitions"
             },
             {
                 "command": "maximo-script-deploy.id",
@@ -203,25 +214,37 @@
             },
             {
                 "command": "maximo-script-deploy.forms",
-                "title": "Extract All Inspection Forms"
-            },
-            {
-                "command": "maximo-script-deploy.formsOne",
-                "title": "Extract Inspection Form"
+                "title": "Extract Inspection Forms"
             },
             {
                 "command": "maximo-script-deploy.reports",
-                "title": "Extract All BIRT Reports"
-            },
-            {
-                "command": "maximo-script-deploy.reportsOne",
-                "title": "Extract BIRT Report"
+                "title": "Extract BIRT Reports"
             },
             {
                 "command": "maximo-script-deploy.selectEnvironment",
                 "title": "Select Maximo Environment"
+            },
+            {
+                "command": "maximo-script-deploy.extractObject",
+                "title": "Extract Maximo JSON"
+            },
+            {
+                "command": "maximo-script-deploy.extractDBC",
+                "title": "Extract Maximo DBC"
+            },
+            {
+                "command": "maximo-script-deploy.tsTemplate",
+                "title": "Initialize Maximo TypeScript Project"
             }
         ],
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "maximo-script-deploy.tsTemplate",
+                    "when": "maximo-script-deploy.isNaviamUser"
+                }
+            ]
+        },
         "keybindings": [
             {
                 "command": "maximo-script-deploy.deploy",
@@ -234,6 +257,92 @@
                 "key": "ctrl+alt+i",
                 "mac": "ctrl+cmd+i",
                 "when": "editorFocus"
+            }
+        ],
+        "debuggers": [
+            {
+                "type": "autoscript",
+                "label": "Maximo Automation Scripts",
+                "languages": [
+                    "python",
+                    "javascript"
+                ],
+                "configurationAttributes": {
+                    "attach": {
+                        "required": [
+                            "host",
+                            "port"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "default": "Attach to Maximo Automation Script"
+                            },
+                            "request": {
+                                "type": "string",
+                                "enum": [
+                                    "attach"
+                                ],
+                                "default": "attach"
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "autoscript"
+                                ],
+                                "default": "autoscript"
+                            },
+                            "host": {
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            },
+                            "port": {
+                                "type": "number",
+                                "default": 4711
+                            },
+                            "scriptRoots": {
+                                "type": "array",
+                                "description": "Local folders containing automation scripts to map back from Maximo script names.",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "default": [
+                                    "${workspaceFolder}"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "initialConfigurations": [
+                    {
+                        "type": "autoscript",
+                        "request": "attach",
+                        "name": "Attach to Maximo Automation Script",
+                        "host": "127.0.0.1",
+                        "port": 4711,
+                        "scriptRoots": [
+                            "${workspaceFolder}"
+                        ],
+                        "installOnAttach": false
+                    }
+                ],
+                "configurationSnippets": [
+                    {
+                        "label": "Attach to Maximo Automation Script",
+                        "description": "Attach to the Maximo Automation Script debugger running inside the Maximo JVM.",
+                        "body": {
+                            "type": "autoscript",
+                            "request": "attach",
+                            "name": "Attach to Maximo Automation Script",
+                            "host": "127.0.0.1",
+                            "port": 4711,
+                            "scriptRoots": [
+                                "${workspaceFolder}"
+                            ],
+                            "installOnAttach": false
+                        }
+                    }
+                ]
             }
         ]
     },
@@ -252,10 +361,10 @@
         "@types/mocha": "^9.1.1",
         "@types/node": "^14.18.48",
         "@types/vscode": "^1.75.0",
-        "@vscode/test-electron": "^1.4.6",
+        "@vscode/test-electron": "^2.5.2",
         "eslint": "^8.57.1",
         "glob": "^7.2.3",
-        "mocha": "^11.7.1",
+        "mocha": "^7.2.0",
         "typescript": "^4.9.5",
         "webpack": "^5.100.2",
         "webpack-cli": "^4.10.0"
@@ -266,6 +375,7 @@
         "axios-oauth-client": "^1.5.0",
         "axios-token-interceptor": "^0.2.0",
         "is-valid-hostname": "^1.0.2",
+        "punycode": "^2.3.1",
         "readline": "^1.3.0",
         "semver": "^7.7.2",
         "temp": "^0.9.4",

@@ -1,3 +1,4 @@
+// @ts-nocheck
 export class MaximoError extends Error {
     constructor(message, reasonCode, statusCode) {
         super();

@@ -17,9 +17,7 @@ var ScriptException = Java.type('javax.script.ScriptException');
 
 var ScriptBinding = Java.type('com.ibm.tivoli.maximo.script.ScriptBinding');
 var ScriptCache = Java.type('com.ibm.tivoli.maximo.script.ScriptCache');
-var ScriptDriverFactory = Java.type(
-    'com.ibm.tivoli.maximo.script.ScriptDriverFactory'
-);
+var ScriptDriverFactory = Java.type('com.ibm.tivoli.maximo.script.ScriptDriverFactory');
 
 var MboConstants = Java.type('psdi.mbo.MboConstants');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
@@ -33,15 +31,11 @@ var MXLoggerFactory = Java.type('psdi.util.logging.MXLoggerFactory');
 // Global input variables
 scriptSource = '';
 
-var logger = MXLoggerFactory.getLogger(
-    'maximo.script.' + service.getScriptName()
-);
+var logger = MXLoggerFactory.getLogger('maximo.naviam.devtools');
 
 load({
-    script: ScriptCache.getInstance()
-        .getScriptInfo('NAVIAM.AUTOSCRIPT.LIBRARY')
-        .getScriptSource(),
-    name: 'NAVIAM.AUTOSCRIPT.LIBRARY',
+    script: ScriptCache.getInstance().getScriptInfo('NAVIAM.AUTOSCRIPT.LIBRARY').getScriptSource(),
+    name: 'NAVIAM.AUTOSCRIPT.LIBRARY'
 });
 
 if (typeof httpMethod !== 'undefined') {
@@ -59,52 +53,30 @@ function main() {
             action = getRequestAction();
 
             if (httpMethod != 'POST') {
-                throw new ScriptError(
-                    'only_post_supported',
-                    'Only the HTTP POST method is supported when deploying automation scripts.'
-                );
+                throw new ScriptError('only_post_supported', 'Only the HTTP POST method is supported when deploying automation scripts.');
             }
             scriptSource = requestBody;
             if (!scriptSource) {
-                throw new ScriptError(
-                    'no_script_source',
-                    'A script source must be the request body.'
-                );
+                throw new ScriptError('no_script_source', 'A script source must be the request body.');
             }
 
             if (action && action.startsWith('source')) {
                 scriptSource = requestBody;
                 if (!scriptSource) {
-                    throw new ScriptError(
-                        'no_script_source',
-                        'A script source must be the request body.'
-                    );
+                    throw new ScriptError('no_script_source', 'A script source must be the request body.');
                 }
 
-                var scriptConfig = getConfigFromScript(
-                    scriptSource,
-                    action.split('/')[1]
-                );
+                var scriptConfig = getConfigFromScript(scriptSource, action.split('/')[1]);
 
                 var sqlf = new SqlFormat('autoscript = :1');
-                sqlf.setObject(
-                    1,
-                    'AUTOSCRIPT',
-                    'AUTOSCRIPT',
-                    scriptConfig.autoscript
-                );
+                sqlf.setObject(1, 'AUTOSCRIPT', 'AUTOSCRIPT', scriptConfig.autoscript);
                 var autoScriptSet;
                 try {
-                    autoScriptSet = MXServer.getMXServer().getMboSet(
-                        'AUTOSCRIPT',
-                        userInfo
-                    );
+                    autoScriptSet = MXServer.getMXServer().getMboSet('AUTOSCRIPT', userInfo);
                     autoScriptSet.setWhere(sqlf.format());
                     if (!autoScriptSet.isEmpty()) {
                         response = {};
-                        response.source = autoScriptSet
-                            .getMbo(0)
-                            .getString('SOURCE');
+                        response.source = autoScriptSet.getMbo(0).getString('SOURCE');
                         responseBody = JSON.stringify(response);
                         return;
                     } else {
@@ -117,27 +89,20 @@ function main() {
                     _close(autoScriptSet);
                 }
             } else if (action && action == 'config') {
-                deployConfig(JSON.parse(requestBody));
+                deployConfig(JSON.parse(requestBody), request);
                 return;
             }
-        } else if (
-            typeof request !== 'undefined' &&
-            typeof httpMethod !== 'undefined'
-        ) {
+        } else if (typeof request !== 'undefined' && typeof httpMethod !== 'undefined') {
             if (httpMethod === 'GET') {
                 if (request.getQueryParam('deployId')) {
-                    responseBody = JSON.stringify(
-                        getDeploymentResult(request.getQueryParam('deployId'))
-                    );
+                    responseBody = JSON.stringify(getDeploymentResult(request.getQueryParam('deployId')));
                     return;
                 } else {
                     action = getRequestAction();
                     if (action) {
                         if (action.startsWith('version')) {
                             var response = {
-                                version: getScriptVersion(
-                                    'NAVIAM.AUTOSCRIPT.DEPLOY'
-                                ),
+                                version: getScriptVersion('NAVIAM.AUTOSCRIPT.DEPLOY')
                             };
                             responseBody = JSON.stringify(response);
                             return;
@@ -145,25 +110,17 @@ function main() {
                     }
                 }
             } else if (httpMethod == 'PUT') {
-                if (
-                    request.getQueryParam('deployId') &&
-                    request.getQueryParam('cancel') == 'true'
-                ) {
-                    var bulletinBoardSet = MXServer.getMXServer().getMboSet(
-                        'BULLETINBOARD',
-                        userInfo
-                    );
+                if (request.getQueryParam('deployId') && request.getQueryParam('cancel') == 'true') {
+                    var bulletinBoardSet = MXServer.getMXServer().getMboSet('BULLETINBOARD', userInfo);
                     try {
-                        var bulletinBoard = bulletinBoardSet.getMboForUniqueId(
-                            request.getQueryParam('deployId')
-                        );
+                        var bulletinBoard = bulletinBoardSet.getMboForUniqueId(request.getQueryParam('deployId'));
                         if (bulletinBoard) {
                             bulletinBoard.delete();
                             bulletinBoardSet.save();
                         }
                         responseBody = JSON.stringify({
                             deploying: false,
-                            status: 'success',
+                            status: 'success'
                         });
                         return;
                     } finally {
@@ -196,10 +153,7 @@ function main() {
             response.message = error.getMessage();
         } else if (error instanceof RuntimeException) {
             if (error.getCause() instanceof MXException) {
-                response.reason =
-                    error.getCause().getErrorGroup() +
-                    '_' +
-                    error.getCause().getErrorKey();
+                response.reason = error.getCause().getErrorGroup() + '_' + error.getCause().getErrorKey();
                 response.message = error.getCause().getMessage();
             } else {
                 response.reason = 'runtime_exception';
@@ -237,17 +191,9 @@ function deployScript(scriptSource, language) {
         var autoScriptSet;
 
         try {
-            autoScriptSet = MXServer.getMXServer().getMboSet(
-                'AUTOSCRIPT',
-                userInfo
-            );
+            autoScriptSet = MXServer.getMXServer().getMboSet('AUTOSCRIPT', userInfo);
             var sqlf = new SqlFormat('autoscript = :1');
-            sqlf.setObject(
-                1,
-                'AUTOSCRIPT',
-                'AUTOSCRIPT',
-                scriptConfig.autoscript
-            );
+            sqlf.setObject(1, 'AUTOSCRIPT', 'AUTOSCRIPT', scriptConfig.autoscript);
 
             autoScriptSet.setWhere(sqlf.format());
 
@@ -256,17 +202,11 @@ function deployScript(scriptSource, language) {
             if (autoScriptSet.isEmpty()) {
                 autoscript = autoScriptSet.add();
                 autoscript.setValue('AUTOSCRIPT', scriptConfig.autoscript);
-                autoscript.setValue(
-                    'SCRIPTLANGUAGE',
-                    language ? language : 'javascript'
-                );
+                autoscript.setValue('SCRIPTLANGUAGE', language ? language : 'javascript');
                 autoscript.setValue('ACTIVE', true);
             } else {
                 autoscript = autoScriptSet.getMbo(0);
-                if (
-                    typeof scriptConfig._delete !== 'undefined' &&
-                    scriptConfig._delete === true
-                ) {
+                if (typeof scriptConfig._delete !== 'undefined' && scriptConfig._delete === true) {
                     autoscript.delete();
                     autoScriptSet.save();
                     result.scriptName = scriptConfig.autoscript;
@@ -308,34 +248,17 @@ function deployScript(scriptSource, language) {
                 autoscript.setValue('DESCRIPTION', scriptConfig.description);
             }
 
-            setValueIfAvailable(
-                autoscript,
-                'DESCRIPTION',
-                scriptConfig.description
-            );
+            setValueIfAvailable(autoscript, 'DESCRIPTION', scriptConfig.description);
             setValueIfAvailable(autoscript, 'VERSION', scriptConfig.version);
             setValueIfAvailable(autoscript, 'ACTIVE', scriptConfig.active);
             setValueIfAvailable(autoscript, 'LOGLEVEL', scriptConfig.logLevel);
 
-            if (
-                typeof scriptConfig.allowInvokingScriptFunctions ==
-                    'undefined' ||
-                scriptConfig.allowInvokingScriptFunctions == null
-            ) {
-                if (
-                    scriptConfig.autoscript
-                        .toUpperCase()
-                        .startsWith('APPBEAN') ||
-                    scriptConfig.autoscript.toUpperCase().startsWith('DATABEAN')
-                ) {
+            if (typeof scriptConfig.allowInvokingScriptFunctions == 'undefined' || scriptConfig.allowInvokingScriptFunctions == null) {
+                if (scriptConfig.autoscript.toUpperCase().startsWith('APPBEAN') || scriptConfig.autoscript.toUpperCase().startsWith('DATABEAN')) {
                     setValueIfAvailable(autoscript, 'INTERFACE', true);
                 }
             } else {
-                setValueIfAvailable(
-                    autoscript,
-                    'INTERFACE',
-                    scriptConfig.allowInvokingScriptFunctions
-                );
+                setValueIfAvailable(autoscript, 'INTERFACE', scriptConfig.allowInvokingScriptFunctions);
             }
 
             if (typeof scriptConfig.autoScriptVars !== 'undefined') {
@@ -343,164 +266,67 @@ function deployScript(scriptSource, language) {
                     if (typeof element.varname !== 'undefined') {
                         var autoScriptVar = autoScriptVarsSet.add();
                         autoScriptVar.setValue('VARNAME', element.varname);
-                        setValueIfAvailable(
-                            autoScriptVar,
-                            'DESCRIPTION',
-                            element.description
-                        );
-                        setValueIfAvailable(
-                            autoScriptVar,
-                            'VARBINDINGTYPE',
-                            element.varBindingType
-                        );
-                        setValueIfAvailable(
-                            autoScriptVar,
-                            'VARTYPE',
-                            element.varType
-                        );
-                        setValueIfAvailable(
-                            autoScriptVar,
-                            'ALLOWOVERRIDE',
-                            element.allowOverride
-                        );
+                        setValueIfAvailable(autoScriptVar, 'DESCRIPTION', element.description);
+                        setValueIfAvailable(autoScriptVar, 'VARBINDINGTYPE', element.varBindingType);
+                        setValueIfAvailable(autoScriptVar, 'VARTYPE', element.varType);
+                        setValueIfAvailable(autoScriptVar, 'ALLOWOVERRIDE', element.allowOverride);
 
-                        if (
-                            element.varBindingType.toUpperCase() != 'LITERAL' &&
-                            element.varType.toUpperCase() != 'IN'
-                        ) {
-                            setValueIfAvailable(
-                                autoScriptVar,
-                                'NOVALIDATION',
-                                element.noValidation
-                            );
-                            setValueIfAvailable(
-                                autoScriptVar,
-                                'NOACCESSCHECK',
-                                element.noAccessCheck
-                            );
-                            setValueIfAvailable(
-                                autoScriptVar,
-                                'NOACTION',
-                                element.noAction
-                            );
+                        if (element.varBindingType.toUpperCase() != 'LITERAL' && element.varType.toUpperCase() != 'IN') {
+                            setValueIfAvailable(autoScriptVar, 'NOVALIDATION', element.noValidation);
+                            setValueIfAvailable(autoScriptVar, 'NOACCESSCHECK', element.noAccessCheck);
+                            setValueIfAvailable(autoScriptVar, 'NOACTION', element.noAction);
                         }
 
-                        setValueIfAvailable(
-                            autoScriptVar,
-                            'LITERALDATATYPE',
-                            element.literalDataType
-                        );
-                        setValueIfAvailable(
-                            autoScriptVar,
-                            'VARBINDINGVALUE',
-                            element.varBindingValue,
-                            MboConstants.NOACCESSCHECK
-                        );
+                        setValueIfAvailable(autoScriptVar, 'LITERALDATATYPE', element.literalDataType);
+                        setValueIfAvailable(autoScriptVar, 'VARBINDINGVALUE', element.varBindingValue, MboConstants.NOACCESSCHECK);
                     }
                 });
             }
 
             if (scriptConfig.scriptLaunchPoints) {
                 scriptConfig.scriptLaunchPoints.forEach(function (element) {
-                    if (
-                        typeof element.launchPointName !== 'undefined' &&
-                        typeof element.launchPointType !== 'undefined'
-                    ) {
+                    if (typeof element.launchPointName !== 'undefined' && typeof element.launchPointType !== 'undefined') {
                         var scriptLaunchPoint = scriptLaunchPointSet.add();
-                        scriptLaunchPoint.setValue(
-                            'LAUNCHPOINTNAME',
-                            element.launchPointName
-                        );
-                        scriptLaunchPoint.setValue(
-                            'LAUNCHPOINTTYPE',
-                            element.launchPointType,
-                            MboConstants.NOACCESSCHECK
-                        );
+                        scriptLaunchPoint.setValue('LAUNCHPOINTNAME', element.launchPointName);
+                        scriptLaunchPoint.setValue('LAUNCHPOINTTYPE', element.launchPointType, MboConstants.NOACCESSCHECK);
 
                         if (typeof element.active !== 'undefined') {
-                            scriptLaunchPoint.setValue(
-                                'ACTIVE',
-                                element.active
-                            );
+                            scriptLaunchPoint.setValue('ACTIVE', element.active);
                         } else {
                             scriptLaunchPoint.setValue('ACTIVE', true);
                         }
 
-                        setValueIfAvailable(
-                            scriptLaunchPoint,
-                            'DESCRIPTION',
-                            element.description
-                        );
+                        setValueIfAvailable(scriptLaunchPoint, 'DESCRIPTION', element.description);
 
-                        if (
-                            element.launchPointType.toUpperCase() === 'OBJECT'
-                        ) {
+                        if (element.launchPointType.toUpperCase() === 'OBJECT') {
                             if (typeof element.objectName === 'undefined') {
-                                throw new ScriptError(
-                                    'missing_attribute',
-                                    'The objectName is a required attribute when defining an Object launch point.'
-                                );
+                                throw new ScriptError('missing_attribute', 'The objectName is a required attribute when defining an Object launch point.');
                             }
 
-                            scriptLaunchPoint.setValue(
-                                'OBJECTNAME',
-                                element.objectName
-                            );
+                            scriptLaunchPoint.setValue('OBJECTNAME', element.objectName);
 
-                            setValueIfAvailable(
-                                scriptLaunchPoint,
-                                'CONDITION',
-                                element.condition
-                            );
+                            setValueIfAvailable(scriptLaunchPoint, 'CONDITION', element.condition);
 
-                            if (
-                                typeof element.initializeValue !==
-                                    'undefined' &&
-                                element.initializeValue
-                            ) {
+                            if (typeof element.initializeValue !== 'undefined' && element.initializeValue) {
                                 scriptLaunchPoint.setValue('EVENTTYPE', '0');
-                            } else if (
-                                typeof element.validateApplication !==
-                                    'undefined' &&
-                                element.validateApplication
-                            ) {
+                            } else if (typeof element.validateApplication !== 'undefined' && element.validateApplication) {
                                 scriptLaunchPoint.setValue('EVENTTYPE', '1');
-                            } else if (
-                                typeof element.allowObjectCreation !==
-                                    'undefined' &&
-                                element.allowObjectCreation
-                            ) {
+                            } else if (typeof element.allowObjectCreation !== 'undefined' && element.allowObjectCreation) {
                                 scriptLaunchPoint.setValue('EVENTTYPE', '2');
-                            } else if (
-                                typeof element.allowObjectDeletion !==
-                                    'undefined' &&
-                                element.allowObjectDeletion
-                            ) {
+                            } else if (typeof element.allowObjectDeletion !== 'undefined' && element.allowObjectDeletion) {
                                 scriptLaunchPoint.setValue('EVENTTYPE', '3');
-                            } else if (
-                                typeof element.save !== 'undefined' &&
-                                element.save
-                            ) {
+                            } else if (typeof element.save !== 'undefined' && element.save) {
                                 scriptLaunchPoint.setValue('EVENTTYPE', '4');
                                 var saveActionAdded = false;
-                                if (
-                                    typeof element.add !== 'undefined' &&
-                                    element.add
-                                ) {
+                                if (typeof element.add !== 'undefined' && element.add) {
                                     scriptLaunchPoint.setValue('ADD', true);
                                     saveActionAdded = true;
                                 }
-                                if (
-                                    typeof element.update !== 'undefined' &&
-                                    element.update
-                                ) {
+                                if (typeof element.update !== 'undefined' && element.update) {
                                     scriptLaunchPoint.setValue('UPDATE', true);
                                     saveActionAdded = true;
                                 }
-                                if (
-                                    typeof element.delete !== 'undefined' &&
-                                    element.delete
-                                ) {
+                                if (typeof element.delete !== 'undefined' && element.delete) {
                                     scriptLaunchPoint.setValue('DELETE', true);
                                     saveActionAdded = true;
                                 }
@@ -513,33 +339,14 @@ function deployScript(scriptSource, language) {
                                 }
 
                                 var saveWhenAdded = false;
-                                if (
-                                    typeof element.beforeSave !== 'undefined' &&
-                                    element.beforeSave
-                                ) {
-                                    scriptLaunchPoint.setValue(
-                                        'EVCONTEXT',
-                                        '0'
-                                    );
+                                if (typeof element.beforeSave !== 'undefined' && element.beforeSave) {
+                                    scriptLaunchPoint.setValue('EVCONTEXT', '0');
                                     saveWhenAdded = true;
-                                } else if (
-                                    typeof element.afterSave !== 'undefined' &&
-                                    element.afterSave
-                                ) {
-                                    scriptLaunchPoint.setValue(
-                                        'EVCONTEXT',
-                                        '1'
-                                    );
+                                } else if (typeof element.afterSave !== 'undefined' && element.afterSave) {
+                                    scriptLaunchPoint.setValue('EVCONTEXT', '1');
                                     saveWhenAdded = true;
-                                } else if (
-                                    typeof element.afterCommit !==
-                                        'undefined' &&
-                                    element.afterCommit
-                                ) {
-                                    scriptLaunchPoint.setValue(
-                                        'EVCONTEXT',
-                                        '2'
-                                    );
+                                } else if (typeof element.afterCommit !== 'undefined' && element.afterCommit) {
+                                    scriptLaunchPoint.setValue('EVCONTEXT', '2');
                                     saveWhenAdded = true;
                                 }
 
@@ -555,15 +362,9 @@ function deployScript(scriptSource, language) {
                                     'One of the following attributes is required when defining an Object launch point: initializeValue, validateApplication, allowObjectCreation, allowObjectDeletion, or save.'
                                 );
                             }
-                        } else if (
-                            element.launchPointType.toUpperCase() ===
-                            'ATTRIBUTE'
-                        ) {
+                        } else if (element.launchPointType.toUpperCase() === 'ATTRIBUTE') {
                             if (element.objectName === 'undefined') {
-                                throw new ScriptError(
-                                    'missing_attribute',
-                                    'The objectName is a required attribute when defining an Attribute launch point.'
-                                );
+                                throw new ScriptError('missing_attribute', 'The objectName is a required attribute when defining an Attribute launch point.');
                             }
                             if (element.attributeName === 'undefined') {
                                 throw new ScriptError(
@@ -571,102 +372,39 @@ function deployScript(scriptSource, language) {
                                     'The attributeName is a required attribute when defining an Attribute launch point.'
                                 );
                             }
-                            scriptLaunchPoint.setValue(
-                                'OBJECTNAME',
-                                element.objectName
-                            );
-                            scriptLaunchPoint.setValue(
-                                'ATTRIBUTENAME',
-                                element.attributeName
-                            );
+                            scriptLaunchPoint.setValue('OBJECTNAME', element.objectName);
+                            scriptLaunchPoint.setValue('ATTRIBUTENAME', element.attributeName);
 
-                            if (
-                                typeof element.initializeAccessRestriction !==
-                                    'undefined' &&
-                                element.initializeAccessRestriction
-                            ) {
-                                scriptLaunchPoint.setValue(
-                                    'ATTRIBUTEEVENT',
-                                    '1'
-                                );
-                            } else if (
-                                typeof element.initializeValue !==
-                                    'undefined' &&
-                                element.initializeValue
-                            ) {
-                                scriptLaunchPoint.setValue(
-                                    'ATTRIBUTEEVENT',
-                                    '0'
-                                );
-                            } else if (
-                                typeof element.validate !== 'undefined' &&
-                                element.validate
-                            ) {
-                                scriptLaunchPoint.setValue(
-                                    'ATTRIBUTEEVENT',
-                                    '2'
-                                );
-                            } else if (
-                                typeof element.retrieveList !== 'undefined' &&
-                                element.retrieveList
-                            ) {
-                                scriptLaunchPoint.setValue(
-                                    'ATTRIBUTEEVENT',
-                                    '3'
-                                );
-                            } else if (
-                                typeof element.runAction !== 'undefined' &&
-                                element.runAction
-                            ) {
-                                scriptLaunchPoint.setValue(
-                                    'ATTRIBUTEEVENT',
-                                    '4'
-                                );
+                            if (typeof element.initializeAccessRestriction !== 'undefined' && element.initializeAccessRestriction) {
+                                scriptLaunchPoint.setValue('ATTRIBUTEEVENT', '1');
+                            } else if (typeof element.initializeValue !== 'undefined' && element.initializeValue) {
+                                scriptLaunchPoint.setValue('ATTRIBUTEEVENT', '0');
+                            } else if (typeof element.validate !== 'undefined' && element.validate) {
+                                scriptLaunchPoint.setValue('ATTRIBUTEEVENT', '2');
+                            } else if (typeof element.retrieveList !== 'undefined' && element.retrieveList) {
+                                scriptLaunchPoint.setValue('ATTRIBUTEEVENT', '3');
+                            } else if (typeof element.runAction !== 'undefined' && element.runAction) {
+                                scriptLaunchPoint.setValue('ATTRIBUTEEVENT', '4');
                             } else {
                                 throw new ScriptError(
                                     'missing_attribute',
                                     'One of the following attributes is required when defining an Attribute launch point: initializeAccessRestriction, initializeValue, validate, retrieveList or runAction.'
                                 );
                             }
-                        } else if (
-                            element.launchPointType.toUpperCase() === 'ACTION'
-                        ) {
+                        } else if (element.launchPointType.toUpperCase() === 'ACTION') {
                             if (typeof element.actionName === 'undefined') {
-                                throw new ScriptError(
-                                    'missing_attribute',
-                                    'The actionName is required when defining an Action launch point'
-                                );
+                                throw new ScriptError('missing_attribute', 'The actionName is required when defining an Action launch point');
                             }
-                            scriptLaunchPoint.setValue(
-                                'ACTIONNAME',
-                                element.actionName
-                            );
-                            setValueIfAvailable(
-                                scriptLaunchPoint,
-                                'OBJECTNAME',
-                                element.objectName
-                            );
-                        } else if (
-                            element.launchPointType.toUpperCase() ===
-                            'CUSTOMCONDITION'
-                        ) {
-                            setValueIfAvailable(
-                                scriptLaunchPoint,
-                                'OBJECTNAME',
-                                element.objectName
-                            );
+                            scriptLaunchPoint.setValue('ACTIONNAME', element.actionName);
+                            setValueIfAvailable(scriptLaunchPoint, 'OBJECTNAME', element.objectName);
+                        } else if (element.launchPointType.toUpperCase() === 'CUSTOMCONDITION') {
+                            setValueIfAvailable(scriptLaunchPoint, 'OBJECTNAME', element.objectName);
                         } else {
-                            throw new ScriptError(
-                                'unknown_launchpoint_type',
-                                'The launch point type ' +
-                                    element.launchPointType +
-                                    ' is not supported.'
-                            );
+                            throw new ScriptError('unknown_launchpoint_type', 'The launch point type ' + element.launchPointType + ' is not supported.');
                         }
 
                         if (typeof element.launchPointVars !== 'undefined') {
-                            var launchPointVarsSet =
-                                scriptLaunchPoint.getMboSet('LAUNCHPOINTVARS');
+                            var launchPointVarsSet = scriptLaunchPoint.getMboSet('LAUNCHPOINTVARS');
 
                             if (launchPointVarsSet.isEmpty()) {
                                 throw new ScriptError(
@@ -675,47 +413,24 @@ function deployScript(scriptSource, language) {
                                 );
                             }
 
-                            element.launchPointVars.forEach(function (
-                                elementChild
-                            ) {
-                                if (
-                                    typeof elementChild.varName ===
-                                        'undefined' ||
-                                    typeof elementChild.varBindingValue ===
-                                        'undefined'
-                                ) {
+                            element.launchPointVars.forEach(function (elementChild) {
+                                if (typeof elementChild.varName === 'undefined' || typeof elementChild.varBindingValue === 'undefined') {
                                     throw new ScriptError(
                                         'missing_attribute',
                                         'A varName and varBindingValue are required when defining a launch point variable.'
                                     );
                                 }
 
-                                var launchPointVars =
-                                    launchPointVarsSet.moveFirst();
+                                var launchPointVars = launchPointVarsSet.moveFirst();
                                 var found = false;
                                 while (launchPointVars && !found) {
-                                    if (
-                                        launchPointVars
-                                            .getString('VARNAME')
-                                            .equalsIgnoreCase(
-                                                elementChild.varName
-                                            )
-                                    ) {
-                                        launchPointVars.setValue(
-                                            'OVERRIDDEN',
-                                            true,
-                                            MboConstants.NOACCESSCHECK
-                                        );
-                                        launchPointVars.setValue(
-                                            'VARBINDINGVALUE',
-                                            elementChild.varBindingValue,
-                                            MboConstants.NOACCESSCHECK
-                                        );
+                                    if (launchPointVars.getString('VARNAME').equalsIgnoreCase(elementChild.varName)) {
+                                        launchPointVars.setValue('OVERRIDDEN', true, MboConstants.NOACCESSCHECK);
+                                        launchPointVars.setValue('VARBINDINGVALUE', elementChild.varBindingValue, MboConstants.NOACCESSCHECK);
                                         found = true;
                                     }
 
-                                    launchPointVars =
-                                        launchPointVarsSet.moveNext();
+                                    launchPointVars = launchPointVarsSet.moveNext();
                                 }
 
                                 if (!found) {
@@ -743,16 +458,9 @@ function deployScript(scriptSource, language) {
                 // save the configuration details.
                 service
                     .invokeScript('NAVIAM.AUTOSCRIPT.STORE')
-                    .createOrUpdateScript(
-                        scriptConfig.autoscript.toUpperCase(),
-                        scriptSource,
-                        userInfo.getUserName()
-                    );
+                    .createOrUpdateScript(scriptConfig.autoscript.toUpperCase(), scriptSource, userInfo.getUserName());
             } catch (error) {
-                log_error(
-                    'Error saving script configuration history.' +
-                        JSON.stringify(error)
-                );
+                log_error('Error saving script configuration history.' + JSON.stringify(error));
             }
 
             var messages = scriptConfig.messages;
@@ -782,9 +490,7 @@ function deployScript(scriptSource, language) {
             var ctx = new HashMap();
             if (scriptConfig.onDeploy) {
                 var manager = new ScriptEngineManager();
-                var engine = manager.getEngineByName(
-                    language ? language : 'javascript'
-                );
+                var engine = manager.getEngineByName(language ? language : 'javascript');
 
                 var bindings = engine.createBindings();
 
@@ -802,9 +508,7 @@ function deployScript(scriptSource, language) {
                     bindings.put('onDeploy', true);
                 }
 
-                engine
-                    .getContext()
-                    .setBindings(bindings, ScriptContext.GLOBAL_SCOPE);
+                engine.getContext().setBindings(bindings, ScriptContext.GLOBAL_SCOPE);
 
                 engine.eval(scriptSource);
 
@@ -812,29 +516,13 @@ function deployScript(scriptSource, language) {
                     engine.invokeFunction(scriptConfig.onDeploy);
                 } catch (error) {
                     if (error instanceof NoSuchMethodException) {
-                        throw new ScriptError(
-                            'ondeploy_function_notfound',
-                            'The onDeploy function "' +
-                                scriptConfig.onDeploy +
-                                '" was not found.'
-                        );
+                        throw new ScriptError('ondeploy_function_notfound', 'The onDeploy function "' + scriptConfig.onDeploy + '" was not found.');
                     } else if (error instanceof ScriptException) {
-                        throw new ScriptError(
-                            'error_ondeploy',
-                            'Error calling onDeploy function "' +
-                                scriptConfig.onDeploy +
-                                '" :' +
-                                error.message
-                        );
+                        throw new ScriptError('error_ondeploy', 'Error calling onDeploy function "' + scriptConfig.onDeploy + '" :' + error.message);
                     }
                 }
-            } else if (
-                typeof scriptConfig.onDeployScript !== 'undefined' &&
-                scriptConfig.onDeployScript
-            ) {
-                var deployScript = ScriptCache.getInstance().getScriptInfo(
-                    scriptConfig.onDeployScript
-                );
+            } else if (typeof scriptConfig.onDeployScript !== 'undefined' && scriptConfig.onDeployScript) {
+                var deployScript = ScriptCache.getInstance().getScriptInfo(scriptConfig.onDeployScript);
                 if (deployScript) {
                     var ctx = new HashMap();
                     ctx.put('service', service);
@@ -842,34 +530,17 @@ function deployScript(scriptSource, language) {
                     ctx.put('userInfo', userInfo);
                     ctx.put('onDeploy', true);
 
-                    ScriptDriverFactory.getInstance()
-                        .getScriptDriver(deployScript.getName())
-                        .runScript(deployScript.getName(), ctx);
+                    ScriptDriverFactory.getInstance().getScriptDriver(deployScript.getName()).runScript(deployScript.getName(), ctx);
 
-                    if (
-                        typeof scriptConfig.deleteDeployScript ===
-                            'undefined' ||
-                        scriptConfig.deleteDeployScript == null ||
-                        scriptConfig.deleteDeployScript
-                    ) {
+                    if (typeof scriptConfig.deleteDeployScript === 'undefined' || scriptConfig.deleteDeployScript == null || scriptConfig.deleteDeployScript) {
                         var deployAutoScriptSet;
                         try {
-                            deployAutoScriptSet =
-                                MXServer.getMXServer().getMboSet(
-                                    'AUTOSCRIPT',
-                                    userInfo
-                                );
+                            deployAutoScriptSet = MXServer.getMXServer().getMboSet('AUTOSCRIPT', userInfo);
                             var deploySqlf = new SqlFormat('autoscript = :1');
-                            deploySqlf.setObject(
-                                1,
-                                'AUTOSCRIPT',
-                                'AUTOSCRIPT',
-                                deployScript.getName()
-                            );
+                            deploySqlf.setObject(1, 'AUTOSCRIPT', 'AUTOSCRIPT', deployScript.getName());
 
                             deployAutoScriptSet.setWhere(deploySqlf.format());
-                            var deployAutoScript =
-                                deployAutoScriptSet.moveFirst();
+                            var deployAutoScript = deployAutoScriptSet.moveFirst();
                             if (deployAutoScript) {
                                 deployAutoScript.delete();
                                 deployAutoScriptSet.save();
@@ -880,48 +551,25 @@ function deployScript(scriptSource, language) {
                     }
                 }
             } else {
-                var deployScript = ScriptCache.getInstance().getScriptInfo(
-                    scriptConfig.autoscript + '.DEPLOY'
-                );
+                var deployScript = ScriptCache.getInstance().getScriptInfo(scriptConfig.autoscript + '.DEPLOY');
                 if (deployScript) {
-                    var bulletinBoardSet = MXServer.getMXServer().getMboSet(
-                        'BULLETINBOARD',
-                        userInfo
-                    );
+                    var bulletinBoardSet = MXServer.getMXServer().getMboSet('BULLETINBOARD', userInfo);
 
                     try {
                         var bulletinBoard = bulletinBoardSet.add();
-                        bulletinBoard.setValue(
-                            'SUBJECT',
-                            'Deploy script configuration ' +
-                                scriptConfig.autoscript
-                        );
-                        bulletinBoard.setValue(
-                            'MESSAGE',
-                            'Deployment progress is being tracked in the associated Communication Log.'
-                        );
+                        bulletinBoard.setValue('SUBJECT', 'Deploy script configuration ' + scriptConfig.autoscript);
+                        bulletinBoard.setValue('MESSAGE', 'Deployment progress is being tracked in the associated Communication Log.');
                         var progress = {
-                            description:
-                                'Deploying script configuration ' +
-                                scriptConfig.autoscript,
-                            progress: [],
+                            description: 'Deploying script configuration ' + scriptConfig.autoscript,
+                            progress: []
                         };
                         var commlog = bulletinBoard.getMboSet('COMMLOG').add();
-                        commlog.setValue(
-                            'SENDFROM',
-                            service.getProperty('mxe.adminEmail')
-                        );
-                        commlog.setValue(
-                            'MESSAGE',
-                            JSON.stringify(progress, null, 4)
-                        );
+                        commlog.setValue('SENDFROM', service.getProperty('mxe.adminEmail'));
+                        commlog.setValue('MESSAGE', JSON.stringify(progress, null, 4));
                         var calendar = Calendar.getInstance();
                         calendar.setTime(bulletinBoard.getDate('POSTDATE'));
                         calendar.add(Calendar.MINUTE, 30);
-                        bulletinBoard.setValue(
-                            'EXPIREDATE',
-                            calendar.getTime()
-                        );
+                        bulletinBoard.setValue('EXPIREDATE', calendar.getTime());
                         bulletinBoardSet.save();
                         deployId = bulletinBoard.getUniqueIDValue();
                     } finally {
@@ -933,48 +581,24 @@ function deployScript(scriptSource, language) {
                             var bulletinBoardSet;
 
                             try {
-                                bulletinBoardSet =
-                                    MXServer.getMXServer().getMboSet(
-                                        'BULLETINBOARD',
-                                        MXServer.getMXServer().getSystemUserInfo()
-                                    );
+                                bulletinBoardSet = MXServer.getMXServer().getMboSet('BULLETINBOARD', MXServer.getMXServer().getSystemUserInfo());
 
-                                var bulletinBoard =
-                                    bulletinBoardSet.getMboForUniqueId(
-                                        deployId
-                                    );
+                                var bulletinBoard = bulletinBoardSet.getMboForUniqueId(deployId);
 
                                 if (bulletinBoard) {
-                                    var message = JSON.parse(
-                                        bulletinBoard.getString(
-                                            'COMMLOG.MESSAGE'
-                                        )
-                                    );
+                                    var message = JSON.parse(bulletinBoard.getString('COMMLOG.MESSAGE'));
                                     message.progress.push({
                                         message: progress,
-                                        timestamp: Java.type(
-                                            'psdi.util.MXFormat'
-                                        ).dateTimeToString(
-                                            MXServer.getMXServer().getDate()
-                                        ),
+                                        timestamp: Java.type('psdi.util.MXFormat').dateTimeToString(MXServer.getMXServer().getDate())
                                     });
 
-                                    bulletinBoard.setValue(
-                                        'COMMLOG.MESSAGE',
-                                        JSON.stringify(message, null, 4)
-                                    );
+                                    bulletinBoard.setValue('COMMLOG.MESSAGE', JSON.stringify(message, null, 4));
                                     bulletinBoardSet.save();
                                 } else {
-                                    throw Error(
-                                        'The script deployment bulletin board record with id ' +
-                                            deployId +
-                                            ' was not found. Cancelling deployment.'
-                                    );
+                                    throw Error('The script deployment bulletin board record with id ' + deployId + ' was not found. Cancelling deployment.');
                                 }
                             } catch (error) {
-                                Java.type('java.lang.System').out.println(
-                                    'Error updating progress: ' + error
-                                );
+                                Java.type('java.lang.System').out.println('Error updating progress: ' + error);
                                 throw error;
                             } finally {
                                 if (bulletinBoardSet) {
@@ -995,115 +619,63 @@ function deployScript(scriptSource, language) {
                     var backgroundUserInfo = userInfo;
                     var ScriptDeployRunner = Java.extend(Runnable, {
                         run: function () {
-                            var bulletinBoardSet =
-                                MXServer.getMXServer().getMboSet(
-                                    'BULLETINBOARD',
-                                    backgroundUserInfo
-                                );
+                            var bulletinBoardSet = MXServer.getMXServer().getMboSet('BULLETINBOARD', backgroundUserInfo);
 
                             try {
-                                ScriptDriverFactory.getInstance()
-                                    .getScriptDriver(deployScript.getName())
-                                    .runScript(deployScript.getName(), ctx);
+                                ScriptDriverFactory.getInstance().getScriptDriver(deployScript.getName()).runScript(deployScript.getName(), ctx);
 
-                                var bulletinBoard =
-                                    bulletinBoardSet.getMboForUniqueId(
-                                        deployId
-                                    );
+                                var bulletinBoard = bulletinBoardSet.getMboForUniqueId(deployId);
                                 if (bulletinBoard) {
                                     bulletinBoard.delete();
                                     bulletinBoardSet.save();
                                 }
                             } catch (error) {
-                                var bulletinBoard =
-                                    bulletinBoardSet.getMboForUniqueId(
-                                        deployId
-                                    );
+                                var bulletinBoard = bulletinBoardSet.getMboForUniqueId(deployId);
                                 if (bulletinBoard) {
-                                    var progress = JSON.parse(
-                                        bulletinBoard.getString(
-                                            'COMMLOG.MESSAGE'
-                                        )
-                                    );
+                                    var progress = JSON.parse(bulletinBoard.getString('COMMLOG.MESSAGE'));
 
                                     if (
-                                        typeof error.getErrorGroup !==
-                                            'undefined' &&
+                                        typeof error.getErrorGroup !== 'undefined' &&
                                         error.getErrorGroup() == 'script' &&
-                                        error.getErrorKey() ==
-                                            'errorrunningscript'
+                                        error.getErrorKey() == 'errorrunningscript'
                                     ) {
                                         progress.error =
-                                            Java.type(
-                                                'psdi.util.MXExceptionMediator'
-                                            ).getMessage(
-                                                error.getDetail(),
-                                                MXServer.getMXServer().getBaseLang()
-                                            ) +
+                                            Java.type('psdi.util.MXExceptionMediator').getMessage(error.getDetail(), MXServer.getMXServer().getBaseLang()) +
                                             ' of script ' +
                                             error.getParameters()[0];
                                     } else {
-                                        if (
-                                            typeof error.printStackTrace ===
-                                            'function'
-                                        ) {
+                                        if (typeof error.printStackTrace === 'function') {
                                             error.printStackTrace();
                                         }
                                         progress.error = error.getMessage();
                                     }
 
-                                    bulletinBoard.setValue(
-                                        'STATUS',
-                                        'REJECTED'
-                                    );
-                                    bulletinBoard.setValue(
-                                        'COMMLOG.MESSAGE',
-                                        JSON.stringify(progress, null, 4)
-                                    );
+                                    bulletinBoard.setValue('STATUS', 'REJECTED');
+                                    bulletinBoard.setValue('COMMLOG.MESSAGE', JSON.stringify(progress, null, 4));
                                     bulletinBoardSet.save();
                                 }
 
-                                Java.type('java.lang.System').out.println(
-                                    error
-                                );
+                                Java.type('java.lang.System').out.println(error);
                                 if (typeof service !== 'undefined') {
-                                    service.log_error(
-                                        'Script Deployment Error',
-                                        error
-                                    );
+                                    service.log_error('Script Deployment Error', error);
                                 }
                             } finally {
                                 _close(bulletinBoardSet);
 
                                 // remove the deploy script.
                                 if (
-                                    typeof scriptConfig.deleteDeployScript ===
-                                        'undefined' ||
+                                    typeof scriptConfig.deleteDeployScript === 'undefined' ||
                                     scriptConfig.deleteDeployScript == null ||
                                     scriptConfig.deleteDeployScript
                                 ) {
                                     var deployAutoScriptSet;
                                     try {
-                                        deployAutoScriptSet =
-                                            MXServer.getMXServer().getMboSet(
-                                                'AUTOSCRIPT',
-                                                MXServer.getMXServer().getSystemUserInfo()
-                                            );
-                                        var deploySqlf = new SqlFormat(
-                                            'autoscript = :1'
-                                        );
-                                        deploySqlf.setObject(
-                                            1,
-                                            'AUTOSCRIPT',
-                                            'AUTOSCRIPT',
-                                            deployScript.getName()
-                                        );
+                                        deployAutoScriptSet = MXServer.getMXServer().getMboSet('AUTOSCRIPT', MXServer.getMXServer().getSystemUserInfo());
+                                        var deploySqlf = new SqlFormat('autoscript = :1');
+                                        deploySqlf.setObject(1, 'AUTOSCRIPT', 'AUTOSCRIPT', deployScript.getName());
 
-                                        deployAutoScriptSet.setWhere(
-                                            deploySqlf.format()
-                                        );
-                                        var deployAutoScript =
-                                            deployAutoScriptSet.moveFirst();
+                                        deployAutoScriptSet.setWhere(deploySqlf.format());
+                                        var deployAutoScript = deployAutoScriptSet.moveFirst();
                                         if (deployAutoScript) {
                                             deployAutoScript.delete();
                                             deployAutoScriptSet.save();
@@ -1113,12 +685,10 @@ function deployScript(scriptSource, language) {
                                     }
                                 }
                             }
-                        },
+                        }
                     });
 
-                    var scriptDeployRunner = new Thread(
-                        new ScriptDeployRunner()
-                    );
+                    var scriptDeployRunner = new Thread(new ScriptDeployRunner());
                     scriptDeployRunner.start();
 
                     result = getDeploymentResult(deployId);
@@ -1135,28 +705,20 @@ function deployScript(scriptSource, language) {
 
         return result;
     } else {
-        throw new ScriptError(
-            'config_not_found',
-            'Configuration variable scriptConfig was not found in the script.'
-        );
+        throw new ScriptError('config_not_found', 'Configuration variable scriptConfig was not found in the script.');
     }
 }
 
 function getDeploymentResult(deployId) {
     try {
-        var bulletinBoardSet = MXServer.getMXServer().getMboSet(
-            'BULLETINBOARD',
-            userInfo
-        );
+        var bulletinBoardSet = MXServer.getMXServer().getMboSet('BULLETINBOARD', userInfo);
         var entry = bulletinBoardSet.getMboForUniqueId(deployId);
 
         if (entry) {
             var message = JSON.parse(entry.getString('COMMLOG.MESSAGE'));
             if (entry.getString('STATUS') == 'REJECTED') {
                 message.status = 'error';
-                message.error = JSON.parse(
-                    entry.getString('COMMLOG.MESSAGE')
-                ).error;
+                message.error = JSON.parse(entry.getString('COMMLOG.MESSAGE')).error;
                 message.deploying = false;
                 return message;
             } else {
@@ -1173,38 +735,20 @@ function getDeploymentResult(deployId) {
 }
 
 function setValueIfAvailable(mbo, attribute, value) {
-    if (
-        typeof value !== 'undefined' &&
-        mbo.getMboValue(attribute).isFlagSet(MboConstants.READONLY) == false
-    ) {
+    if (typeof value !== 'undefined' && mbo.getMboValue(attribute).isFlagSet(MboConstants.READONLY) == false) {
         mbo.setValue(attribute, value);
     }
 }
 
 function checkPermissions(app, optionName) {
     if (!userInfo) {
-        throw new ScriptError(
-            'no_user_info',
-            'The userInfo global variable has not been set, therefore the user permissions cannot be verified.'
-        );
+        throw new ScriptError('no_user_info', 'The userInfo global variable has not been set, therefore the user permissions cannot be verified.');
     }
 
-    if (
-        !MXServer.getMXServer()
-            .lookup('SECURITY')
-            .getProfile(userInfo)
-            .hasAppOption(app, optionName) &&
-        !isInAdminGroup()
-    ) {
+    if (!MXServer.getMXServer().lookup('SECURITY').getProfile(userInfo).hasAppOption(app, optionName) && !isInAdminGroup()) {
         throw new ScriptError(
             'no_permission',
-            'The user ' +
-                userInfo.getUserName() +
-                ' does not have access to the ' +
-                optionName +
-                ' option in the ' +
-                app +
-                ' object structure.'
+            'The user ' + userInfo.getUserName() + ' does not have access to the ' + optionName + ' option in the ' + app + ' object structure.'
         );
     }
 }
@@ -1212,21 +756,14 @@ function checkPermissions(app, optionName) {
 // Determines if the current user is in the administrator group, returns true if the user is, false otherwise.
 function isInAdminGroup() {
     var user = userInfo.getUserName();
-    service.log_info(
-        'Determining if the user ' + user + ' is in the administrator group.'
-    );
+    service.log_info('Determining if the user ' + user + ' is in the administrator group.');
     var groupUserSet;
 
     try {
-        groupUserSet = MXServer.getMXServer().getMboSet(
-            'GROUPUSER',
-            MXServer.getMXServer().getSystemUserInfo()
-        );
+        groupUserSet = MXServer.getMXServer().getMboSet('GROUPUSER', MXServer.getMXServer().getSystemUserInfo());
 
         // Get the ADMINGROUP MAXVAR value.
-        var adminGroup = MXServer.getMXServer()
-            .lookup('MAXVARS')
-            .getString('ADMINGROUP', null);
+        var adminGroup = MXServer.getMXServer().lookup('MAXVARS').getString('ADMINGROUP', null);
 
         // Query for the current user and the found admin group.
         // The current user is determined by the implicity `user` variable.
@@ -1236,22 +773,10 @@ function isInAdminGroup() {
         groupUserSet.setWhere(sqlFormat.format());
 
         if (!groupUserSet.isEmpty()) {
-            service.log_info(
-                'The user ' +
-                    user +
-                    ' is in the administrator group ' +
-                    adminGroup +
-                    '.'
-            );
+            service.log_info('The user ' + user + ' is in the administrator group ' + adminGroup + '.');
             return true;
         } else {
-            service.log_info(
-                'The user ' +
-                    user +
-                    ' is not in the administrator group ' +
-                    adminGroup +
-                    '.'
-            );
+            service.log_info('The user ' + user + ' is not in the administrator group ' + adminGroup + '.');
             return false;
         }
     } finally {
@@ -1267,15 +792,10 @@ function getConfigFromScript(scriptSource, languageHint) {
             var found = scriptSource.match(regex);
             if (found && found.length == 1) {
                 var config = found[0];
-                config = config
-                    .trim()
-                    .substring(config.indexOf('{'), config.length - 3);
+                config = config.trim().substring(config.indexOf('{'), config.length - 3);
                 return JSON.parse(config);
             } else {
-                throw new ScriptError(
-                    'config_not_found',
-                    'Configuration variable scriptConfig was not found in the script.'
-                );
+                throw new ScriptError('config_not_found', 'Configuration variable scriptConfig was not found in the script.');
             }
         } else {
             var ast;
@@ -1287,52 +807,189 @@ function getConfigFromScript(scriptSource, languageHint) {
                     return getConfigFromPythonScript(scriptSource);
                 } catch (error) {
                     log_error(JSON.stringify(error));
-                    throw new ScriptError(
-                        'parsing_error',
-                        'Error parsing script, please see log for details.'
-                    );
+                    throw new ScriptError('parsing_error', 'Error parsing script, please see log for details.');
                 }
             }
             if (ast.type === 'Program' && ast.body) {
                 var result;
-                ast.body.forEach(function (element) {
-                    if (element.type === 'VariableDeclaration') {
-                        if (element.declarations) {
-                            element.declarations.forEach(function (
-                                declaration
-                            ) {
-                                if (
-                                    declaration.id &&
-                                    declaration.id.type === 'Identifier' &&
-                                    declaration.id.name === 'scriptConfig'
-                                ) {
-                                    result = astToJavaScript(declaration.init);
+
+                var tryExtractConfigFromAssignedObjectLiteral = function (source) {
+                    var assignmentRegex =
+                        /(?:^|[^\w$])(?:scriptConfig|[A-Za-z_$][\w$]*\s*\.\s*scriptConfig|[A-Za-z_$][\w$]*\s*\[\s*['"]scriptConfig['"]\s*\])\s*=\s*/g;
+
+                    var readBalancedObject = function (value, startIndex) {
+                        var length = value.length;
+                        var index = startIndex;
+
+                        while (index < length && /\s/.test(value.charAt(index))) {
+                            index++;
+                        }
+
+                        if (index >= length || value.charAt(index) !== '{') {
+                            return null;
+                        }
+
+                        var depth = 0;
+                        var inString = false;
+                        var quote = '';
+                        var escaped = false;
+                        var objectStart = index;
+
+                        for (; index < length; index++) {
+                            var ch = value.charAt(index);
+
+                            if (inString) {
+                                if (escaped) {
+                                    escaped = false;
+                                } else if (ch === '\\') {
+                                    escaped = true;
+                                } else if (ch === quote) {
+                                    inString = false;
+                                    quote = '';
                                 }
-                            });
+
+                                continue;
+                            }
+
+                            if (ch === '"' || ch.charCodeAt(0) === 39) {
+                                inString = true;
+                                quote = ch;
+                                continue;
+                            }
+
+                            if (ch === '{') {
+                                depth++;
+                            } else if (ch === '}') {
+                                depth--;
+
+                                if (depth === 0) {
+                                    return value.substring(objectStart, index + 1);
+                                }
+                            }
+                        }
+
+                        return null;
+                    };
+
+                    while (assignmentRegex.exec(source) !== null) {
+                        var objectLiteral = readBalancedObject(source, assignmentRegex.lastIndex);
+                        if (!objectLiteral) {
+                            continue;
+                        }
+
+                        try {
+                            var objectAst = parse('var __scriptConfigFallback = ' + objectLiteral + ';');
+                            if (objectAst && objectAst.type === 'Program' && objectAst.body && objectAst.body.length > 0) {
+                                var declaration = objectAst.body[0];
+                                if (
+                                    declaration.type === 'VariableDeclaration' &&
+                                    declaration.declarations &&
+                                    declaration.declarations.length > 0 &&
+                                    declaration.declarations[0].init
+                                ) {
+                                    return astToJavaScript(declaration.declarations[0].init);
+                                }
+                            }
+                        } catch (ignore) {
+                            // Continue scanning other assignments if this one cannot be parsed.
                         }
                     }
-                });
+
+                    return null;
+                };
+
+                var isScriptConfigMemberExpression = function (node) {
+                    if (!node || node.type !== 'MemberExpression') {
+                        return false;
+                    }
+
+                    if (!node.computed && node.property && node.property.type === 'Identifier' && node.property.name === 'scriptConfig') {
+                        return true;
+                    }
+
+                    if (node.computed && node.property && node.property.type === 'Literal' && node.property.value === 'scriptConfig') {
+                        return true;
+                    }
+
+                    return false;
+                };
+
+                var getScriptConfigValueNode = function (node) {
+                    if (!node) {
+                        return null;
+                    }
+
+                    if (node.type === 'VariableDeclarator') {
+                        if (node.id && node.id.type === 'Identifier' && node.id.name === 'scriptConfig') {
+                            return node.init || null;
+                        }
+                    }
+
+                    if (node.type === 'AssignmentExpression') {
+                        if (node.left && node.left.type === 'Identifier' && node.left.name === 'scriptConfig') {
+                            return node.right || null;
+                        }
+
+                        if (isScriptConfigMemberExpression(node.left)) {
+                            return node.right || null;
+                        }
+                    }
+
+                    return null;
+                };
+
+                var findScriptConfigValueNode = function (node) {
+                    if (!node || typeof node !== 'object') {
+                        return null;
+                    }
+
+                    var directMatch = getScriptConfigValueNode(node);
+                    if (directMatch) {
+                        return directMatch;
+                    }
+
+                    var keys = Object.keys(node);
+                    for (var i = 0; i < keys.length; i++) {
+                        var child = node[keys[i]];
+
+                        if (Array.isArray(child)) {
+                            for (var j = 0; j < child.length; j++) {
+                                var nestedArrayResult = findScriptConfigValueNode(child[j]);
+                                if (nestedArrayResult) {
+                                    return nestedArrayResult;
+                                }
+                            }
+                        } else if (child && typeof child === 'object') {
+                            var nestedObjectResult = findScriptConfigValueNode(child);
+                            if (nestedObjectResult) {
+                                return nestedObjectResult;
+                            }
+                        }
+                    }
+
+                    return null;
+                };
+
+                var configNode = findScriptConfigValueNode(ast);
+                if (configNode) {
+                    result = astToJavaScript(configNode);
+                }
+
+                if (!result) {
+                    result = tryExtractConfigFromAssignedObjectLiteral(scriptSource);
+                }
 
                 if (result) {
                     return result;
                 } else {
-                    throw new ScriptError(
-                        'config_not_found',
-                        'Configuration variable scriptConfig was not found in the script.'
-                    );
+                    throw new ScriptError('config_not_found', 'Configuration variable scriptConfig was not found in the script.');
                 }
             } else {
-                throw new ScriptError(
-                    'script_wrong_type',
-                    'The script must be of type Program and have a body to be deployed.'
-                );
+                throw new ScriptError('script_wrong_type', 'The script must be of type Program and have a body to be deployed.');
             }
         }
     } else {
-        throw new ScriptError(
-            'no_script_source',
-            'The script source is required to deploy the script.'
-        );
+        throw new ScriptError('no_script_source', 'The script source is required to deploy the script.');
     }
 }
 
@@ -1341,32 +998,21 @@ function getConfigFromPythonScript(scriptSource) {
     var found = scriptSource.match(regex);
     if (found && found.length == 1) {
         var config = found[0];
-        config = config
-            .trim()
-            .substring(config.indexOf('{'), config.length - 3);
+        config = config.trim().substring(config.indexOf('{'), config.length - 3);
         return JSON.parse(config);
     } else {
-        throw new ScriptError(
-            'config_not_found',
-            'Configuration variable scriptConfig was not found in the script.'
-        );
+        throw new ScriptError('config_not_found', 'Configuration variable scriptConfig was not found in the script.');
     }
 }
 
 function createOrUpdateProperty(property) {
     if (typeof property.propName === 'undefined' || !property.propName) {
-        throw new ScriptError(
-            'message_missing_varname',
-            'The property record is missing the required property "propName"'
-        );
+        throw new ScriptError('message_missing_varname', 'The property record is missing the required property "propName"');
     }
 
     var maxPropSet;
     try {
-        maxPropSet = MXServer.getMXServer().getMboSet(
-            'MAXPROP',
-            MXServer.getMXServer().getSystemUserInfo()
-        );
+        maxPropSet = MXServer.getMXServer().getMboSet('MAXPROP', MXServer.getMXServer().getSystemUserInfo());
         var sqlf = new SqlFormat('propname = :1');
         sqlf.setObject(1, 'MAXPROP', 'PROPNAME', property.propName);
         maxPropSet.setWhere(sqlf.format());
@@ -1392,10 +1038,7 @@ function createOrUpdateProperty(property) {
                 maxProp.setValue('MAXTYPE', property.maxType);
             }
 
-            if (
-                typeof property.description !== 'undefined' &&
-                property.description
-            ) {
+            if (typeof property.description !== 'undefined' && property.description) {
                 maxProp.setValue('DESCRIPTION', property.description);
             }
 
@@ -1440,46 +1083,23 @@ function createOrUpdateProperty(property) {
 
             var toBeAdded = propValue.toBeAdded();
 
-            if (
-                typeof property.propValue !== 'undefined' &&
-                property.propValue
-            ) {
-                propValue.setValue(
-                    'PROPVALUE',
-                    property.propValue,
-                    MboConstants.NOACCESSCHECK
-                );
+            if (typeof property.propValue !== 'undefined' && property.propValue) {
+                propValue.setValue('PROPVALUE', property.propValue, MboConstants.NOACCESSCHECK);
             }
         }
 
         maxPropSet.save();
 
-        if (
-            toBeAdded &&
-            typeof property.initialPropValue !== 'undefined' &&
-            property.initialPropValue
-        ) {
+        if (toBeAdded && typeof property.initialPropValue !== 'undefined' && property.initialPropValue) {
             var id = maxProp.getUniqueIDValue();
             maxPropSet.reset();
-            maxPropSet
-                .getMboForUniqueId(id)
-                .getMboSet('MAXPROPVALUE')
-                .moveFirst()
-                .setValue(
-                    'PROPVALUE',
-                    property.initialPropValue,
-                    MboConstants.NOACCESSCHECK
-                );
+            maxPropSet.getMboForUniqueId(id).getMboSet('MAXPROPVALUE').moveFirst().setValue('PROPVALUE', property.initialPropValue, MboConstants.NOACCESSCHECK);
 
             // refresh the properties so the current value is available.
             maxPropSet.save();
         }
 
-        MXServer.getMXServer().reloadMaximoCache(
-            'MAXPROP',
-            property.propName,
-            true
-        );
+        MXServer.getMXServer().reloadMaximoCache('MAXPROP', property.propName, true);
     } finally {
         _close(maxPropSet);
     }
@@ -1487,29 +1107,20 @@ function createOrUpdateProperty(property) {
 
 function createOrUpdateMaxVar(maxvar) {
     if (typeof maxvar.varName === 'undefined' || !maxvar.varName) {
-        throw new ScriptError(
-            'message_missing_varname',
-            'The maxvar record is missing the required property "varName"'
-        );
+        throw new ScriptError('message_missing_varname', 'The maxvar record is missing the required property "varName"');
     } else {
         maxvar.varName = maxvar.varName.toUpperCase();
     }
 
     if (typeof maxvar.varType === 'undefined' || !maxvar.varType) {
-        throw new ScriptError(
-            'message_missing_vartype',
-            'The maxvar record is missing the required property "varType"'
-        );
+        throw new ScriptError('message_missing_vartype', 'The maxvar record is missing the required property "varType"');
     } else {
         maxvar.varType = maxvar.varType.toUpperCase();
     }
 
     var maxvarTypeSet;
     try {
-        maxvarTypeSet = MXServer.getMXServer().getMboSet(
-            'MAXVARTYPE',
-            MXServer.getMXServer().getSystemUserInfo()
-        );
+        maxvarTypeSet = MXServer.getMXServer().getMboSet('MAXVARTYPE', MXServer.getMXServer().getSystemUserInfo());
 
         var sqlf = new SqlFormat('varname = :1');
         sqlf.setObject(1, 'MAXVARTYPE', 'VARNAME', maxvar.varName);
@@ -1536,19 +1147,13 @@ function createOrUpdateMaxVar(maxvar) {
                 maxvarType = maxvarTypeSet.moveFirst();
             }
 
-            if (
-                typeof maxvar.defaultValue !== 'undefined' &&
-                maxvar.defaultValue
-            ) {
+            if (typeof maxvar.defaultValue !== 'undefined' && maxvar.defaultValue) {
                 maxvarType.setValue('DEFAULTVALUE', maxvar.defaultValue);
             } else {
                 maxvarType.setValueNull('DEFAULTVALUE');
             }
 
-            if (
-                typeof maxvar.description !== 'undefined' &&
-                maxvar.description
-            ) {
+            if (typeof maxvar.description !== 'undefined' && maxvar.description) {
                 maxvarType.setValue('DESCRIPTION', maxvar.description);
             } else {
                 maxvarType.setValueNull('DESCRIPTION');
@@ -1586,29 +1191,15 @@ function createOrUpdateMaxVar(maxvar) {
 }
 
 function createOrUpdateMessage(message) {
-    if (
-        typeof message.msgGroup === 'undefined' ||
-        !message.msgGroup ||
-        typeof message.msgKey === 'undefined' ||
-        !message.msgKey
-    ) {
+    if (typeof message.msgGroup === 'undefined' || !message.msgGroup || typeof message.msgKey === 'undefined' || !message.msgKey) {
         throw new ScriptError(
             'message_missing_group_or_key',
-            'The message: \n' +
-                JSON.stringify(message, null, 4) +
-                '\nis missing either a msgKey or msgGroupp value.'
+            'The message: \n' + JSON.stringify(message, null, 4) + '\nis missing either a msgKey or msgGroupp value.'
         );
     }
 
     if (typeof message.value === 'undefined' || !message.value) {
-        throw new ScriptError(
-            'message_missing_value',
-            'The message: ' +
-                message.msgGroup +
-                ':' +
-                message.msgKey +
-                '\nis missing a message value.'
-        );
+        throw new ScriptError('message_missing_value', 'The message: ' + message.msgGroup + ':' + message.msgKey + '\nis missing a message value.');
     }
 
     if (typeof message.prefix === 'undefined' || !message.prefix) {
@@ -1619,10 +1210,7 @@ function createOrUpdateMessage(message) {
         message.suffix = 'E';
     }
 
-    if (
-        typeof message.displayMethod === 'undefined' ||
-        !message.displayMethod
-    ) {
+    if (typeof message.displayMethod === 'undefined' || !message.displayMethod) {
         message.displayMethod = 'MSGBOX';
     }
 
@@ -1632,10 +1220,7 @@ function createOrUpdateMessage(message) {
 
     var maxMessagesSet;
     try {
-        maxMessagesSet = MXServer.getMXServer().getMboSet(
-            'MAXMESSAGES',
-            MXServer.getMXServer().getSystemUserInfo()
-        );
+        maxMessagesSet = MXServer.getMXServer().getMboSet('MAXMESSAGES', MXServer.getMXServer().getSystemUserInfo());
 
         var sqlf = new SqlFormat('msggroup = :1 and msgkey = :2');
         sqlf.setObject(1, 'MAXMESSAGES', 'MSGGROUP', message.msgGroup);
@@ -1673,14 +1258,8 @@ function createOrUpdateMessage(message) {
 }
 
 function validateScriptConfig(scriptConfig) {
-    if (
-        !scriptConfig.autoscript ||
-        scriptConfig.autoscript.trim().length === 0
-    ) {
-        throw new ScriptError(
-            'script_name_required',
-            'The auto script name (autoscript) is required in the script configuration.'
-        );
+    if (!scriptConfig.autoscript || scriptConfig.autoscript.trim().length === 0) {
+        throw new ScriptError('script_name_required', 'The auto script name (autoscript) is required in the script configuration.');
     }
 }
 
@@ -1713,17 +1292,12 @@ function astToJavaScript(ast) {
             if (element.type === 'ObjectExpression' && element.properties) {
                 var elementObject = {};
                 element.properties.map(function (property) {
-                    if (
-                        property.value.type == 'Literal' &&
-                        property.key.type == 'Identifier'
-                    ) {
+                    if (property.value.type == 'Literal' && property.key.type == 'Identifier') {
                         // In some systems the property key name is returned as "name" and in others as value.
                         if (typeof property.key.name !== 'undefined') {
-                            javaScript[property.key.name] =
-                                property.value.value;
+                            javaScript[property.key.name] = property.value.value;
                         } else {
-                            javaScript[property.key.value] =
-                                property.value.value;
+                            javaScript[property.key.value] = property.value.value;
                         }
                     } else if (property.value.type == 'ArrayExpression') {
                         var child = [];
@@ -1758,25 +1332,15 @@ function getRequestAction() {
 
     var isOSLC = true;
 
-    if (
-        !resourceReq
-            .toLowerCase()
-            .startsWith('/oslc/script/' + service.scriptName.toLowerCase())
-    ) {
-        if (
-            !resourceReq
-                .toLowerCase()
-                .startsWith('/api/script/' + service.scriptName.toLowerCase())
-        ) {
+    if (!resourceReq.toLowerCase().startsWith('/oslc/script/' + service.scriptName.toLowerCase())) {
+        if (!resourceReq.toLowerCase().startsWith('/api/script/' + service.scriptName.toLowerCase())) {
             return null;
         } else {
             osOSLC = false;
         }
     }
 
-    var baseReqPath = isOSLC
-        ? '/oslc/script/' + service.scriptName
-        : '/api/script/' + service.scriptName;
+    var baseReqPath = isOSLC ? '/oslc/script/' + service.scriptName : '/api/script/' + service.scriptName;
 
     var action = resourceReq.substring(baseReqPath.length);
 
@@ -1855,7 +1419,7 @@ ScriptError.prototype.element;
 var scriptConfig = {
     autoscript: 'NAVIAM.AUTOSCRIPT.DEPLOY',
     description: 'Naviam Automation Script Deploy Script',
-    version: '1.0.0',
+    version: '1.54.0',
     active: true,
-    logLevel: 'INFO',
+    logLevel: 'INFO'
 };

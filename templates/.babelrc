@@ -1,0 +1,19 @@
+{
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "targets": {
+          "ie": "11" 
+        },
+        "exclude": [
+          "transform-typeof-symbol",
+          "es.symbol"
+        ],
+        "useBuiltIns": "usage",
+        "corejs": 3,
+        "modules": false 
+      }
+    ]
+  ]
+}

@@ -1,4 +1,13 @@
 # Release Notes
+## 1.3.0
+- Add support for remote debugging.
+  
+## 1.2.1
+- Add support for deploying TypeScript compiled scripts directly.
+  
+## 1.2.0
+- Added support for DBC and JSON extract
+  
 ## 1.1.0 
 - Added log streaming for selected server pod.
   

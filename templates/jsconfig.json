@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es6",
+    "checkJs": false,
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "maxNodeModuleJsDepth": 1
+  },
+  "include": [
+    "src/**/*",
+    "*.js",
+    "**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/node_modules/*"
+  ]
+}

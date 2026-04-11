@@ -1,0 +1,1099 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/config.json",
+    "type": "object",
+    "title": "Naviam Maximo Developer Tools Deployment File",
+    "properties": {
+        "properties": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/maximo_properties" },
+            "description": "An array of Maximo properties to be deployed to the target system."
+        },
+        "messages": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/message" },
+            "description": "An array of Maximo messages to be deployed to the target system."
+        },
+        "loggers": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/logger" },
+            "description": "An array of Maximo loggers to be deployed to the target system."
+        },
+        "cronTasks": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/cronTask" },
+            "description": "An array of Maximo cron tasks to be deployed to the target system."
+        },
+        "domains": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/domain" },
+            "description": "An array of Maximo domains to be deployed to the target system."
+        },
+        "intObjects": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/intObject" },
+            "description": "An array of Maximo integration objects."
+        }
+    },
+    "definitions": {
+        "intObject": {
+            "title": "Maximo Integration Object",
+            "description": "A Maximo Integration Object",
+            "type": "object",
+            "properties": {
+                "_delete": {
+                    "description": "Flag to indicate that the domain should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "intObjectName": {
+                    "description": "Identifies the integration object. This value must be unique.",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "Describes the integration object.",
+                    "type": "string"
+                },
+                "useWith": {
+                    "description": "Indicates from where in Maximo the Maximo Object Structure is accessible. Possible values include: ALL, INTEGRATION and DEPLOYMENT MGR. If you choose ALL, the MOS can be used from any Maximo application. If you choose INTEGRATION, the template is available from the INTEGRATION applications, but cannot be used in other app. Chosing either DEPLOYMENT MGR or someother app limits the use of the MOS to within that specific application.",
+                    "type": "string",
+                    "enum": ["INTEGRATION", "MIGRATIONMGR", "OSLC", "REPORTING", "WOS"]
+                },
+                "useOSSecurity": {
+                    "description": "Use Object Structure for Authorization Name",
+                    "type": "boolean",
+                    "default": false
+                },
+                "authApp": {
+                    "description": "The specified application can authorize inbound queue-based or synchronous integration messages to this object structure. The application can also authorize export of data from this object structure.",
+                    "type": "string"
+                },
+                "selfReferencing": {
+                    "description": "Is the object self referencing",
+                    "type": "boolean"
+                },
+                "queryOnly": {
+                    "description": "Describes the integration object.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "flatSupported": {
+                    "description": "This is a Boolean indicator identifying if the MOS supports Flat File/ Interface table processing. This defaults to 'N",
+                    "type": "boolean",
+                    "default": false
+                },
+                "loadQueryFromApp": {
+                    "description": "Load Query From All Apps. This defaults to 'N",
+                    "type": "boolean",
+                    "default": false
+                },
+                "defClass": {
+                    "description": "Path to a Java class file that contains outbound processing and filtering code. This is a processing class that is typically used to filter the content of any MOS created by Maximo. It is applicable only for Publishing and/ or filtering query responses. This class is not always required",
+                    "type": "string"
+                },
+                "procClass": {
+                    "description": "Path to a Java class file that contains Inbound processing code. This is a processing class that facilitates the creation/ update of the MBOs that constitute the MOS. Note that this class does not contain any processing logic for query support it is only for facilitating Content Management (Create/ Update/ Delete) Services. This class is not always required.",
+                    "type": "string"
+                },
+                "searchAttrs": {
+                    "description": "Search Attributes.",
+                    "type": "string"
+                },
+                "restrictWhere": {
+                    "description": "Data restriction condition.",
+                    "type": "string"
+                },
+                "module": {
+                    "description": "The name of the module. The name must match the name of the module that is used for the associated Maximo application.",
+                    "type": "string"
+                },
+                "maxIntObjDetail": {
+                    "type": "array",
+                    "description": "The Maximo objects included in the integration object.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "objectName": {
+                                "description": "Identifies a Maximo Business Object (MBO).",
+                                "type": "string"
+                            },
+                            "altKey": {
+                                "description": "A unique index that the integration framework uses to find a record in the system in place of the primary key for the object. Use an alternate key if the primary key is not known by the external system. Define the alternate key as a MAXIMO index in the Database Configuration application.",
+                                "type": "string"
+                            },
+                            "excludeByDefault": {
+                                "description": "Exclude Attributes",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "skipKeyUpdate": {
+                                "description": "When selected, when new primary key values are received, the values are not updated in the Maximo database and the original primary key values are retained.",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "deleteOnCreate": {
+                                "description": "Delete auto-generated data for selected child object",
+                                "type": "boolean",
+                                "default": true
+                            },
+                            "propagateEvent": {
+                                "description": "Propagate Event",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "invokeExecute": {
+                                "description": "Invoke Execute on Non-persistent Object",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "fdResource": {
+                                "description": "Federated Resource Name",
+                                "type": "string"
+                            },
+                            "parentObjName": {
+                                "description": "Parent Object Name",
+                                "type": "string"
+                            },
+                            "relation": {
+                                "description": "Where clause used to navigate from a parent MBO to a child MBO. Relationships are predefined in Maximo. Applies only to standard (non-merged) integration objects.",
+                                "type": "string"
+                            },
+                            "objectOrder": {
+                                "description": "Sequence in which the MEA processes child MBOs with the same parent MBO. This number is assigned when a user adds a child MBO. You can change this value in user-defined, but not in predefined (MEA-supplied), integration objects. Applies only to standard (non-merged) integration objects.",
+                                "type": "integer"
+                            }
+                        },
+                        "required": ["objectName"]
+                    },
+                    "maxIntObjCols": {
+                        "type": "array",
+                        "description": "Integration object column non-persistent and exclude rules.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "description": "Identifies a user defined data field. The name cannot be the same as that of any persistent or non-persistent field in the integration object, and it cannot be TRANSID. Within interface tables, user fields have a data type of ALN and a length of 50, and you cannot change those attributes. The field name must conform to XML field naming conventions.",
+                                    "type": "string"
+                                },
+                                "intObjFldType": {
+                                    "description": "The type of integration object field, either EXCLUDE or NONPERSISTENT",
+                                    "type": "string",
+                                    "enum": ["EXCLUDE", "NONPERSISTENT"]
+                                }
+                            },
+                            "required": ["name"]
+                        }
+                    },
+                    "maxIntObjAlias": {
+                        "type": "array",
+                        "description": "Integration object column aliases",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "description": "Name of the attribute to alias",
+                                    "type": "string"
+                                },
+                                "aliasName": {
+                                    "description": "The alias for the attribute being aliased",
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "objectAppAuth": {
+                        "type": "array",
+                        "description": "Object Application Authorization",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "context": {
+                                    "description": "Specify the REST API context for the object resource (for example if the object resource URI is /rest/mbo/po, the REST API context for object po is /rest/mbo). The context is case-sensitive.",
+                                    "type": "string"
+                                },
+                                "description": {
+                                    "description": "Description of the context",
+                                    "type": "string"
+                                },
+                                "objectName": {
+                                    "description": "Specify the object that the REST API can query or update using this application security context.",
+                                    "type": "string"
+                                },
+                                "authApp": {
+                                    "description": "Specify an application that can authorize the request. The combination of the application and the security group of the user determines if the request is authorized.",
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "sigOption": {
+                    "type": "array",
+                    "description": "The signature security options associated with the integration object.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "optionName": {
+                                "description": "Signature Option Option Name",
+                                "type": "string"
+                            },
+                            "description": {
+                                "description": "Signature Option Description",
+                                "type": "string"
+                            },
+                            "esigEnabled": {
+                                "description": "Indicates Electronic signature (ESIG) is enabled for this function.",
+                                "type": "string",
+                                "default": false
+                            },
+                            "alsoGrants": {
+                                "description": "List of other sigoptions that will be automatically granted when this sigoption is selected",
+                                "type": "string"
+                            },
+                            "alsoRevokes": {
+                                "description": "List of other sigoptions that will be automatically revoked when this sigoption is deselected",
+                                "type": "string"
+                            },
+                            "prerequisite": {
+                                "description": "List of other sigoptions that must be selected before this sigoption can be selected",
+                                "type": "string"
+                            },
+                            "visible": {
+                                "description": "Indicates whether this sigoption can be granted via the Security Groups application. It will be visible and grantable if the value is 1 and not visible if the value is 0. If it is not visible, it should be granted and revoked along with another application by listing it in the ALSOGRANTS and ALSOREVOKES columns.",
+                                "type": "boolean",
+                                "default": true
+                            }
+                        },
+                        "required": ["optionName"]
+                    }
+                },
+                "osOSLCAction": {
+                    "type": "array",
+                    "description": "The object structure OSLC actions",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "description": "Name of the action",
+                                "type": "string"
+                            },
+                            "description": {
+                                "description": "Description of the action",
+                                "type": "string"
+                            },
+                            "implType": {
+                                "description": "Implementation type",
+                                "type": "string"
+                            },
+                            "systemName": {
+                                "description": "The system action name",
+                                "type": "string"
+                            },
+                            "scriptName": {
+                                "description": "The name of the script",
+                                "type": "string"
+                            },
+                            "processName": {
+                                "description": "The name of the process",
+                                "type": "string"
+                            },
+                            "methodName": {
+                                "description": "The method name",
+                                "type": "string"
+                            },
+                            "optionName": {
+                                "description": "The name of signature option name",
+                                "type": "string"
+                            },
+                            "collection": {
+                                "description": "The collection action",
+                                "type": "string"
+                            }
+                        },
+                        "required": ["name"]
+                    }
+                },
+                "oslcQuery": {
+                    "type": "array",
+                    "description": "OSLC query definitions",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "queryType": {
+                                "description": "Query type",
+                                "type": "string",
+                                "default": "appclause"
+                            },
+                            "app": {
+                                "description": "The application name",
+                                "type": "string"
+                            },
+                            "clauseName": {
+                                "description": "The name of the query clause",
+                                "type": "string"
+                            },
+                            "method": {
+                                "description": "Java Method For Query in the OS definition class",
+                                "type": "string"
+                            },
+                            "description": {
+                                "description": "A description of the query",
+                                "type": "string"
+                            },
+                            "clause": {
+                                "description": "The where clause for the query",
+                                "type": "string"
+                            },
+                            "isPublic": {
+                                "description": "Is the query public",
+                                "type": "boolean",
+                                "default": true
+                            },
+                            "script": {
+                                "description": "The script that provides the filtering of records.",
+                                "type": "string"
+                            },
+                            "filter": {
+                                "description": "Indicates if the query is used as a filter",
+                                "type": "boolean",
+                                "default": false
+                            }
+                        }
+                    }
+                },
+                "queryTemplate": {
+                    "type": "array",
+                    "description": "A query template",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "templateName": {
+                                "description": "The name of the template",
+                                "type": "string"
+                            },
+                            "description": {
+                                "description": "A description of the template",
+                                "type": "string"
+                            },
+                            "pageSize": {
+                                "description": "The page size for the query response",
+                                "type": "integer"
+                            },
+                            "role": {
+                                "description": "The name of the role",
+                                "type": "string"
+                            },
+                            "searchAttributes": {
+                                "description": "The search attributes",
+                                "type": "string"
+                            },
+                            "timelineAttributes": {
+                                "description": "The timeline attributes",
+                                "type": "string"
+                            },
+                            "isPublic": {
+                                "description": "Flag that indicates that the template is public",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "queryTemplateAttr": {
+                                "type": "array",
+                                "description": "A list of template attributes",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "selectAttrName": {
+                                            "description": "The attribute name",
+                                            "type": "string"
+                                        },
+                                        "title": {
+                                            "description": "The title for the attribute",
+                                            "type": "string"
+                                        },
+                                        "selectOrder": {
+                                            "description": "The order of selection",
+                                            "type": "integer"
+                                        },
+                                        "alias": {
+                                            "description": "The alias for the attribute name",
+                                            "type": "string"
+                                        },
+                                        "sortByOn": {
+                                            "description": "The attributes to order by",
+                                            "type": "string"
+                                        },
+                                        "ascending": {
+                                            "description": "Indicates if the results should be order ascending on the attribute",
+                                            "type": "boolean",
+                                            "default": false
+                                        },
+                                        "sortByOrder": {
+                                            "description": "Order of the order by",
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "required": ["templateName"]
+                    }
+                }
+            }
+        },
+        "domain": {
+            "title": "Maximo Domain",
+            "description": "A Maximo Domain",
+            "type": "object",
+            "properties": {
+                "_delete": {
+                    "description": "Flag to indicate that the domain should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "delete": {
+                    "description": "Flag to indicate that the domain should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "domainId": {
+                    "description": "The domain ID for the Maximo domain (MAXDOMAIN.DOMAINID)",
+                    "type": "string"
+                },
+                "domainType": {
+                    "description": "The domain type for the Maximo domain (MAXDOMAIN.DOMAINTYPE)",
+                    "type": "string",
+                    "enum": ["ALN", "NUMERIC", "NUMRANGE", "SYNONYM", "TABLE", "CROSSOVER"]
+                },
+                "scale": {
+                    "description": "The scale for the Maximo domain (MAXDOMAIN.SCALE)",
+                    "type": "integer"
+                },
+                "description": {
+                    "description": "The description for the Maximo domain (MAXDOMAIN.DESCRIPTION)",
+                    "type": "string"
+                },
+                "maxType": {
+                    "description": "The Maximo type for the Maximo domain (MAXDOMAIN.MAXTYPE)",
+                    "type": "string"
+                },
+                "length": {
+                    "description": "The length for the Maximo domain (MAXDOMAIN.LENGTH)",
+                    "type": "integer"
+                },
+                "alnDomain": {
+                    "description": "The alnDomain values for the Maximo object",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "value": {
+                                "description": "Value for ALN domain row (ALNDOMAIN.VALUE)",
+                                "type": "string"
+                            },
+                            "description": {
+                                "description": "Description of ALN domain row (ALNDOMAIN.DESCRIPTION)",
+                                "type": "string"
+                            },
+                            "orgId": {
+                                "description": "Organization ID of ALN domain row (ALNDOMAIN.ORGID)",
+                                "type": "string"
+                            },
+                            "siteId": {
+                                "description": "Site ID of ALN domain row (ALNDOMAIN.SITEID)",
+                                "type": "string"
+                            },
+                            "maxDomValCond": {
+                                "description": "An array of parameter values for the domain value conditions.",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "conditionNum": {
+                                            "description": "Condition number for the domain value condition (MAXDOMVALCOND.CONDITIONNUM)",
+                                            "type": "string"
+                                        },
+                                        "objectName": {
+                                            "description": "Object name for the domain value condition (MAXDOMVALCOND.OBJECTNAME)",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": ["conditionNum"]
+                                }
+                            }
+                        },
+                        "required": ["value"]
+                    }
+                },
+                "numericDomain": {
+                    "description": "The numericDomain values for the Maximo object",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "value": {
+                                "description": "Value for NUMERIC domain row (NUMERICDOMAIN.VALUE)",
+                                "type": "string"
+                            },
+                            "description": {
+                                "description": "Description of NUMERIC domain row (NUMERICDOMAIN.DESCRIPTION)",
+                                "type": "string"
+                            },
+                            "orgId": {
+                                "description": "Organization ID of NUMERIC domain row (NUMERICDOMAIN.ORGID)",
+                                "type": "string"
+                            },
+                            "siteId": {
+                                "description": "Site ID of NUMERIC domain row (NUMERICDOMAIN.SITEID)",
+                                "type": "string"
+                            },
+                            "maxDomValCond": {
+                                "description": "An array of parameter values for the domain value conditions.",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "conditionNum": {
+                                            "description": "Condition number for the domain value condition (MAXDOMVALCOND.CONDITIONNUM)",
+                                            "type": "string"
+                                        },
+                                        "objectName": {
+                                            "description": "Object name for the domain value condition (MAXDOMVALCOND.OBJECTNAME)",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": ["conditionNum"]
+                                }
+                            }
+                        },
+                        "required": ["value"]
+                    }
+                },
+                "numRangeDomain": {
+                    "description": "The numericDomain values for the Maximo object",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "rangeSegment": {
+                                "description": "Range segment for NUMRANGE domain row (NUMRANGEDOMAIN.RANGESEGMENT)",
+                                "type": "string"
+                            },
+                            "rangeMinimum": {
+                                "description": "Range minimum of NUMRANGE domain row (NUMRANGEDOMAIN.RANGEMINIMUM)",
+                                "type": "string"
+                            },
+                            "rangeMaximum": {
+                                "description": "Range maximum of NUMRANGE domain row (NUMRANGEDOMAIN.RANGEMAXIMUM)",
+                                "type": "string"
+                            },
+                            "rangeInterval": {
+                                "description": "Range interval of NUMRANGE domain row (NUMRANGEDOMAIN.RANGEINTERVAL)",
+                                "type": "string"
+                            },
+                            "orgId": {
+                                "description": "Organization ID of NUMRANGE domain row (NUMRANGEDOMAIN.ORGID)",
+                                "type": "string"
+                            },
+                            "siteId": {
+                                "description": "Site ID of NUMRANGE domain row (NUMRANGEDOMAIN.SITEID)",
+                                "type": "string"
+                            }
+                        },
+                        "required": ["rangeSegment"]
+                    }
+                },
+                "synonymDomain": {
+                    "description": "The synonymDomain values for the Maximo object",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "value": {
+                                "description": "Value for SYNONYM domain row (SYNONYMDOMAIN.VALUE)",
+                                "type": "string"
+                            },
+                            "maxValue": {
+                                "description": "Maximo value for SYNONYM domain row (SYNONYMDOMAIN.MAXVALUE)",
+                                "type": "string"
+                            },
+                            "description": {
+                                "description": "Description of SYNONYM domain row (SYNONYMDOMAIN.DESCRIPTION)",
+                                "type": "string"
+                            },
+                            "orgId": {
+                                "description": "Organization ID of SYNONYM domain row (SYNONYMDOMAIN.ORGID)",
+                                "type": "string"
+                            },
+                            "siteId": {
+                                "description": "Site ID of SYNONYM domain row (SYNONYMDOMAIN.SITEID)",
+                                "type": "string"
+                            },
+                            "defaults": {
+                                "description": "Defaults flag of SYNONYM domain row (SYNONYMDOMAIN.DEFAULTS)",
+                                "type": "boolean"
+                            },
+                            "maxDomValCond": {
+                                "description": "An array of parameter values for the domain value conditions.",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "conditionNum": {
+                                            "description": "Condition number for the domain value condition (MAXDOMVALCOND.CONDITIONNUM)",
+                                            "type": "string"
+                                        },
+                                        "objectName": {
+                                            "description": "Object name for the domain value condition (MAXDOMVALCOND.OBJECTNAME)",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": ["conditionNum"]
+                                }
+                            }
+                        },
+                        "required": ["value", "maxValue"]
+                    }
+                },
+                "tableDomain": {
+                    "description": "The tableDomain values for the Maximo object",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "objectName": {
+                                "description": "Object name for TABLE domain row (TABLEDOMAIN.OBJECTNAME)",
+                                "type": "string"
+                            },
+                            "validtnWhereClause": {
+                                "description": "Validation where clause of TABLE domain row (TABLEDOMAIN.VALIDTNWHERECLAUSE)",
+                                "type": "string"
+                            },
+                            "listWhereClause": {
+                                "description": "List where clause of TABLE domain row (TABLEDOMAIN.LISTWHERECLAUSE)",
+                                "type": "string"
+                            },
+                            "errorResourceBundle": {
+                                "description": "Error resource bundle of TABLE domain row (TABLEDOMAIN.ERRORRESOURCBUNDLE)",
+                                "type": "string"
+                            },
+                            "errorAccessKey": {
+                                "description": "Error access key of TABLE domain row (TABLEDOMAIN.ERRORACCESSKEY)",
+                                "type": "string"
+                            },
+                            "orgId": {
+                                "description": "Organization ID of TABLE domain row (TABLEDOMAIN.ORGID)",
+                                "type": "string"
+                            },
+                            "siteId": {
+                                "description": "Site ID of TABLE domain row (TABLEDOMAIN.SITEID)",
+                                "type": "string"
+                            }
+                        },
+                        "required": ["objectName"]
+                    }
+                },
+                "crossoverDomain": {
+                    "description": "The crossoverDomain values for the Maximo object",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "objectName": {
+                                "description": "Object name for TABLE domain row (TABLEDOMAIN.OBJECTNAME)",
+                                "type": "string"
+                            },
+                            "validtnWhereClause": {
+                                "description": "Validation where clause of TABLE domain row (TABLEDOMAIN.VALIDTNWHERECLAUSE)",
+                                "type": "string"
+                            },
+                            "listWhereClause": {
+                                "description": "List where clause of TABLE domain row (TABLEDOMAIN.LISTWHERECLAUSE)",
+                                "type": "string"
+                            },
+                            "errorResourcBundle": {
+                                "description": "Error resource bundle of TABLE domain row (TABLEDOMAIN.ERRORRESOURCBUNDLE)",
+                                "type": "string"
+                            },
+                            "errorAccessKey": {
+                                "description": "Error access key of TABLE domain row (TABLEDOMAIN.ERRORACCESSKEY)",
+                                "type": "string"
+                            },
+                            "orgId": {
+                                "description": "Organization ID of TABLE domain row (TABLEDOMAIN.ORGID)",
+                                "type": "string"
+                            },
+                            "siteId": {
+                                "description": "Site ID of TABLE domain row (TABLEDOMAIN.SITEID)",
+                                "type": "string"
+                            },
+                            "crossoverFields": {
+                                "description": "An array of parameter values for the crossover fields.",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "sourceField": {
+                                            "description": "Source field for the crossover domain row (CROSSOVERDOMAIN.SOURCEFIELD)",
+                                            "type": "string"
+                                        },
+                                        "destField": {
+                                            "description": "Destination field name for the crossover domain row (CROSSOVERDOMAIN.DESTFIELD)",
+                                            "type": "string"
+                                        },
+                                        "copyEvenIfSrcNull": {
+                                            "description": "Copy even if source is null flag for the crossover domain row (CROSSOVERDOMAIN.COPYEVENIFSRCNULL)",
+                                            "type": "boolean"
+                                        },
+                                        "copyOnlyIfDestNull": {
+                                            "description": "Copy only if destination is null flag for the crossover domain row (CROSSOVERDOMAIN.COPYONLYIFDESTNULL)",
+                                            "type": "boolean"
+                                        },
+                                        "sourceCondition": {
+                                            "description": "Source condition for the crossover domain row (CROSSOVERDOMAIN.SOURCECONDITION)",
+                                            "type": "string"
+                                        },
+                                        "destCondition": {
+                                            "description": "Destination condition for the crossover domain row (CROSSOVERDOMAIN.DESTCONDITION)",
+                                            "type": "string"
+                                        },
+                                        "sequence": {
+                                            "description": "Sequence for the crossover domain row (CROSSOVERDOMAIN.SEQUENCE)",
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "required": ["sourceField", "destField"]
+                                }
+                            }
+                        },
+                        "required": ["objectName"]
+                    }
+                }
+            },
+            "required": ["domainId", "domainType"]
+        },
+        "cronTask": {
+            "title": "Cron Task",
+            "description": "A Maximo Cron Task",
+            "type": "object",
+            "properties": {
+                "_delete": {
+                    "description": "Flag to indicate that the domain should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "delete": {
+                    "description": "Flag to indicate that the cron task should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "cronTaskName": {
+                    "description": "The name of the Cron Task (CRONTASKDEF.CRONTASKNAME)",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "The description of the Cron Task (CRONTASKDEF.DESCRIPTION)",
+                    "type": "string"
+                },
+                "className": {
+                    "description": "The Java class name of the Cron Task implementation (CRONTASKDEF.CLASSNAME)",
+                    "type": "string"
+                },
+                "accessLevel": {
+                    "description": "The access level for the Maximo Cron Task (CRONTASKDEF.ACCESSLEVEL)",
+                    "type": "string",
+                    "enum": ["FULL", "MODIFYONLY", "READONLY"],
+                    "default": "FULL"
+                },
+                "cronTaskInstance": {
+                    "description": "An array of Maximo Cron Task instance definitions",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "instanceName": {
+                                "description": "The name of the Cron Task instance (CRONTASKINSTANCE.INSTANCENAME)",
+                                "type": "string"
+                            },
+                            "description": {
+                                "description": "The description of the Cron Task instance (CRONTASKINSTANCE.DESCRIPTION)",
+                                "type": "string"
+                            },
+                            "schedule": {
+                                "description": "The schedule of the Cron Task instance in Unix cron task format (CRONTASKINSTANCE.SCHEDULE)",
+                                "type": "string",
+                                "default": "1h,*,0,*,*,*,*,*,*,*"
+                            },
+                            "active": {
+                                "description": "Flag to indicate if the Cron Task instance is active or not (CRONTASKINSTANCE.ACTIVE)",
+                                "type": "boolean",
+                                "default": "false"
+                            },
+                            "keepHistory": {
+                                "description": "Flag to indicate if the Cron Task instance will retain a history of runs or not (CRONTASKINSTANCE.RETAINHISTORY)",
+                                "type": "boolean",
+                                "default": "true"
+                            },
+                            "runAsUserId": {
+                                "description": "The user Id that will be used to run the Cron Task instance, must be a valid Maximo user Id (CRONTASKINSTANCE.RUNASUSERID)",
+                                "type": "string",
+                                "default": "MAXADMIN"
+                            },
+                            "maxHistory": {
+                                "description": "The maximum number of history records to retain (CRONTASKINSTANCE.MAXHISTORY)",
+                                "type": "integer",
+                                "default": "1000"
+                            },
+                            "cronTaskParam": {
+                                "description": "An array of parameter values for the Cron Task instance.",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "parameter": {
+                                            "description": "The name of the Cron Task parameter.  The parameters are automatically added by the class and the name is matched after the parameters are added (CRONTASKPARAM.PARAMETER)",
+                                            "type": "string"
+                                        },
+                                        "value": {
+                                            "description": "The value of the Cron Task parameter (CRONTASKPARAM.VALUE)",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": ["parameter"]
+                                }
+                            }
+                        },
+                        "required": ["instanceName"]
+                    }
+                }
+            },
+            "required": ["cronTaskName", "className"]
+        },
+        "logger": {
+            "title": "Logger",
+            "description": "A Maximo logger",
+            "type": "object",
+            "properties": {
+                "_delete": {
+                    "description": "Flag to indicate that the domain should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "delete": {
+                    "description": "Flag to indicate that the logger should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "logger": {
+                    "description": "The base logger name for the Maximo logger (MAXLOGGER.LOGGER)",
+                    "type": "string"
+                },
+                "parentLogKey": {
+                    "description": "The log key for the parent logger, this is used to find the parent logger Id (MAXLOGGER.PARENTLOGGERID)",
+                    "type": "string"
+                },
+                "logKey": {
+                    "description": "The log key for the logger, if not provided defaults to log4j.logger.maximo. plus the logger name (MAXLOGGER.LOGKEY)",
+                    "type": "string",
+                    "default": "log4j.logger.maximo. + logKey"
+                },
+                "logLevel": {
+                    "description": "The log level for the Maximo logger (MAXLOGGER.LOGLEVEL)",
+                    "type": "string",
+                    "enum": ["DEBUG", "ERROR", "FATAL", "INFO", "WARN"],
+                    "default": "ERROR"
+                },
+                "active": {
+                    "description": "Flag to indicate if the logger is active or not (MAXLOGGER.ACTIVE)",
+                    "type": "boolean",
+                    "default": true
+                },
+                "appenders": {
+                    "description": "A comma delimited list of appenders  Maximo logger (MAXLOGGER.APPENDERS)",
+                    "type": "string"
+                }
+            },
+            "required": ["logger"]
+        },
+        "message": {
+            "title": "Message",
+            "description": "A Maximo message",
+            "type": "object",
+            "properties": {
+                "_delete": {
+                    "description": "Flag to indicate that the domain should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "delete": {
+                    "description": "Flag to indicate that the message should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "msgGroup": {
+                    "description": "The group for the Maximo message (MAXMESSAGES.MSGGROUP)",
+                    "type": "string"
+                },
+                "msgKey": {
+                    "description": "The key for the Maximo message (MAXMESSAGES.MSGKEY)",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "The value for the Maximo message (MAXMESSAGES.VALUE)",
+                    "type": "string"
+                },
+                "displayMethod": {
+                    "description": "The display for the Maximo message (MAXMESSAGES.DISPLAYMETHOD)",
+                    "type": "string",
+                    "enum": ["MSGBOX", "STATUS", "TEXT"],
+                    "default": "MSGBOX"
+                },
+                "options": {
+                    "description": "The display options for the Maximo message, values are derived from the UI labels and translated to the internal integer value (MAXMESSAGES.OPTIONS)",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["ok", "close", "cancel", "yes", "no"],
+                        "default": "ok"
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                },
+                "prefix": {
+                    "description": "The message prefix for the Maximo message (MAXMESSAGES.MSGIDPREFIX)",
+                    "type": "string",
+                    "default": "BMXZZ"
+                },
+                "suffix": {
+                    "description": "The message suffix for the Maximo message (MAXMESSAGES.MSGIDSUFFIX)",
+                    "type": "string",
+                    "enum": ["E", "I", "W"],
+                    "default": "E"
+                },
+                "explanation": {
+                    "description": "The value for the Maximo message explanation (MAXMESSAGES.EXPLANATION)",
+                    "type": "string"
+                },
+                "operatorResponse": {
+                    "description": "The value for the Maximo message operator response (MAXMESSAGES.OPERATORRESPONSE)",
+                    "type": "string"
+                },
+                "adminResponse": {
+                    "description": "The value for the Maximo message admin response (MAXMESSAGES.ADMINRESPONSE)",
+                    "type": "string"
+                },
+                "systemAction": {
+                    "description": "The value for the Maximo message system action (MAXMESSAGES.SYSTEMACTION)",
+                    "type": "string"
+                }
+            },
+            "required": ["msgGroup", "msgKey", "value"]
+        },
+        "maximo_properties": {
+            "title": "Property",
+            "description": "A Maximo property",
+            "type": "object",
+            "properties": {
+                "_delete": {
+                    "description": "Flag to indicate that the domain should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "delete": {
+                    "description": "Flag to indicate that the property should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "propName": {
+                    "description": "The name for the Maximo property (MAXPROP.PROPNAME)",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "The property description for the Maximo property (MAXPROP.DESCRIPTION)",
+                    "type": "string"
+                },
+                "domainId": {
+                    "description": "The Maximo domain Id associated with the Maximo property. (MAXPROP.DOMAINID)",
+                    "type": "string"
+                },
+                "encrypted": {
+                    "description": "Flag to indicate if the Maximo property is encrypted or not (MAXPROP.ENCRYPTED)",
+                    "type": "boolean",
+                    "default": "false"
+                },
+                "globalOnly": {
+                    "description": "Flag to indicate if the Maximo property is only available in a global context or not (MAXPROP.GLOBALONLY)",
+                    "type": "boolean",
+                    "default": "false"
+                },
+                "instanceOnly": {
+                    "description": "Flag to indicate if the Maximo property is only available in an instance context or not (MAXPROP.INSTANCEONLY)",
+                    "type": "boolean",
+                    "default": "false"
+                },
+                "liveRefresh": {
+                    "description": "Flag to indicate if the Maximo property is able to be live refreshed or not (MAXPROP.LIVEREFRESH)",
+                    "type": "boolean",
+                    "default": "true"
+                },
+                "masked": {
+                    "description": "Flag to indicate if the Maximo property is masked or not when displayed in the System Properties application (MAXPROP.MASKED)",
+                    "type": "boolean",
+                    "default": "false"
+                },
+                "maxType": {
+                    "description": "The Maximo data type of the property (MAXPROP.MAXTYPE)",
+                    "type": "string",
+                    "enum": ["ALN", "INTEGER", "YORN"],
+                    "default": "ALN"
+                },
+                "nullsAllowed": {
+                    "description": "Flag to indicate if the Maximo property allows nulls or not (MAXPROP.NULLSALLOWED)",
+                    "type": "boolean",
+                    "default": true
+                },
+                "onlineChanges": {
+                    "description": "Flag to indicate if the Maximo property may be overridden via the Maximo System Properties application or not (MAXPROP.ONLINECHANGES)",
+                    "type": "boolean",
+                    "default": true
+                },
+                "secureLevel": {
+                    "description": "The level of access permitted for the property (MAXPROP.SECURELEVEL)",
+                    "type": "string",
+                    "enum": ["PRIVATE", "PUBLIC", "SECURE"],
+                    "default": "PUBLIC"
+                },
+                "propValue": {
+                    "description": "The global value for the property (MAXPROP.DISPPROPVALUE)",
+                    "type": "string"
+                },
+                "maximoDefault": {
+                    "description": "The Maximo default value for the property (MAXPROP.MAXIMODEFAULT)",
+                    "type": "string"
+                },
+                "maxPropInstance": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "serverName": {
+                                "description": "The name of the Maximo server for the property instance (MAXPROPINSTANCE.SERVERNAME)",
+                                "type": "string"
+                            },
+                            "propValue": {
+                                "description": "The value of the Maximo server for the property instance (MAXPROPINSTANCE.DISPPROPVALUE)",
+                                "type": "string"
+                            },
+                            "serverHost": {
+                                "description": "The value of the Maximo server host name for the property instance (MAXPROPINSTANCE.SERVERHOST)",
+                                "type": "string"
+                            }
+                        },
+                        "required": ["serverName"]
+                    }
+                }
+            },
+
+            "required": ["propName"]
+        }
+    }
+}

@@ -97,7 +97,14 @@ function main() {
             if (!hasAppOption(SECURITY_APP, SECURITY_OPTION) && !isAdmin()) {
                 responseBody = JSON.stringify({
                     status: 'error',
-                    message: 'The user ' + userInfo.getUserName() + ' does not have permission to stream the Maximo log. The security option ' + SECURITY_OPTION + ' on the ' + SECURITY_APP + ' application is required.',
+                    message:
+                        'The user ' +
+                        userInfo.getUserName() +
+                        ' does not have permission to stream the Maximo log. The security option ' +
+                        SECURITY_OPTION +
+                        ' on the ' +
+                        SECURITY_APP +
+                        ' application is required.'
                 });
                 return;
             }
@@ -117,7 +124,7 @@ function main() {
                 } else {
                     responseBody = JSON.stringify({
                         status: 'error',
-                        message: 'The major Maximo version ' + Version.majorVersion + ' is not supported.',
+                        message: 'The major Maximo version ' + Version.majorVersion + ' is not supported.'
                     });
                 }
             } finally {
@@ -126,7 +133,14 @@ function main() {
                     var response = request.getHttpServletResponse();
                     response.getOutputStream().print(0);
                 } catch (error) {
-                    MXServer.getMXServer().lookup('SECURITY').disconnectUser(userInfo.getUserName(), userInfo.getMaxSessionID(), SecurityService.BROWSER_TIMEOUT, MXServer.getMXServer().getSystemUserInfo().getUserName());
+                    MXServer.getMXServer()
+                        .lookup('SECURITY')
+                        .disconnectUser(
+                            userInfo.getUserName(),
+                            userInfo.getMaxSessionID(),
+                            SecurityService.BROWSER_TIMEOUT,
+                            MXServer.getMXServer().getSystemUserInfo().getUserName()
+                        );
 
                     // if an error occurs, make sure that the user session is closed.
                     var maxSessionSet = MXServer.getMXServer().getMboSet('MAXSESSION', MXServer.getMXServer().getSystemUserInfo());
@@ -134,7 +148,9 @@ function main() {
                         var maxSession = maxSessionSet.getMboForUniqueId(userInfo.getMaxSessionID());
 
                         if (maxSession) {
-                            FixedLoggers.MAXIMOLOGGER.error('Closing user session due to client disconnect while streaming the Maximo log for user: ' + userInfo.getUserName());
+                            FixedLoggers.MAXIMOLOGGER.error(
+                                'Closing user session due to client disconnect while streaming the Maximo log for user: ' + userInfo.getUserName()
+                            );
                             maxSession.setValue('logout', true, MboConstants.NOACCESSCHECK | MboConstants.NOVALIDATION);
                         }
                         maxSessionSet.save();
@@ -158,7 +174,7 @@ function getHosts() {
                 serverhost: serverSession.getString('SERVERHOST'),
                 servername: serverSession.getString('SERVERNAME'),
                 javajvmname: serverSession.getString('JAVAJVMNAME').substring(serverSession.getString('JAVAJVMNAME').indexOf('@') + 1),
-                id: serverSession.getUniqueIDValue(),
+                id: serverSession.getUniqueIDValue()
             });
             serverSession = serverSessionSet.moveNext();
         }
@@ -253,57 +269,71 @@ function _handleV8(host) {
                     var key;
                     try {
                         // This is a blocking call, waiting for events
-                        key = watchService.take();
+                        key = watchService.poll(1, Java.type('java.util.concurrent.TimeUnit').SECONDS);
+                        // key = watchService.take();
                     } catch (error) {
-                        FixedLoggers.MAXIMOLOGGER.error('Closing user session due to thread interruption while streaming the Maximo log for user: ' + userInfo.getUserName());
+                        FixedLoggers.MAXIMOLOGGER.error(
+                            'Closing user session due to thread interruption while streaming the Maximo log for user: ' + userInfo.getUserName()
+                        );
                         return;
                     }
+                    if (key == null) {
+                        // this keeps the connection alive while logging to ensure that the connection doesn't timeout due to inactivity.
+                        output.write(new ServerSentEvent(count++, 'ping', 'pong').sse());
+                        output.flush();
+                    } else {
+                        var events = key.pollEvents().iterator();
 
-                    var events = key.pollEvents().iterator();
+                        while (events.hasNext()) {
+                            var event = events.next();
+                            var kind = event.kind();
+                            var changed = event.context();
 
-                    while (events.hasNext()) {
-                        var event = events.next();
-                        var kind = event.kind();
-                        var changed = event.context();
+                            if (changed.getFileName().toString().equals('messages.log') && kind == StandardWatchEventKinds.ENTRY_MODIFY) {
+                                var newLkp = raf.length();
 
-                        if (changed.getFileName().toString().equals('messages.log') && kind == StandardWatchEventKinds.ENTRY_MODIFY) {
-                            var newLkp = raf.length();
-
-                            if (newLkp > lkp) {
-                                // New lines have been added
-                                raf.seek(lkp);
-                                var line;
-                                var content = [];
-                                while ((line = raf.readLine()) != null) {
-                                    if (line.indexOf('SystemOut                                                    O') > 0) {
-                                        line = line.substring(line.indexOf('SystemOut                                                    O') + 63);
+                                if (newLkp > lkp) {
+                                    // New lines have been added
+                                    raf.seek(lkp);
+                                    var line;
+                                    var content = [];
+                                    while ((line = raf.readLine()) != null) {
+                                        if (line.indexOf('SystemOut                                                    O') > 0) {
+                                            line = line.substring(line.indexOf('SystemOut                                                    O') + 63);
+                                        }
+                                        content.push(line);
                                     }
-                                    content.push(line);
+
+                                    output.write(new ServerSentEvent(count++, 'log', JSON.stringify(content)).sse());
+                                    output.flush();
+
+                                    lkp = raf.length();
+                                } else if (newLkp < lkp) {
+                                    // The file was likely truncated, restarting
+                                    lkp = raf.length();
+                                    raf.seek(lkp);
                                 }
-
-                                output.write(new ServerSentEvent(count++, 'log', JSON.stringify(content)).sse());
-                                output.flush();
-
-                                lkp = raf.length();
-                            } else if (newLkp < lkp) {
-                                // The file was likely truncated, restarting
-                                lkp = raf.length();
-                                raf.seek(lkp);
                             }
                         }
                     }
 
                     // IMPORTANT: Reset the key to continue receiving future events
-                    if (!key.reset()) {
+                    if (key !== null && !key.reset()) {
                         System.err.println('WatchKey is no longer valid. Exiting.');
                         break; // Exit the loop if the directory is no longer accessible
                     }
                 }
             } catch (error) {
                 if (error instanceof Java.type('java.io.IOException')) {
-                    FixedLoggers.MAXIMOLOGGER.error('Closing user session due to client disconnect while streaming the Maximo log for user: ' + userInfo.getUserName());
+                    error.printStackTrace();
+                    FixedLoggers.MAXIMOLOGGER.error(
+                        'Closing user session due to client disconnect while streaming the Maximo log for user: ' + userInfo.getUserName()
+                    );
                 } else {
-                    FixedLoggers.MAXIMOLOGGER.error('Closing user session due to an unexpected error while streaming the Maximo log for user: ' + userInfo.getUserName(), error);
+                    FixedLoggers.MAXIMOLOGGER.error(
+                        'Closing user session due to an unexpected error while streaming the Maximo log for user: ' + userInfo.getUserName(),
+                        error
+                    );
                 }
 
                 return;
@@ -315,14 +345,14 @@ function _handleV8(host) {
         } else {
             responseBody = JSON.stringify({
                 status: 'error',
-                message: 'The log file ' + logFile.getPath() + ' could not be opened.',
+                message: 'The log file ' + logFile.getPath() + ' could not be opened.'
             });
             return;
         }
     } else {
         responseBody = JSON.stringify({
             status: 'error',
-            message: 'Could not determine the log folder.',
+            message: 'Could not determine the log folder.'
         });
         return;
     }
@@ -390,13 +420,13 @@ function _handleV7(timeout) {
             } else {
                 responseBody = JSON.stringify({
                     status: 'error',
-                    message: 'A logging context with the maximo root logger could not be found.',
+                    message: 'A logging context with the maximo root logger could not be found.'
                 });
             }
         } else {
             responseBody = JSON.stringify({
                 status: 'error',
-                message: 'Only the default org.apache.logging.log4j.core.impl.Log4jContextFactory context factory is supported.',
+                message: 'Only the default org.apache.logging.log4j.core.impl.Log4jContextFactory context factory is supported.'
             });
         }
     } else {
@@ -427,13 +457,13 @@ function _handleV7(timeout) {
             } else {
                 responseBody = JSON.stringify({
                     status: 'error',
-                    message: 'The standard Console log appender is not configured for the root maximo logger.',
+                    message: 'The standard Console log appender is not configured for the root maximo logger.'
                 });
             }
         } else {
             responseBody = JSON.stringify({
                 status: 'error',
-                message: 'Cannot get the root maximo logger.',
+                message: 'Cannot get the root maximo logger.'
             });
         }
     }
@@ -532,7 +562,7 @@ function deleteAPIKeyForUser(userName) {
 
 function getAPIKey(userName) {
     var response = {
-        deleteAfterUse: false,
+        deleteAfterUse: false
     };
     var apiKeyTokenSet = MXServer.getMXServer().getMboSet('APIKEYTOKEN', MXServer.getMXServer().getSystemUserInfo());
     try {
@@ -641,5 +671,5 @@ var scriptConfig = {
     description: 'Naviam Script to Stream Log Files.',
     version: '1.0.0',
     active: true,
-    logLevel: 'ERROR',
+    logLevel: 'ERROR'
 };

@@ -347,11 +347,12 @@
                                             "description": "Column Sequence Within This Index (MAXSYSINDEXCOLS.COLSEQ)",
                                             "type": "integer"
                                         }
-                                    }
+                                    },
+                                    "required": ["column"]
                                 }
                             }
                         },
-                        "required": ["column"]
+                        "required": ["index"]
                     }
                 },
                 "relationships": {

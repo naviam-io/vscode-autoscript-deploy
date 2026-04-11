@@ -8,3 +8,10 @@ src/.DS_Store
 .DS_Store
 
 .devtools-config.json
+.github/
+
+.vscode/mcp.json
+
+java/src/main/resources/autoscript-debug-version.txt
+
+java/.jython_cache/

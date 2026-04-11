@@ -94,6 +94,10 @@
                     "description": "Path to the reports extract directory",
                     "type": "string"
                 },
+                "extractLocationDBC": {
+                    "description": "Path to the DBC extract directory",
+                    "type": "string"
+                },
                 "proxyHost": {
                     "description": "The proxy host name",
                     "type": "string"
@@ -110,6 +114,10 @@
                 "proxyPassword": {
                     "description": "The proxy authentication password",
                     "type": "string"
+                },
+                "debugPort": {
+                    "description": "The Maximo Automation Script debug port",
+                    "type": "integer"
                 }
             },
             "required": ["host", "name"]

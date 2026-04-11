@@ -1,4 +1,50 @@
 # Release Notes
+## 1.27.2
+- Push to fix pipeline publishing, no changes to the extension.
+  
+## 1.27.1
+- Minor fixes for installation of properties.
+  
+## 1.27.0
+- Added remote debugging for automation scripts.
+- Fixed issue with low activity systems when log streaming.
+- Fixed issue with deploying inspection forms.
+   
+## 1.26.2
+- Update the TypeScript templates.
+  
+## 1.26.1
+- Fixed missing jsconfig.json from the extension package.
+
+## 1.26.0
+- Add support for creating TypeScript automation script projects.
+  
+## 1.25.0
+- Add support for direct TypeScript deploys.
+- Add support for local manage containers.
+  
+## 1.24.6
+- Add experimental support for webpack and TypeScript files.
+  
+## 1.24.5
+- Fixed issue where an Abort error was shown if the progress object was unavailable.
+  
+## 1.24.4
+- Fixed issue with copying the DTD file to the dbc file directory on Windows.
+
+## 1.24.3
+- Add support for DBC extract location.
+- Fixed external system extract list (was displaying enterprise services)
+  
+## 1.24.2
+- Fixes for EAM when using a user name and password.
+## 1.24.1
+- Updated dependencies to latest versions.
+## 1.24.0
+- Added support for extracting DBC files.
+- Added support for extracting JSON configuration files.
+- Added multi-type select where each type displays a list of available files.
+  
 ## 1.23.1
 - Fixed missing cases with json schemas
 - Updated logo

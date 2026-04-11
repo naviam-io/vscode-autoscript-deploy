@@ -3,9 +3,37 @@
         "AUTOSCRIPT",
         "BIRT",
         "Charsets",
+        "DISCARDABLE",
         "Huizen",
         "maxauth",
-        "Sharptree",
-        "Naviam"
-    ]
+        "Naviam",
+        "oslc",
+        "Sharptree"
+    ],
+    "json.schemas": [
+        {
+            "fileMatch": [
+                "*.predeploy.json",
+                "*-predeploy.json"
+            ],
+            "url": "./.vscode/predeploy-schema.json"
+        },
+        {
+            "fileMatch": [],
+            "url": "./.vscode/deploy-schema.json"
+        },
+        {
+            "fileMatch": [
+                ".devtools-config.json"
+            ],
+            "url": "./.vscode/devtools-config-schema.json"
+        }
+    ],
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "prettier.trailingComma": "none",
+    "files.associations": {
+        "*.dbc": "xml"
+    }
 }

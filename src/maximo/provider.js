@@ -1,3 +1,4 @@
+// @ts-nocheck
 export default class ServerSourceProvider {
     constructor(sourceMap) {
         this.sourceMap = sourceMap;

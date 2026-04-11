@@ -1,0 +1,754 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Note there needs to be updated script.dtd file in the BEA domain directory where you run DBChange -->
+
+<!ELEMENT script (description?,check*,statements)>
+<!ATTLIST script
+	author CDATA #REQUIRED
+	scriptname CDATA #REQUIRED
+	for_demo_only (true|false) "false"
+	for_install_only (true|false) "false"
+	for_system_down_only (true|false) "false"
+	context (master|landlord|tenants|all) #IMPLIED
+	tenantcode CDATA #IMPLIED
+>
+
+<!ELEMENT description (#PCDATA)>
+<!ELEMENT statements (create_relationship|modify_relationship|drop_relationship|freeform|add_attributes|modify_attribute|drop_attributes|
+	define_table|modify_table|drop_table|specify_index|drop_index|specify_synonym_domain|add_synonyms|specify_aln_domain|specify_numeric_domain|
+	specify_crossover_domain|drop_domain|specify_table_domain|add_sigoption|drop_sigoption|create_maxvar|modify_maxvar|drop_maxvar|modify_domain_type|
+	add_service|modify_service|drop_service|create_app|modify_app|drop_app|create_module|modify_module|drop_module|create_app_menu|additional_app_menu|
+	define_view|modify_view|drop_view|drop_view_attribute|add_view_attribute|modify_view_attributes|add_property|set_property|drop_property|module_app|
+	insert|logical_relationship|delete|update|remove_menu_option|add_update_autoscript|remove_autoscript)* >
+
+<!--This section defines the checks to make before running the script.
+If any query returns a row, the information will be logged and usually the script will be skipped.
+The first check that has a query return a row takes precedence.
+If no query returns rows, the script will be run.
+Generally used to skip running the script if the script contents have already been applied.-->
+<!ELEMENT check (check_query+)>
+<!ATTLIST check
+	tag CDATA "INFO"
+	group CDATA "scriptrun"
+	key CDATA "ScriptNotNeeded"
+	default CDATA "This script was intentionally skipped."
+	skip_script (true|false) "true"
+>
+
+<!--Examples:
+select 1 from maxintobject where intobjectname ='MXSCRIPT'
+select 1 from maxattribute where objectname = 'WFASSIGNMENT' and attributename = 'RELATIONSHIP'
+Don't include a terminator - ; or go.-->
+<!ELEMENT check_query EMPTY>
+<!ATTLIST check_query
+	query CDATA #REQUIRED
+>
+
+<!--This element tells DBChange to skip running script. One check_skip will cause the script to be skipped. -->
+<!ELEMENT check_log EMPTY>
+
+<!ELEMENT modify_domain_type EMPTY>
+<!ATTLIST modify_domain_type
+	domain CDATA #REQUIRED
+	maxtype (ALN|LONGALN|LOWER|UPPER|AMOUNT|DECIMAL|DURATION|FLOAT|INTEGER|SMALLINT) #IMPLIED
+	length NMTOKEN #IMPLIED
+	scale NMTOKEN #IMPLIED
+>
+
+<!ELEMENT define_view (((autoselect,table+,view_column*)|(view_column+,view_select,view_from)),view_where,longdescription?)>
+<!ATTLIST define_view 
+	name CDATA #REQUIRED
+	description CDATA #REQUIRED
+	service CDATA #REQUIRED
+	classname CDATA #REQUIRED
+	extends CDATA #IMPLIED
+	type (system|site|companyset|itemset|org|orgappfilter|orgsite|siteappfilter|systemappfilter|systemorg|systemorgsite|systemsite) #REQUIRED
+	mainobject (true|false) "false"
+	internal (true|false) "false"
+>
+<!-- Add this? primarykey CDATA #IMPLIED -->
+
+<!ELEMENT autoselect EMPTY>
+
+<!ELEMENT table EMPTY>
+<!ATTLIST table name CDATA #REQUIRED>
+
+<!ELEMENT view_column EMPTY>
+<!ATTLIST view_column 
+	table CDATA #REQUIRED
+	column CDATA #REQUIRED
+	view_column CDATA #REQUIRED
+	same_storage_as CDATA #IMPLIED
+>
+
+<!ELEMENT view_select (#PCDATA)>
+<!ELEMENT view_from (#PCDATA)>
+<!ELEMENT view_where (#PCDATA)>
+
+<!ELEMENT modify_view (view_select?,view_from?,view_where?,longdescription?)>
+<!ATTLIST modify_view 
+	name CDATA #REQUIRED
+	classname CDATA #IMPLIED
+	description CDATA #IMPLIED
+	mainobject (true|false) #IMPLIED
+	internal (true|false) #IMPLIED
+	service CDATA #IMPLIED
+	type (system|site|companyset|itemset|org|orgappfilter|orgsite|siteappfilter|systemappfilter|systemorg|systemorgsite|systemsite) #IMPLIED
+>
+
+<!ELEMENT drop_view EMPTY>
+<!ATTLIST drop_view 
+	name CDATA #REQUIRED
+>
+
+<!ELEMENT drop_view_attribute EMPTY>
+<!ATTLIST drop_view_attribute
+	view CDATA #REQUIRED
+	attribute CDATA #REQUIRED
+>
+
+<!ELEMENT add_view_attribute EMPTY>
+<!ATTLIST add_view_attribute
+	view CDATA #REQUIRED
+	view_column CDATA #REQUIRED
+	table CDATA #REQUIRED
+	column CDATA #REQUIRED
+	same_storage_as CDATA #IMPLIED
+>
+
+<!ELEMENT modify_view_attributes (modify_view_data+)>
+<!ATTLIST modify_view_attributes
+	view CDATA #REQUIRED
+>
+
+<!ELEMENT modify_view_data EMPTY>
+<!ATTLIST modify_view_data
+  view_column CDATA #REQUIRED
+	new_name CDATA #IMPLIED
+	table CDATA #IMPLIED
+	column CDATA #IMPLIED
+	same_storage_as CDATA #IMPLIED
+>
+
+<!ELEMENT create_maxvar EMPTY>
+<!ATTLIST create_maxvar
+	name CDATA #REQUIRED
+	description CDATA #REQUIRED
+	default CDATA #IMPLIED
+	type (system|site|organization|system_tenant) #REQUIRED
+>
+
+<!ELEMENT modify_maxvar EMPTY>
+<!ATTLIST modify_maxvar 
+	name CDATA #REQUIRED
+	description CDATA #IMPLIED
+	default CDATA #IMPLIED
+	type (system|site|organization|system_tenant) #IMPLIED
+>
+
+<!ELEMENT drop_maxvar EMPTY>
+<!ATTLIST drop_maxvar
+	name CDATA #REQUIRED
+>
+
+<!ELEMENT value (#PCDATA)>
+<!ELEMENT MSG_BTNCLOSE EMPTY>
+<!ELEMENT MSG_BTNOK EMPTY>
+<!ELEMENT MSG_BTNCANCEL EMPTY>
+<!ELEMENT MSG_BTNYES EMPTY>
+<!ELEMENT MSG_BTNNO EMPTY>
+<!ELEMENT MSG_ICONWARNING EMPTY>
+<!ELEMENT MSG_ICONSTOP EMPTY>
+<!ELEMENT MSG_ICONEXCLAMATION EMPTY>
+
+<!ELEMENT create_relationship EMPTY >
+<!ATTLIST create_relationship
+	parent CDATA #REQUIRED
+	name CDATA #REQUIRED
+	child CDATA #REQUIRED
+	whereclause CDATA #REQUIRED
+	remarks CDATA #REQUIRED
+	isdefault (true|false) "false"
+>
+<!ELEMENT modify_relationship EMPTY >
+<!ATTLIST modify_relationship
+	parent CDATA #REQUIRED
+	name CDATA #REQUIRED
+	child CDATA #IMPLIED
+	whereclause CDATA #IMPLIED
+	remarks CDATA #IMPLIED
+	isdefault (true|false) "false"
+>
+<!ELEMENT drop_relationship EMPTY >
+<!ATTLIST drop_relationship
+	parent CDATA #REQUIRED
+	name CDATA #REQUIRED
+>
+
+<!ELEMENT freeform (sql+) >
+<!ATTLIST freeform
+	description CDATA #REQUIRED
+>
+<!ELEMENT sql (#PCDATA)>
+<!ATTLIST sql
+	target (oracle|sqlserver|db2|all|not_oracle|not_sqlserver|not_db2) "all"
+>
+
+<!ELEMENT define_table (attrdef+,longdescription?)>
+<!ATTLIST define_table
+	object CDATA #REQUIRED
+	description CDATA #REQUIRED
+	service CDATA #REQUIRED
+	classname CDATA #IMPLIED
+	persistent (true|false) "true"
+	type (system|site|organization|orgwithsite|companyset|itemset|org|orgappfilter|orgsite|siteappfilter|systemappfilter|systemorg|systemorgsite|systemsite) #REQUIRED
+	primarykey CDATA #IMPLIED
+	mainobject (true|false) "false"
+	internal (true|false) "false"
+	trigroot CDATA #IMPLIED
+	unique_column CDATA #IMPLIED
+	storagetype (tenant|master|system|template|system_resource|master_with_setup|template_with_setup|tenant_monitor) "tenant"
+	resource_type CDATA #IMPLIED
+>
+<!-- 
+	Above, in the list for type, organization and orgwithsite are deprecated and are kept only so existing scripts can be used.
+	In the statement run method, organization will be converted to org and orgwithsite converted to orgsite.
+	
+	The list of storagetype comes from the MTStorageType class. That list must correspond to this list.
+-->
+	
+<!ELEMENT modify_table (longdescription)? >
+<!ATTLIST modify_table
+	name CDATA #REQUIRED
+	object CDATA #IMPLIED
+	description CDATA #IMPLIED
+	service CDATA #IMPLIED
+	classname CDATA #IMPLIED
+	type (system|site|organization|orgwithsite|companyset|itemset|org|orgappfilter|orgsite|siteappfilter|systemappfilter|systemorg|systemorgsite|systemsite) #IMPLIED
+	primarykey CDATA #IMPLIED
+	mainobject (true|false) #IMPLIED
+	internal (true|false) #IMPLIED
+	trigroot CDATA #IMPLIED
+	unique_column CDATA #IMPLIED
+	storagetype (tenant|master|system|template|system_resource|master_with_setup|template_with_setup|tenant_monitor) #IMPLIED
+>
+
+<!ELEMENT drop_table EMPTY >
+<!ATTLIST drop_table
+	object CDATA #REQUIRED
+>
+
+<!-- Support for changing type of a table? -->
+
+<!ELEMENT add_attributes (attrdef+)>
+<!ATTLIST add_attributes
+	object CDATA #REQUIRED
+>
+
+<!-- later: modify_attributes (attrmod+) / attributes: 	object CDATA #REQUIRED -->
+
+<!ELEMENT attrmod EMPTY>
+<!ATTLIST attrmod
+	attribute CDATA #REQUIRED
+	maxtype (ALN|AMOUNT|BIGINT|BLOB|CLOB|CRYPTO|CRYPTOX|DATE|DATETIME|DECIMAL|DURATION|FLOAT|GL|INTEGER|LONGALN|LOWER|SMALLINT|TIME|UPPER|YORN) #IMPLIED
+	length NMTOKEN #IMPLIED
+	persistent (true|false) #IMPLIED
+	haslongdesc (true|false) #IMPLIED
+	required (true|false) #IMPLIED
+	userdefined (true|false) #IMPLIED
+	domain CDATA #IMPLIED
+	classname CDATA #IMPLIED
+	defaultvalue CDATA #IMPLIED
+	title CDATA #IMPLIED
+	remarks CDATA #IMPLIED
+	sameasobject CDATA #IMPLIED
+	sameasattribute CDATA #IMPLIED
+	mustbe (true|false) #IMPLIED
+	ispositive (true|false) #IMPLIED
+	scale NMTOKEN #IMPLIED
+	autokey CDATA #IMPLIED
+	canautonum (true|false) #IMPLIED
+	searchtype (WILDCARD|EXACT|NONE|TEXT) #IMPLIED
+	localizable (true|false) #IMPLIED
+	domainlink CDATA #IMPLIED
+	restricted (true|false) #IMPLIED
+>
+
+<!ELEMENT modify_attribute EMPTY>
+<!ATTLIST modify_attribute
+	object CDATA #REQUIRED
+	attribute CDATA #REQUIRED
+	maxtype (ALN|AMOUNT|BIGINT|BLOB|CLOB|CRYPTO|CRYPTOX|DATE|DATETIME|DECIMAL|DURATION|FLOAT|GL|INTEGER|LONGALN|LOWER|SMALLINT|TIME|UPPER|YORN) #IMPLIED
+	length NMTOKEN #IMPLIED
+	persistent (true|false) #IMPLIED
+	haslongdesc (true|false) #IMPLIED
+	required (true|false) #IMPLIED
+	userdefined (true|false) #IMPLIED
+	domain CDATA #IMPLIED
+	classname CDATA #IMPLIED
+	defaultvalue CDATA #IMPLIED
+	title CDATA #IMPLIED
+	remarks CDATA #IMPLIED
+	sameasobject CDATA #IMPLIED
+	sameasattribute CDATA #IMPLIED
+	mustbe (true|false) #IMPLIED
+	ispositive (true|false) #IMPLIED
+	scale NMTOKEN #IMPLIED
+	autokey CDATA #IMPLIED
+	canautonum (true|false) #IMPLIED
+	searchtype (WILDCARD|EXACT|NONE|TEXT) #IMPLIED
+	localizable (true|false) #IMPLIED
+	domainlink CDATA #IMPLIED
+	restricted (true|false) #IMPLIED
+	excludetenants CDATA #IMPLIED
+>
+
+<!ELEMENT drop_attributes (attrname+)>
+<!ATTLIST drop_attributes
+	object CDATA #REQUIRED
+>
+
+<!ELEMENT attrname EMPTY>
+<!ATTLIST attrname
+	name CDATA #REQUIRED
+>
+
+<!ELEMENT attrdef  EMPTY>
+<!ATTLIST attrdef
+	attribute CDATA #REQUIRED
+	maxtype (ALN|AMOUNT|BIGINT|BLOB|CLOB|CRYPTO|CRYPTOX|DATE|DATETIME|DECIMAL|DURATION|FLOAT|GL|INTEGER|LONGALN|LOWER|SMALLINT|TIME|UPPER|YORN) #IMPLIED
+	length NMTOKEN #IMPLIED
+	persistent (true|false) "true"
+	haslongdesc (true|false) "false"
+	required (true|false) "false"
+	userdefined (true|false) "false"
+	domain CDATA #IMPLIED
+	classname CDATA #IMPLIED
+	defaultvalue CDATA #IMPLIED
+	title CDATA #REQUIRED
+	remarks CDATA #REQUIRED
+	sameasobject CDATA #IMPLIED
+	sameasattribute CDATA #IMPLIED
+	mustbe (true|false) "false"
+	ispositive (true|false) "false"
+	scale NMTOKEN #IMPLIED
+	autokey CDATA #IMPLIED
+	canautonum (true|false) "false"
+	searchtype (WILDCARD|EXACT|NONE|TEXT) #IMPLIED
+	localizable (true|false) #IMPLIED
+	domainlink CDATA #IMPLIED
+	restricted (true|false) #IMPLIED
+>
+
+<!-- use "specify" to modify an existing index or bring new a one into existence -->
+<!ELEMENT specify_index (indexkey+) >
+<!ATTLIST specify_index
+	name CDATA #IMPLIED
+	object CDATA #REQUIRED
+	primary (true|false) "false"
+	unique (true | false) "false"
+	clustered (true | false) "false"
+	required (true|false) "false"
+	addtenantid (true|false) "true"
+>
+<!-- drop index by name or definition -->
+<!ELEMENT drop_index (indexkey*) >
+<!ATTLIST drop_index
+	name CDATA #IMPLIED
+	object CDATA #REQUIRED
+>
+<!ELEMENT indexkey EMPTY>
+<!ATTLIST indexkey
+	column CDATA #REQUIRED
+	ascending (true | false) "true"
+>
+
+<!ELEMENT specify_synonym_domain (synonymvalueinfo+)>
+<!ATTLIST specify_synonym_domain
+	domainid CDATA #REQUIRED
+	description CDATA #IMPLIED
+	maxtype (ALN|LONGALN|LOWER|UPPER) "UPPER"
+	length NMTOKEN "8"
+	overwrite (true|false) "false"
+	internal (true|false) "false"
+>
+
+<!ELEMENT add_synonyms (synonymvalueinfo+)>
+<!ATTLIST add_synonyms
+	domainid CDATA #REQUIRED
+>
+
+<!ELEMENT synonymvalueinfo EMPTY>
+<!ATTLIST synonymvalueinfo
+	value CDATA #REQUIRED
+	maxvalue CDATA #REQUIRED
+	defaults (true|false) #REQUIRED
+	description CDATA #IMPLIED
+>
+
+<!ELEMENT specify_aln_domain (alnvalueinfo+)>
+<!ATTLIST specify_aln_domain
+	domainid CDATA #REQUIRED
+	description CDATA #IMPLIED
+	maxtype (ALN|LONGALN|LOWER|UPPER) "UPPER"
+	length NMTOKEN "8"
+	overwrite (true|false) "false"
+	internal (true|false) "false"
+>
+
+<!ELEMENT specify_numeric_domain (numericvalueinfo+)> 
+<!ATTLIST specify_numeric_domain
+	domainid CDATA #REQUIRED
+	description CDATA #IMPLIED
+	maxtype (AMOUNT|DECIMAL|DURATION|FLOAT|INTEGER|SMALLINT) "INTEGER"
+	length NMTOKEN "4"
+	scale NMTOKEN "0"
+	overwrite (true|false) "false"
+	internal (true|false) "false"
+>
+
+<!ELEMENT specify_crossover_domain (crossovervalueinfo+)>
+<!ATTLIST specify_crossover_domain
+	domainid CDATA #REQUIRED
+	description CDATA #IMPLIED
+	overwrite (true|false) "false"
+	validationwhereclause CDATA #REQUIRED
+	listwhereclause CDATA #IMPLIED
+	errorbundle CDATA #IMPLIED
+	errorkey CDATA #IMPLIED
+	objectname CDATA #REQUIRED
+	internal (true|false) "false"
+>
+
+<!ELEMENT specify_table_domain EMPTY>
+<!ATTLIST specify_table_domain
+	domainid CDATA #REQUIRED
+	description CDATA #IMPLIED
+	overwrite (true|false) "false"
+	validationwhereclause CDATA #REQUIRED
+	listwhereclause CDATA #IMPLIED
+	errorbundle CDATA #IMPLIED
+	errorkey CDATA #IMPLIED
+	objectname CDATA #REQUIRED
+	internal (true|false) "false"
+>
+
+<!ELEMENT drop_domain EMPTY >
+<!ATTLIST drop_domain
+	domainid CDATA #REQUIRED
+>
+
+<!ELEMENT alnvalueinfo EMPTY>
+<!ATTLIST alnvalueinfo
+	value CDATA #REQUIRED
+	description CDATA #IMPLIED
+>
+
+<!ELEMENT numericvalueinfo EMPTY>
+<!ATTLIST numericvalueinfo
+	value NMTOKEN #REQUIRED
+	description CDATA #IMPLIED
+>
+
+<!ELEMENT crossovervalueinfo EMPTY>
+<!ATTLIST crossovervalueinfo
+	sourcefield CDATA #REQUIRED
+	destfield CDATA #IMPLIED
+	copyifnull (true|false) "false"
+	copyevenifsrcnull (true|false) "false"
+	copyonlyifdestnull (true|false) "false"
+>
+
+<!ELEMENT add_sigoption (longdescription)? >
+<!ATTLIST add_sigoption
+	app CDATA #REQUIRED
+	optionname CDATA #REQUIRED
+	description CDATA #REQUIRED
+	esigenabled (true|false) "false"
+	visible (true|false) "true"
+	alsogrants CDATA #IMPLIED
+	alsorevokes CDATA #IMPLIED
+	prerequisite CDATA #IMPLIED
+	langcode CDATA #IMPLIED
+	grantapp CDATA #IMPLIED
+	grantoption CDATA #IMPLIED
+	granteveryone (true|false) "false"
+	grantcondition CDATA #IMPLIED
+>
+<!-- grantapp and grantoption determine what groups should be granted application authorization for the new sigoption.
+	If the grant is based on STARTCNTR.READ, then groups that have READ access to the Start Center will be authorized
+	for the new option when the script is run.
+	
+	granteveryone will grant the sigoption to the all users group
+	
+	grantcondition will apply the condition to all ApplicationAuth records created
+	
+	11-10977 - langcode is not longer required, and actually this setting will be ignored. 
+	The code for the base language of the database will be used.
+	The attribute is only kept to allow existing scripts to be valid.
+	-->
+
+<!ELEMENT drop_sigoption EMPTY>
+<!ATTLIST drop_sigoption 
+	app CDATA #REQUIRED
+	optionname CDATA #REQUIRED
+>
+
+<!-- This statement inserts into to the module menu -->
+<!ELEMENT create_module (module_menu_app|module_menu_header)+>
+<!ATTLIST create_module 
+	module CDATA #REQUIRED
+	description CDATA #REQUIRED
+	menu_position (first|last|before|after) "last"
+	menu_param CDATA #IMPLIED
+	skipnavigation (true|false) "false"
+	skipentitlement (true|false) "false"
+	image CDATA #IMPLIED
+	maxprodid CDATA #IMPLIED
+>
+
+<!-- Note that image refers to the module's image, not for the applications -->
+<!ELEMENT modify_module EMPTY>
+<!ATTLIST modify_module 
+	module CDATA #REQUIRED
+	description CDATA #IMPLIED
+	menu_position (first|last|before|after) #IMPLIED
+	menu_pos_param CDATA #IMPLIED
+	skipnavigation (true|false) "false"
+	skipentitlement (true|false) "false"
+	image CDATA #IMPLIED
+	maxprodid CDATA #IMPLIED
+>
+<!-- qqqq what about sub-menus? -->
+
+<!-- adds an application to the MaxModule menu -->
+<!ELEMENT module_app EMPTY>
+<!ATTLIST module_app
+	module CDATA #REQUIRED
+	app CDATA #REQUIRED
+	menu_position (first|last|before|after) "last"
+	menu_pos_param CDATA #IMPLIED
+	pinned CDATA #IMPLIED
+	image CDATA #IMPLIED
+>
+
+<!-- dropping an app will also drop related sigoption and maxmenu entries -->
+<!ELEMENT drop_module EMPTY>
+<!ATTLIST drop_module 
+	module CDATA #REQUIRED
+>
+
+<!ELEMENT create_app (longdescription)?>
+<!ATTLIST create_app
+	app CDATA #REQUIRED
+	description CDATA #REQUIRED
+	skipnavigation (true|false) "false"
+	restrictions CDATA #IMPLIED
+	orderby CDATA #IMPLIED
+	maintbname CDATA #IMPLIED
+>
+<!-- qqqq add parameters to specify module, app image, and position in module's app list? -->
+
+<!ELEMENT modify_app (longdescription)?>
+<!ATTLIST modify_app
+	app CDATA #REQUIRED
+	description CDATA #IMPLIED
+	skipnavigation (true|false) "false"
+	restrictions CDATA #IMPLIED
+	orderby CDATA #IMPLIED
+	maintbname CDATA #IMPLIED
+>
+
+<!-- dropping an app will also drop related sigoption and maxmenu entries -->
+<!ELEMENT drop_app EMPTY>
+<!ATTLIST drop_app
+	app CDATA #REQUIRED
+>
+
+<!ELEMENT module_menu_app EMPTY>
+<!ATTLIST module_menu_app
+	app CDATA #REQUIRED 
+	url CDATA #IMPLIED
+	pinned CDATA #IMPLIED
+	image CDATA #IMPLIED
+>
+
+<!ELEMENT module_menu_header (module_menu_app)+>
+<!ATTLIST module_menu_header
+	headerdescription CDATA #REQUIRED
+>
+
+<!-- This statement creates a new menu for the application -->
+<!ELEMENT create_app_menu (app_menu_option|menu_separator|app_menu_header)+>	
+<!ATTLIST create_app_menu
+	app CDATA #REQUIRED
+	type (action|tool|search) "action"
+>
+
+<!ELEMENT app_menu_option EMPTY>
+<!ATTLIST app_menu_option
+	option CDATA #REQUIRED
+	image CDATA #IMPLIED
+	accesskey CDATA #IMPLIED
+	tabdisplay (LIST|MAIN|ALL) #REQUIRED
+>
+
+<!ELEMENT menu_separator EMPTY>
+<!ATTLIST menu_separator
+	tabdisplay (LIST|MAIN|ALL) #IMPLIED
+>
+
+<!ELEMENT app_menu_header (app_menu_option|menu_separator)+>
+<!ATTLIST app_menu_header 
+	headerdescription CDATA #REQUIRED
+	image CDATA #IMPLIED
+	tabdisplay (LIST|MAIN|ALL) "ALL"
+>
+
+<!-- This statement adds more menu stuff to an existing application menu -->
+<!ELEMENT additional_app_menu (app_menu_option|menu_separator|app_menu_header)+>
+<!ATTLIST additional_app_menu
+	app CDATA #REQUIRED
+	type (action|tool|search) "action"
+	menu_position (first|last|before|after) "first"
+	pos_param CDATA #IMPLIED
+>
+
+<!ELEMENT remove_menu_option EMPTY>
+<!ATTLIST remove_menu_option
+	app CDATA #REQUIRED
+	type (action|tool|search) "action"
+	option CDATA #REQUIRED
+>
+
+<!ELEMENT add_service EMPTY>
+<!ATTLIST add_service 
+	servicename CDATA #REQUIRED
+	description CDATA #REQUIRED
+	classname CDATA #REQUIRED
+	singleton (true|false) "true"
+	initorder CDATA #IMPLIED
+	internal (true|false) "true"
+	active (true|false) "true"
+>
+
+<!ELEMENT modify_service EMPTY>
+<!ATTLIST modify_service 
+	servicename CDATA #REQUIRED
+	description CDATA #IMPLIED
+	classname CDATA #IMPLIED
+	singleton (true|false) #IMPLIED
+>
+
+<!ELEMENT drop_service EMPTY>
+<!ATTLIST drop_service 
+	servicename CDATA #REQUIRED
+>
+
+<!ELEMENT add_property EMPTY>
+<!ATTLIST add_property
+	name CDATA #REQUIRED
+	description CDATA #REQUIRED
+	maxtype (ALN|INTEGER|YORN) #REQUIRED
+	domainid CDATA #IMPLIED
+	scope (global|instance|open) "open"
+	secure_level (private|public|secure|mtsecure) #REQUIRED
+	live_refresh (true|false) "true"
+	required (true|false) "false"
+	online_changes (true|false) "true"
+	user_defined (true|false) "false"
+	default_value CDATA #IMPLIED
+	encrypted (true|false) "false"
+	masked (true|false) "false"
+	value CDATA #IMPLIED 
+	valuerules (ONONLY|OFFONLY|INCONLY|DECONLY|NONE) #IMPLIED
+	accesstype (0|1|2|3|master|landlord|delta|tenant) "master"
+>
+<!-- master = 0, landlord = 1, delta = 2, tenant = 3 -->
+
+<!ELEMENT set_property EMPTY>
+<!ATTLIST set_property 
+	name CDATA #REQUIRED
+	value CDATA #REQUIRED 
+>
+
+<!ELEMENT drop_property EMPTY>
+<!ATTLIST drop_property 
+	name CDATA #REQUIRED
+>
+
+<!-- probably won't support this -->
+<!ELEMENT longdescription (#PCDATA)>
+
+<!ELEMENT insert (insertrow+)>
+<!ATTLIST insert 
+	table CDATA #REQUIRED
+	selectfrom CDATA #IMPLIED
+	selectwhere CDATA #IMPLIED
+	ignore_duplicates (true|false) "false"
+>
+
+<!ELEMENT insertrow (columnvalue+)>
+
+<!ELEMENT columnvalue EMPTY>
+<!ATTLIST columnvalue 
+	column CDATA #REQUIRED
+	string CDATA #IMPLIED
+	fromcolumn CDATA #IMPLIED
+	boolean (true|false) #IMPLIED
+	number CDATA #IMPLIED
+	date CDATA #IMPLIED
+	offset_days CDATA #IMPLIED
+	offset_hours CDATA #IMPLIED	
+	defaultsynonym CDATA #IMPLIED
+	domainvalue CDATA #IMPLIED
+	domainid CDATA #IMPLIED
+	selectnumber CDATA #IMPLIED
+	selectstring CDATA #IMPLIED
+	clob CDATA #IMPLIED
+	blob CDATA #IMPLIED
+>
+<!-- domainvalue and domainid work together to get the appropriate value for the column based upon the database. -->
+
+<!ELEMENT delete (where*,whereclause*)>
+<!ATTLIST delete
+	table CDATA #REQUIRED
+>
+
+<!ELEMENT where (columnvalue+)>
+<!-- column values are equals only and are ANDed together, i.e. a=1 and b=2 and c=3 -->
+
+<!ELEMENT update (set,where*,whereclause*)>
+<!ATTLIST update
+	table CDATA #REQUIRED
+>
+
+<!ELEMENT set (columnvalue+)>
+<!-- these column values will be used as the set part, i.e. set a = 1, b = 2 -->
+
+<!ELEMENT whereclause EMPTY>
+<!ATTLIST whereclause
+	value CDATA #REQUIRED
+>
+
+<!ELEMENT stringvalue EMPTY>
+
+<!ELEMENT logical_relationship (longdescription)?>
+<!ATTLIST logical_relationship
+	object CDATA #REQUIRED
+	keys CDATA #REQUIRED
+	targetobj CDATA #REQUIRED
+	targetkeys CDATA #REQUIRED
+	status (unverified|verified|invalidated) #REQUIRED
+	description CDATA #IMPLIED
+	number CDATA #IMPLIED
+>
+
+<!ELEMENT add_update_autoscript EMPTY >
+<!ATTLIST add_update_autoscript
+		path CDATA #REQUIRED
+		language (javascript|python) #REQUIRED
+>
+<!ELEMENT remove_autoscript EMPTY >
+<!ATTLIST remove_autoscript
+		name CDATA #REQUIRED
+>

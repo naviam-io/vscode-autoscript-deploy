@@ -5,9 +5,7 @@
 var RESTRequest = Java.type('com.ibm.tivoli.oslc.RESTRequest');
 
 var ScriptCache = Java.type('com.ibm.tivoli.maximo.script.ScriptCache');
-var ScriptDriverFactory = Java.type(
-    'com.ibm.tivoli.maximo.script.ScriptDriverFactory'
-);
+var ScriptDriverFactory = Java.type('com.ibm.tivoli.maximo.script.ScriptDriverFactory');
 var MessageDigest = Java.type('java.security.MessageDigest');
 
 var String = Java.type('java.lang.String');
@@ -29,9 +27,7 @@ var MXLoggerFactory = Java.type('psdi.util.logging.MXLoggerFactory');
 
 var sha256 = MessageDigest.getInstance('SHA-256');
 
-var logger = MXLoggerFactory.getLogger(
-    'maximo.script.' + service.getScriptName()
-);
+var logger = MXLoggerFactory.getLogger('maximo.naviam.devtools');
 
 var configScript = 'NAVIAM.AUTOSCRIPT.DEPLOY.HISTORY';
 
@@ -54,10 +50,7 @@ function main() {
                     break;
                 case 'POST':
                     var body = JSON.parse(requestBody);
-                    if (
-                        body._action &&
-                        body._action.toLowerCase() == 'delete'
-                    ) {
+                    if (body._action && body._action.toLowerCase() == 'delete') {
                         responseBody = remove(configName);
                         break;
                     }
@@ -109,10 +102,7 @@ function _validateHttpRequestAndGetConfigName() {
 
     if (httpMethod == 'PUT' || httpMethod == 'POST') {
         if (typeof requestBody == 'undefined') {
-            throw new ConfigError(
-                'missing_request_body',
-                'The configuration automation script request body cannot be empty for POST and PUT actions.'
-            );
+            throw new ConfigError('missing_request_body', 'The configuration automation script request body cannot be empty for POST and PUT actions.');
         }
     }
 
@@ -132,10 +122,7 @@ function _validateHttpRequestAndGetConfigName() {
         resourceReq = '/' + resourceReq;
     }
 
-    if (
-        !resourceReq.startsWith('/oslc/script/' + service.scriptName) &&
-        !resourceReq.startsWith('/api/script/' + service.scriptName)
-    ) {
+    if (!resourceReq.startsWith('/oslc/script/' + service.scriptName) && !resourceReq.startsWith('/api/script/' + service.scriptName)) {
         throw new ConfigError(
             'invalid_script_invocation',
             'The configuration automation script must be invoked as an Http OSLC script request in the form of /oslc/script/' +
@@ -148,25 +135,15 @@ function _validateHttpRequestAndGetConfigName() {
 
     var isOSLC = true;
 
-    if (
-        !resourceReq
-            .toLowerCase()
-            .startsWith('/oslc/script/' + service.scriptName.toLowerCase())
-    ) {
-        if (
-            !resourceReq
-                .toLowerCase()
-                .startsWith('/api/script/' + service.scriptName.toLowerCase())
-        ) {
+    if (!resourceReq.toLowerCase().startsWith('/oslc/script/' + service.scriptName.toLowerCase())) {
+        if (!resourceReq.toLowerCase().startsWith('/api/script/' + service.scriptName.toLowerCase())) {
             return null;
         } else {
             osOSLC = false;
         }
     }
 
-    var baseReqPath = isOSLC
-        ? '/oslc/script/' + service.scriptName
-        : '/api/script/' + service.scriptName;
+    var baseReqPath = isOSLC ? '/oslc/script/' + service.scriptName : '/api/script/' + service.scriptName;
 
     var name = resourceReq.substring(baseReqPath.length);
     if (name.startsWith('/')) {
@@ -176,9 +153,7 @@ function _validateHttpRequestAndGetConfigName() {
     if (!name || name.trim() === '') {
         throw new ConfigError(
             'missing_configuration_name',
-            'The configuration automation script request must be in the form of ' +
-                baseReqPath +
-                '/{configuration-name}.'
+            'The configuration automation script request must be in the form of ' + baseReqPath + '/{configuration-name}.'
         );
     }
 
@@ -188,10 +163,7 @@ function _validateHttpRequestAndGetConfigName() {
 function _initConfigScript() {
     var autoScriptSet;
     try {
-        autoScriptSet = MXServer.getMXServer().getMboSet(
-            'AUTOSCRIPT',
-            MXServer.getMXServer().getSystemUserInfo()
-        );
+        autoScriptSet = MXServer.getMXServer().getMboSet('AUTOSCRIPT', MXServer.getMXServer().getSystemUserInfo());
         var sqlf = new SqlFormat('autoscript = :1');
         sqlf.setObject(1, 'AUTOSCRIPT', 'AUTOSCRIPT', configScript);
         autoScriptSet.setWhere(sqlf.format());
@@ -199,10 +171,7 @@ function _initConfigScript() {
         if (autoScriptSet.isEmpty()) {
             var autoscript = autoScriptSet.add();
             autoscript.setValue('AUTOSCRIPT', configScript);
-            autoscript.setValue(
-                'DESCRIPTION',
-                'Automation Script Deploy History'
-            );
+            autoscript.setValue('DESCRIPTION', 'Automation Script Deploy History');
             autoscript.setValue('SCRIPTLANGUAGE', 'javascript');
             autoscript.setValue('SOURCE', 'config={};');
             autoScriptSet.save();
@@ -216,21 +185,13 @@ function _saveConfigScript(config) {
     log_info('Saving the config');
     var autoScriptSet;
     try {
-        autoScriptSet = MXServer.getMXServer().getMboSet(
-            'AUTOSCRIPT',
-            MXServer.getMXServer().getSystemUserInfo()
-        );
+        autoScriptSet = MXServer.getMXServer().getMboSet('AUTOSCRIPT', MXServer.getMXServer().getSystemUserInfo());
         var sqlf = new SqlFormat('autoscript = :1');
         sqlf.setObject(1, 'AUTOSCRIPT', 'AUTOSCRIPT', configScript);
         autoScriptSet.setWhere(sqlf.format());
 
         if (autoScriptSet.isEmpty()) {
-            throw ConfigError(
-                'missing_config',
-                'The configuration automation script ' +
-                    configScript +
-                    ' does not exist.'
-            );
+            throw ConfigError('missing_config', 'The configuration automation script ' + configScript + ' does not exist.');
         } else {
             var autoscript = autoScriptSet.getMbo(0);
 
@@ -241,10 +202,7 @@ function _saveConfigScript(config) {
                     return obj;
                 }, {});
 
-            autoscript.setValue(
-                'SOURCE',
-                'config=' + JSON.stringify(orderedConfig, null, 4) + ';'
-            );
+            autoscript.setValue('SOURCE', 'config=' + JSON.stringify(orderedConfig, null, 4) + ';');
 
             autoScriptSet.save();
         }
@@ -260,10 +218,7 @@ function createOrUpdateScript(scriptName, script, userName) {
     try {
         scriptInfo = JSON.parse(read(scriptName));
     } catch (error) {
-        if (
-            typeof error.reason !== 'undefined' &&
-            error.reason === 'missing_config'
-        ) {
+        if (typeof error.reason !== 'undefined' && error.reason === 'missing_config') {
             scriptInfo = {};
             toBeCreated = true;
         } else {
@@ -274,8 +229,7 @@ function createOrUpdateScript(scriptName, script, userName) {
     try {
         scriptInfo.deployed = System.currentTimeMillis();
         scriptInfo.deployedBy = userName;
-        scriptInfo.deployedAsDate =
-            DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(ZonedDateTime.now());
+        scriptInfo.deployedAsDate = DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(ZonedDateTime.now());
         scriptInfo.hash = sha256Hex(script);
 
         if (toBeCreated) {
@@ -293,10 +247,7 @@ function create(name, config) {
     var serverConfig = invokeScript(configScript).config;
 
     if (serverConfig[name]) {
-        throw new ConfigError(
-            'config_exists',
-            'The ' + name + ' configuration already exists and must be unique.'
-        );
+        throw new ConfigError('config_exists', 'The ' + name + ' configuration already exists and must be unique.');
     }
 
     serverConfig[name] = config;
@@ -306,10 +257,7 @@ function create(name, config) {
     } catch (error) {
         if (error instanceof Java.type('psdi.util.MXException')) {
             // if the error is that a record has been updated by another user then try again because we are inserting a new block.
-            if (
-                error.getErrorGroup() == 'system' &&
-                error.getErrorKey() == 'rowupdateexception'
-            ) {
+            if (error.getErrorGroup() == 'system' && error.getErrorKey() == 'rowupdateexception') {
                 create(name, config);
             }
         }
@@ -324,10 +272,7 @@ function read(name) {
     var result = serverConfig[name];
 
     if (typeof result === 'undefined') {
-        throw new ConfigError(
-            'missing_config',
-            'The key name ' + name + ' does not exists in the configuration.'
-        );
+        throw new ConfigError('missing_config', 'The key name ' + name + ' does not exists in the configuration.');
     }
     return JSON.stringify(result, null, 4);
 }
@@ -337,10 +282,7 @@ function update(name, config) {
     var result = serverConfig[name];
 
     if (typeof result === 'undefined') {
-        throw new ConfigError(
-            'missing_config',
-            'The key name ' + name + ' does not exists in the configuration.'
-        );
+        throw new ConfigError('missing_config', 'The key name ' + name + ' does not exists in the configuration.');
     }
 
     var preSignature = _calculateSignature(result);
@@ -354,20 +296,12 @@ function update(name, config) {
     } catch (error) {
         if (error instanceof Java.type('psdi.util.MXException')) {
             // if the error is that a record has been updated by another user then try again if the block we're saving wasn't modified.
-            if (
-                error.getErrorGroup() == 'system' &&
-                error.getErrorKey() == 'rowupdateexception'
-            ) {
+            if (error.getErrorGroup() == 'system' && error.getErrorKey() == 'rowupdateexception') {
                 var checkServerConfig = invokeScript(configScript).config;
                 var checkResult = checkServerConfig[name];
 
                 if (typeof checkResult === 'undefined') {
-                    throw new ConfigError(
-                        'missing_config',
-                        'The key name ' +
-                            name +
-                            ' does not exists in the configuration.'
-                    );
+                    throw new ConfigError('missing_config', 'The key name ' + name + ' does not exists in the configuration.');
                 }
 
                 //if the part that we are updating hasn't changed then go ahead and try again.
@@ -391,10 +325,7 @@ function remove(name) {
     var result = serverConfig[name];
 
     if (typeof result === 'undefined') {
-        throw new ConfigError(
-            'missing_config',
-            'The key name ' + name + ' does not exists in the configuration.'
-        );
+        throw new ConfigError('missing_config', 'The key name ' + name + ' does not exists in the configuration.');
     }
 
     delete serverConfig[name];
@@ -403,10 +334,7 @@ function remove(name) {
     } catch (error) {
         if (error instanceof Java.type('psdi.util.MXException')) {
             // if the error is that a record has been updated by another user then try again because we are removing the block
-            if (
-                error.getErrorGroup() == 'system' &&
-                error.getErrorKey() == 'rowupdateexception'
-            ) {
+            if (error.getErrorGroup() == 'system' && error.getErrorKey() == 'rowupdateexception') {
                 remove(name);
             }
         }
@@ -433,16 +361,10 @@ function ConfigError(reason, message) {
 function invokeScript(scriptName) {
     scriptInfo = ScriptCache.getInstance().getScriptInfo(scriptName);
     if (typeof scriptInfo === 'undefined' || !scriptInfo) {
-        throw new MXApplicationException(
-            'script',
-            'nosuchscript',
-            Java.to([scriptName], 'java.lang.String[]')
-        );
+        throw new MXApplicationException('script', 'nosuchscript', Java.to([scriptName], 'java.lang.String[]'));
     }
     var context = new HashMap();
-    ScriptDriverFactory.getInstance()
-        .getScriptDriver(scriptName)
-        .runScript(scriptName, context);
+    ScriptDriverFactory.getInstance().getScriptDriver(scriptName).runScript(scriptName, context);
     return context;
 }
 
@@ -499,5 +421,5 @@ var scriptConfig = {
     description: 'Naviam Automation Script Storage Script.',
     version: '1.0.0',
     active: true,
-    logLevel: 'ERROR',
+    logLevel: 'ERROR'
 };

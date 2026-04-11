@@ -24,6 +24,7 @@ The following are settings available under the `Naviam > Maximo` group.
 | Extract Inspection Forms Location | Current open folder | Directory where extracted inspection files will be stored.                                                                                                                  |
 | Extract Location                  | Current open folder | Directory where extracted script files will be stored.                                                                                                                      |
 | Extract Screen Location           | Current open folder | Directory where extracted screen XML files will be stored.                                                                                                                  |
+| Extract DBC Location              | Current open folder | Directory where extracted screen DBC files will be stored.                                                                                                                  |
 | Host                              |                     | The Maximo host name _without_ the http/s protocol prefix.                                                                                                                  |
 | Maxauth Only                      | false               | Both Maxauth and Basic headers are usually sent for login, however on WebLogic if Basic fails the Maxauth header is ignored. When checked, only the Maxauth header is sent. |
 | Port                              | 443                 | The Maximo port number, 80 for http, 443 for https or your custom port such as 9080.                                                                                        |
@@ -66,6 +67,7 @@ The `password` and `apiKey` attributes will be automatically encrypted on save. 
     "extractLocationScreens":"Path to the screens extract directory",
     "extractLocationForms":"Path to the forms extract directory",
     "extractLocationReports":"Path to the reports extract directory",
+    "extractLocationDBC":"Path to the DBC extract directory",****
     "proxyHost":"The proxy host",
     "proxyPort": "The proxy port number",
     "proxyUsername": "The proxy authentication user name",
@@ -124,12 +126,14 @@ As part of the configuration, an integration object named `NAVIAM_UTILS` is crea
 | Script                           | Description                                                                                         |
 | :------------------------------- | :-------------------------------------------------------------------------------------------------- |
 | NAVIAM.AUTOSCRIPT.ADMIN          | Script for managing Maximo administrative actions.                                                  |
+| NAVIAM.AUTOSCRIPT.DBC            | Script to extract object configurations as DBC.                                                     |
 | NAVIAM.AUTOSCRIPT.DEPLOY         | The primary script used for deploying and managing automation scripts.                              |
 | NAVIAM.AUTOSCRIPT.DEPLOY.HISTORY | Created after the first script is deployed. Contains a JSON with a history of all scripts deployed. |
 | NAVIAM.AUTOSCRIPT.EXTRACT        | Script for extracting scripts from Maximo.                                                          |
 | NAVIAM.AUTOSCRIPT.FORM           | Script for managing inspection forms.                                                               |
 | NAVIAM.AUTOSCRIPT.LIBRARY        | Script library for applying deployment object defined in JSON deploy files.                         |
 | NAVIAM.AUTOSCRIPT.LOGGING        | Script for streaming the Maximo log.                                                                |
+| NAVIAM.AUTOSCRIPT.OBJECTS        | Script to extract JSON object configurations.                                                       |
 | NAVIAM.AUTOSCRIPT.REPORT         | Script for managing BIRT reports.                                                                   |
 | NAVIAM.AUTOSCRIPT.SCREENS        | Script for managing Maximo screen definitions.                                                      |
 | NAVIAM.AUTOSCRIPT.STORE          | Script for managing the storage of the deploy history.                                              |
@@ -162,7 +166,7 @@ When using a script for deploy actions, that script file may be named the same a
 
 As of version `1.13.0` a JSON document can be used to define select objects to deploy along with the script. Providing a JSON file with the same name as the primary script, with a `.json` file extension will cause the tooling to deploy the objects defined in the JSON document along with the script.
 
-Currently Cron Tasks, Domains, Loggers, Maximo Objects, Messages and Properties are available. Additional Maximo data types will be added in future releases based on feedback and demand. The JSON schemas for these objects are provided below.
+Currently Cron Tasks, Domains, Loggers, Maximo Objects, Messages and Properties are available. Additional Maximo data types will be added in future releases based on feedback and demand. The JSON schemas for these objects are provided in the project under the `.vscode` directory and your `.vscode/settings.json` will be updated to provide intellisense support in configuration json files.
 
 #### JSON Pre-deploy File
 
@@ -365,19 +369,15 @@ As of version `1.20.0` a JSON document may be used to define multiple files to d
 
 ## Extract Automation Scripts
 
-To extract the scripts currently deployed to Maximo, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Extract All Automation Scripts`. The extension will query Maximo for the available scripts and then prompt for confirmation to extract the scripts as shown below. Scripts are saved to the directory specified in the `Extract Location` setting. If the setting has not been configured, the scripts are extracted to the current workspace folder.
+To extract the scripts currently deployed to Maximo, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Extract Automation Scripts`. The extension will query Maximo for the available scripts and display a list of scripts to select from. Once the desired scripts have been selected, click the `OK` button to extract the scripts. Scripts are saved to the directory specified in the `Extract Location` setting. If the setting has not been configured, the scripts are extracted to the current workspace folder.
 
-![Extract Automation Script](images/palette_password_extract_example.gif)
-
-To extract a single script, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Exact Automation Script`. The extension will query Maximo for the available scripts and display them in a searchable quick pick list. Select the script to extract from the list and the extension will extract it to the directory specified in the `Extract Location` setting. If the setting has not been configured, the script is extracted to the current workspace folder.
+![Extract Automation Script](images/palette_script_extract_example.gif)
 
 ## Extract Screen Definitions
 
-To extract the screens from Maximo, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Extract All Screen Definitions`. The extension will query Maximo for the available screens and then prompt for confirmation to extract the screens as shown below. Screens are saved to the directory specified in the `Extract Screen Location` setting. If the setting has not been configured, the screen definitions are extracted to the current workspace folder.
+To extract the screens from Maximo, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Extract Screen Definitions`. The extension will query Maximo for the available screens and display a list of screens to select from.  Once the desired screens have been selected, click the `OK` button to extract the screens. Screens are saved to the directory specified in the `Extract Screen Location` setting. If the setting has not been configured, the screen definitions are extracted to the current workspace folder.
 
 ![Extract Screen Definition](images/palette_screen_extract_example.gif)
-
-To extract a single screen, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Exact Screen Definition`. The extension will query Maximo for the available screens and display them in a searchable quick pick list. Select the screen to extract from the list and the extension will extract it to the directory specified in the `Extract Screen Location` setting. If the setting has not been configured, the screen is extracted to the current workspace folder.
 
 > The screen definition XML is consistently formatted when extracted to assist with comparison. To ensure the formatting remains consisted, when using the standard XML formatter ensure that the `Space Before Empty Close Tag` is unchecked.
 > ![Empty Close Tag Setting](./images/empty_close_tag_setting.png)
@@ -388,21 +388,64 @@ As of version `1.6.0` extracted screens will include a `metadata` tag that conta
 
 ## Extract Inspection Forms
 
-To extract inspection forms from Maximo, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Extract All Inspection Forms`. The extension will query Maximo for the latest inspection forms and then prompt for confirmation to extract the inspection forms as shown below. Inspection forms are saved to the directory specified in the `Extract Inspection Forms Location` setting. If the setting has not been configured, the inspection forms are extracted to the current workspace folder. The extract files are named with the inspection form name, with dashes `-` replacing spaces and with a `.json` file extension.
+To extract inspection forms from Maximo, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Extract Inspection Forms`. The extension will query Maximo for the latest inspection forms and display a list of available forms to select from. Once the desired inspection forms have been selected, click the `OK` button to extract the inspection forms. Inspection forms are saved to the directory specified in the `Extract Inspection Forms Location` setting. If the setting has not been configured, the inspection forms are extracted to the current workspace folder. The extracted files are named with the inspection form name, with dashes `-` replacing spaces and with a `.json` file extension.
 
 > The extract includes the source inspection form and revision number. Note that these values are for reference purposes only and a new inspection form and revision number will be generated in the target system.
 
 ![Extract Screen Definition](images/palette_form_extract_example.gif)
 
-To extract a single inspection form from Maximo, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Extract Inspection Form`. The extension will query Maximo for the latest inspection forms and display them in a searchable quick pick list. Select the form to extract from the list and the extension will extract it to the directory specified in the `Extract Inspection Forms Location` setting. If the setting has not been configured, the form is extracted to the current workspace folder.
-
 ## Extract Reports
 
-To extract reports from Maximo, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Extract All BIRT Reports`. The extension will query Maximo for the registered reports and then prompt for confirmation to extract the reports as shown below. Reports are saved to the directory specified in the `Extract Reports Location` setting. If the setting has not been configured, the reports are extracted to the current workspace folder. The extract reports are saved to a sub folder named with the `REPORTFOLDER` value from Maximo. Additionally, the report attributes, parameters and resource references are written to a `reports.xml` file in the `REPORTFOLDER` folder. The `reports.xml` has the same syntax as the standard Maximo tools `report.xml` files. If the report has resources, those are extracted to a sub folder with the same name as the report, without the `.rptdesign` extension.
-
-To extract a single report form from Maximo, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Extract BIRT Report`. The extension will query Maximo for the reports and display them in a searchable quick pick list, displaying the report description followed by the report name. Select the report to extract from the list and the extension will extract it to the directory specified in the `Extract Reports Location` setting. If the setting has not been configured, the report is extracted to the current workspace folder in a sub folder named with the `REPORTFOLDER` value from Maximo. Additionally, the report attributes, parameters and resource references are written to a `reports.xml` file in the `REPORTFOLDER` folder. If the report has resources, those are extracted to a sub folder with the same name as the report, without the `.rptdesign` extension.
+To extract reports from Maximo, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Extract BIRT Reports`. The extension will query Maximo for the registered reports and display a list of available reports to select from.  Once the desired reports have been selected, click the `OK` button to extract the reports.
+ Reports are saved to the directory specified in the `Extract Reports Location` setting. If the setting has not been configured, the reports are extracted to the current workspace folder. The extracted reports are saved to a sub folder named with the `REPORTFOLDER` value from Maximo. Additionally, the report attributes, parameters and resource references are written to a `reports.xml` file in the `REPORTFOLDER` folder. The `reports.xml` has the same syntax as the standard Maximo tools `report.xml` files. If the report has resources, those are extracted to a sub folder with the same name as the report, without the `.rptdesign` extension.****
 
 ![Extract Report](images/palette_report_extract_example.gif)
+
+## Extract JSON Deploy Files
+
+To extract JSON deploy files from Maximo, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Extract Maximo JSON`. A list of available object types to extract will be displayed. The list includes object types found in the table below.
+
+| Type                          | Description                                                                               |
+| :---------------------------- | :---------------------------------------------------------------------------------------- | 
+| Cron Tasks                    | Maximo cron tasks, including instances and parameter                                      | 
+| Domains                       | Domains and the domain values                                                             | 
+| Integration Objects           | Integration end points                                                                    | 
+| Loggers                       | Maximo logger definitions                                                                 | 
+| Messages                      | Maximo messages                                                                           | 
+| Properties                    | Maximo system properties                                                                  |
+
+
+Once the type has been selected a list of available objects will be displayed and the list desired objects can be selected. Once the list of objects is selected click the `OK` button to extract the configurations. If a script file is currently selected the corresponding `.json` file will appended to if it exists or a new deploy file will be created. If the deploy `.json` file is selected the results will be appended to the existing file. If neither the script or deploy file are selected the results will be copied to the local clipboard and can be pasted to a deployment json file later.
+
+## Extract DBC Files
+
+To extract DBC scripts from Maximo, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Extract Maximo DBC`. A list of available object types to extract will be displayed. The list includes object types found in the table below.
+
+| Type                          | Description                                                                               |
+| :---------------------------- | :---------------------------------------------------------------------------------------- | 
+| Attribute                     | Maximo attributes from the selected Maximo object.                                        | 
+| Automation Script             | Automation scripts                                                                        | 
+| End Point                     | Integration end points                                                                    | 
+| Enterprise Service            | Integration enterprise services                                                           | 
+| External System               | Integration external systems                                                              | 
+| Interaction                   | Integration interactions                                                                  |
+| Invocation Channel            | Integration invocation channels                                                           |
+| Message                       | Maximo system messages                                                                    |
+| Object                        | Maximo Object / Table definition, including indexes and relationships                     |
+| Object Structure              | Data from a selected integration object structure, filter by a provided where clause      |
+| Property                      | Maximo system properties                                                                  |
+| Publish Channel               | Integration publish channels                                                              | 
+| Records by Object Structure   | Data from a selected Maximo object structure, filter by a provided where clause.          | 
+| Table Data                    | Data from a selected Maximo object, filter by a provided where clause.                    |
+| Web Service                   | Integration web service                                                                   |
+
+Once the type has been selected a list of available objects will be displayed and the list desired objects can be selected. Once the list of objects is selected a prompt to input a file will be displayed. Enter a file name, with files ending in `.dbc` creating DBC formatted file, while `.db2`, `.ora` and `.sqs` create SQL scripts.
+
+![Extract DBC Script](images/palette_extract_dbc_example.gif)
+
+For `Records by Object Structure` and `Table Data` there is an additional step, where you must provide a SQL where clause to filter the records extracted from the system.
+
+> Note: When extracting configurations, if the destination file exists, the contents will be overwritten with the value extracted from Maximo. 
 
 ## Compare with Maximo
 

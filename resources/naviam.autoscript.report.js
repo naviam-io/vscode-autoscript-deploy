@@ -1,12 +1,8 @@
 /* eslint-disable no-undef */
 
 // @ts-nocheck
-var ReportImportInfo = Java.type(
-    'com.ibm.tivoli.maximo.report.birt.admin.ReportImportInfo'
-);
-var ReportImportParamInfo = Java.type(
-    'com.ibm.tivoli.maximo.report.birt.admin.ReportImportParamInfo'
-);
+var ReportImportInfo = Java.type('com.ibm.tivoli.maximo.report.birt.admin.ReportImportInfo');
+var ReportImportParamInfo = Java.type('com.ibm.tivoli.maximo.report.birt.admin.ReportImportParamInfo');
 
 var ByteArrayInputStream = Java.type('java.io.ByteArrayInputStream');
 var ByteArrayOutputStream = Java.type('java.io.ByteArrayOutputStream');
@@ -33,9 +29,7 @@ var ZipInputStream = Java.type('java.util.zip.ZipInputStream');
 
 var ByteArray = Java.type('byte[]');
 
-var logger = MXLoggerFactory.getLogger(
-    'maximo.script.' + service.getScriptName()
-);
+var logger = MXLoggerFactory.getLogger('maximo.naviam.devtools');
 
 main();
 
@@ -47,18 +41,11 @@ function main() {
 
             if (httpMethod.toLowerCase() === 'get') {
                 var reportId = getReportId();
-                if (
-                    typeof reportId === 'undefined' ||
-                    reportId === null ||
-                    !reportId
-                ) {
+                if (typeof reportId === 'undefined' || reportId === null || !reportId) {
                     // If nothing is requested then return a list of all screens.
                     var reportSet;
                     try {
-                        reportSet = MXServer.getMXServer().getMboSet(
-                            'REPORT',
-                            userInfo
-                        );
+                        reportSet = MXServer.getMXServer().getMboSet('REPORT', userInfo);
                         var sqlf = new SqlFormat('runtype = :1');
                         sqlf.setObject(1, 'REPORT', 'RUNTYPE', 'BIRT');
                         reportSet.setWhere(sqlf.format());
@@ -71,9 +58,10 @@ function main() {
                         while (report) {
                             reports.push({
                                 reportId: report.getUniqueIDValue(),
-                                report: report.getString('REPORTNAME'),
-                                description: report.getString('DESCRIPTION'),
-                                app: report.getString('REPORTFOLDER'),
+                                label: report.getString('DESCRIPTION'),
+                                description: report.getString('REPORTNAME') + ' (' + report.getString('REPORTFOLDER') + ')',
+                                reportName: report.getString('REPORTNAME'),
+                                app: report.getString('REPORTFOLDER')
                             });
 
                             reportSet.remove(0);
@@ -92,10 +80,7 @@ function main() {
                     responseBody = JSON.stringify(response);
                 }
                 return;
-            } else if (
-                httpMethod.toLowerCase() === 'post' &&
-                typeof requestBody !== 'undefined'
-            ) {
+            } else if (httpMethod.toLowerCase() === 'post' && typeof requestBody !== 'undefined') {
                 var reportData = JSON.parse(requestBody);
 
                 importReport(reportData);
@@ -103,10 +88,7 @@ function main() {
                 response.status = 'success';
                 responseBody = JSON.stringify(response);
             } else {
-                throw new ReportError(
-                    'only_get_supported',
-                    'Only the HTTP GET method is supported when extracting automation scripts.'
-                );
+                throw new ReportError('only_get_supported', 'Only the HTTP GET method is supported when extracting automation scripts.');
             }
         } catch (error) {
             response.status = 'error';
@@ -121,15 +103,11 @@ function main() {
             } else if (error instanceof Error) {
                 response.message = error.message;
             } else if (error instanceof MXException) {
-                response.reason =
-                    error.getErrorGroup() + '_' + error.getErrorKey();
+                response.reason = error.getErrorGroup() + '_' + error.getErrorKey();
                 response.message = error.getMessage();
             } else if (error instanceof RuntimeException) {
                 if (error.getCause() instanceof MXException) {
-                    response.reason =
-                        error.getCause().getErrorGroup() +
-                        '_' +
-                        error.getCause().getErrorKey();
+                    response.reason = error.getCause().getErrorGroup() + '_' + error.getCause().getErrorKey();
                     response.message = error.getCause().getMessage();
                 } else {
                     response.reason = 'runtime_exception';
@@ -197,10 +175,7 @@ function importReport(report) {
     reportInfo.setAttribute('usewherewithparam', report.useWhereWithParam);
 
     var paramNames = [];
-    if (
-        typeof report.parameters !== 'undefined' &&
-        report.parameters.length > 0
-    ) {
+    if (typeof report.parameters !== 'undefined' && report.parameters.length > 0) {
         report.parameters.forEach(function (param) {
             var reportParam = new ReportImportParamInfo();
 
@@ -224,10 +199,7 @@ function importReport(report) {
     reportService.importReport(userInfo, reportInfo, true);
 
     var reportSet = MXServer.getMXServer().getMboSet('REPORT', userInfo);
-    var presentationSet = MXServer.getMXServer().getMboSet(
-        'MAXPRESENTATION',
-        userInfo
-    );
+    var presentationSet = MXServer.getMXServer().getMboSet('MAXPRESENTATION', userInfo);
     try {
         var sqlf = new SqlFormat('reportname = :1');
         sqlf.setObject(1, 'REPORT', 'REPORTNAME', report.reportName);
@@ -235,11 +207,7 @@ function importReport(report) {
         var reportMbo = reportSet.moveFirst();
         if (reportMbo) {
             // generate the request page
-            var xml = reportMbo.generateXML(
-                reportMbo,
-                reportMbo.getMboSet('REPORT_LOOKUP'),
-                reportMbo.getBaseReportXML()
-            );
+            var xml = reportMbo.generateXML(reportMbo, reportMbo.getMboSet('REPORT_LOOKUP'), reportMbo.getBaseReportXML());
 
             // save the presentation
             sqlf = new SqlFormat('app = :1');
@@ -257,11 +225,7 @@ function importReport(report) {
             var reportParam = reportParamSet.moveFirst();
 
             while (reportParam) {
-                if (
-                    paramNames.indexOf(
-                        reportParam.getString('PARAMETERNAME')
-                    ) == -1
-                ) {
+                if (paramNames.indexOf(reportParam.getString('PARAMETERNAME')) == -1) {
                     reportParam.delete();
                 }
 
@@ -285,15 +249,9 @@ function exportReport(reportId) {
 
         if (report) {
             var reportService = MXServer.getMXServer().lookup('BIRTREPORT');
-            var reportExport = reportService.exportReport(
-                userInfo,
-                report.getString('REPORTNAME'),
-                report.getString('REPORTFOLDER')
-            );
+            var reportExport = reportService.exportReport(userInfo, report.getString('REPORTNAME'), report.getString('REPORTFOLDER'));
 
-            var zis = new ZipInputStream(
-                new ByteArrayInputStream(reportExport)
-            );
+            var zis = new ZipInputStream(new ByteArrayInputStream(reportExport));
             var design;
             var entry;
             while ((entry = zis.getNextEntry()) != null) {
@@ -320,36 +278,26 @@ function exportReport(reportId) {
             result.appName = report.getString('APPNAME');
             result.toolbarLocation = report.getString('TOOLBARLOCATION');
             result.toolbarIcon = report.getString('TOOLBARICON');
-            result.toolbarSequence = !report.isNull('TOOLBARSEQUENCE')
-                ? report.getInt('TOOLBARSEQUENCE')
-                : null;
+            result.toolbarSequence = !report.isNull('TOOLBARSEQUENCE') ? report.getInt('TOOLBARSEQUENCE') : null;
             result.noRequestPage = report.getBoolean('NOREQUESTPAGE');
             result.detail = report.getBoolean('DETAIL');
             result.langCode = report.getString('LANGCODE');
             result.useWhereWithParam = report.getBoolean('USEWHEREWITHPARAM');
-            result.recordLimit = !report.isNull('RECORDLIMIT')
-                ? report.getInt('RECORDLIMIT')
-                : null;
+            result.recordLimit = !report.isNull('RECORDLIMIT') ? report.getInt('RECORDLIMIT') : null;
             result.browserView = report.getBoolean('QL');
             result.directPrint = report.getBoolean('DP');
             result.printWithAttachments = report.getBoolean('PAD');
             result.browserViewLocation = report.getString('QLLOC');
             result.directPrintLocation = report.getString('DPLOC');
             result.printWithAttachmentsLocation = report.getString('PADLOC');
-            result.priority = !report.isNull('PRIORITY')
-                ? report.getInt('PRIORITY')
-                : null;
+            result.priority = !report.isNull('PRIORITY') ? report.getInt('PRIORITY') : null;
             result.scheduleOnly = report.getBoolean('SCHEDULEONLY');
-            result.design = design
-                ? design
-                : report.getString('REPORT_DESIGN.DESIGN');
+            result.design = design ? design : report.getString('REPORT_DESIGN.DESIGN');
             result.displayOrder = report.getString('DISPLAYORDER');
             result.paramColumns = report.getString('PARAMCOLUMNS');
 
             if (!report.isNull('REPORT_DESIGN.RESOURCES')) {
-                result.resources = Base64.getEncoder().encodeToString(
-                    report.getBytes('REPORT_DESIGN.RESOURCES')
-                );
+                result.resources = Base64.getEncoder().encodeToString(report.getBytes('REPORT_DESIGN.RESOURCES'));
             }
 
             var params = [];
@@ -402,25 +350,15 @@ function getReportId() {
 
     var isOSLC = true;
 
-    if (
-        !resourceReq
-            .toLowerCase()
-            .startsWith('/oslc/script/' + service.scriptName.toLowerCase())
-    ) {
-        if (
-            !resourceReq
-                .toLowerCase()
-                .startsWith('/api/script/' + service.scriptName.toLowerCase())
-        ) {
+    if (!resourceReq.toLowerCase().startsWith('/oslc/script/' + service.scriptName.toLowerCase())) {
+        if (!resourceReq.toLowerCase().startsWith('/api/script/' + service.scriptName.toLowerCase())) {
             return null;
         } else {
             osOSLC = false;
         }
     }
 
-    var baseReqPath = isOSLC
-        ? '/oslc/script/' + service.scriptName
-        : '/api/script/' + service.scriptName;
+    var baseReqPath = isOSLC ? '/oslc/script/' + service.scriptName : '/api/script/' + service.scriptName;
 
     var action = resourceReq.substring(baseReqPath.length);
 
@@ -432,36 +370,18 @@ function getReportId() {
         return null;
     }
 
-    return URLDecoder.decode(
-        action.toLowerCase(),
-        StandardCharsets.UTF_8.name()
-    );
+    return URLDecoder.decode(action.toLowerCase(), StandardCharsets.UTF_8.name());
 }
 
 function checkPermissions(app, optionName) {
     if (!userInfo) {
-        throw new ReportError(
-            'no_user_info',
-            'The userInfo global variable has not been set, therefore the user permissions cannot be verified.'
-        );
+        throw new ReportError('no_user_info', 'The userInfo global variable has not been set, therefore the user permissions cannot be verified.');
     }
 
-    if (
-        !MXServer.getMXServer()
-            .lookup('SECURITY')
-            .getProfile(userInfo)
-            .hasAppOption(app, optionName) &&
-        !isInAdminGroup()
-    ) {
+    if (!MXServer.getMXServer().lookup('SECURITY').getProfile(userInfo).hasAppOption(app, optionName) && !isInAdminGroup()) {
         throw new ReportError(
             'no_permission',
-            'The user ' +
-                userInfo.getUserName() +
-                ' does not have access to the ' +
-                optionName +
-                ' option in the ' +
-                app +
-                ' object structure.'
+            'The user ' + userInfo.getUserName() + ' does not have access to the ' + optionName + ' option in the ' + app + ' object structure.'
         );
     }
 }
@@ -469,21 +389,14 @@ function checkPermissions(app, optionName) {
 // Determines if the current user is in the administrator group, returns true if the user is, false otherwise.
 function isInAdminGroup() {
     var user = userInfo.getUserName();
-    service.log_info(
-        'Determining if the user ' + user + ' is in the administrator group.'
-    );
+    service.log_info('Determining if the user ' + user + ' is in the administrator group.');
     var groupUserSet;
 
     try {
-        groupUserSet = MXServer.getMXServer().getMboSet(
-            'GROUPUSER',
-            MXServer.getMXServer().getSystemUserInfo()
-        );
+        groupUserSet = MXServer.getMXServer().getMboSet('GROUPUSER', MXServer.getMXServer().getSystemUserInfo());
 
         // Get the ADMINGROUP MAXVAR value.
-        var adminGroup = MXServer.getMXServer()
-            .lookup('MAXVARS')
-            .getString('ADMINGROUP', null);
+        var adminGroup = MXServer.getMXServer().lookup('MAXVARS').getString('ADMINGROUP', null);
 
         // Query for the current user and the found admin group.
         // The current user is determined by the implicity `user` variable.
@@ -493,22 +406,10 @@ function isInAdminGroup() {
         groupUserSet.setWhere(sqlFormat.format());
 
         if (!groupUserSet.isEmpty()) {
-            service.log_info(
-                'The user ' +
-                    user +
-                    ' is in the administrator group ' +
-                    adminGroup +
-                    '.'
-            );
+            service.log_info('The user ' + user + ' is in the administrator group ' + adminGroup + '.');
             return true;
         } else {
-            service.log_info(
-                'The user ' +
-                    user +
-                    ' is not in the administrator group ' +
-                    adminGroup +
-                    '.'
-            );
+            service.log_info('The user ' + user + ' is not in the administrator group ' + adminGroup + '.');
             return false;
         }
     } finally {
@@ -541,9 +442,8 @@ ReportError.prototype.element;
 // eslint-disable-next-line no-unused-vars
 var scriptConfig = {
     autoscript: 'NAVIAM.AUTOSCRIPT.REPORT',
-    description:
-        'Naviam Report Automation Script for Exporting and Importing Reports',
+    description: 'Naviam Report Automation Script for Exporting and Importing Reports',
     version: '1.0.0',
     active: true,
-    logLevel: 'ERROR',
+    logLevel: 'ERROR'
 };
