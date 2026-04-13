@@ -16,6 +16,7 @@ val distro = "autoscript-debug"
 
 val azureToken: String by project
 
+
 repositories {
     mavenCentral()
 
@@ -248,6 +249,11 @@ dependencies {
 }
 
 fun getGitBranch(): String {
+    val configuredBranch = (findProperty("sourceBranchName") as String?)?.trim()
+    if (!configuredBranch.isNullOrEmpty()) {
+        return configuredBranch
+    }
+
     val process = ProcessBuilder("git", "rev-parse", "--abbrev-ref", "HEAD")
         .start()
     process.waitFor()

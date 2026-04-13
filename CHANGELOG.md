@@ -1,4 +1,9 @@
 # Release Notes
+## 1.27.4
+- Added trace level logging and moved common client error handling to trace.
+- Fixed webpack resolution
+- Fixed property fetching and branch name resolution.
+
 ## 1.27.3
 - Fixed issue where webpack had to be installed globally.
 

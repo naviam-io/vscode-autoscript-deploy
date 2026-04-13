@@ -164,42 +164,67 @@ function _isConfigFile(json) {
  */
 function runWebpack(rootPath) {
     Logger.debug(`Running local webpack build in ${rootPath}.`, LOG_SOURCE);
-    return ensureWebpackInitialized(rootPath).then(
-        () =>
-            new Promise((resolve, reject) => {
-                let errorData = '';
+    return ensureWebpackInitialized(rootPath)
+        .catch((error) => {
+            Logger.debug(`Local webpack initialization did not complete: ${error && error.message ? error.message : error}`, LOG_SOURCE);
+        })
+        .then(
+            () =>
+                new Promise((resolve, reject) => {
+                    let errorData = '';
 
-                const process = cp.exec('npx --no-install webpack --mode development', { cwd: rootPath }, (err) => {
-                    if (err) {
-                        console.log(errorData);
-                        return;
-                    }
-                });
+                    const localWebpackBinPath = path.join(rootPath, 'node_modules', '.bin');
+                    const webpackCmdPath = path.join(localWebpackBinPath, 'webpack.cmd');
+                    const webpackUnixPath = path.join(localWebpackBinPath, 'webpack');
+                    const hasLocalWebpack = fs.existsSync(webpackCmdPath) || fs.existsSync(webpackUnixPath);
+                    const webpackBin = fs.existsSync(webpackCmdPath) ? webpackCmdPath : webpackUnixPath;
+                    const webpackCommand = hasLocalWebpack ? `"${webpackBin}" --mode development` : 'webpack --mode development';
 
-                if (process.stdout) {
-                    process.stdout.on('data', (data) => (errorData += data));
-                }
-                if (process.stderr) {
-                    process.stderr.on('data', (data) => (errorData += data));
-                }
-
-                process.on('close', (code) => {
-                    if (code === 0) {
-                        Logger.debug('Webpack process completed successfully.', LOG_SOURCE);
-                        resolve();
+                    if (hasLocalWebpack) {
+                        Logger.debug(`Invoking webpack binary at ${webpackBin}.`, LOG_SOURCE);
                     } else {
-                        Logger.debug(`Webpack process failed with exit code ${code}.`, LOG_SOURCE);
-                        reject(
-                            new Error(
-                                `Webpack failed: ${errorData.indexOf('[tsl] ERROR') > 0 ? errorData.substring(errorData.indexOf('[tsl] ERROR') + 6) : errorData}`
-                            )
-                        );
+                        Logger.debug(`Local webpack executable was not found in ${localWebpackBinPath}. Falling back to global webpack command.`, LOG_SOURCE);
                     }
-                });
 
-                process.on('error', (err) => reject(err));
-            })
-    );
+                    const process = cp.exec(webpackCommand, { cwd: rootPath }, (err) => {
+                        if (err) {
+                            console.log(errorData);
+                            return;
+                        }
+                    });
+
+                    if (process.stdout) {
+                        process.stdout.on('data', (data) => (errorData += data));
+                    }
+                    if (process.stderr) {
+                        process.stderr.on('data', (data) => (errorData += data));
+                    }
+
+                    process.on('close', (code) => {
+                        if (code === 0) {
+                            Logger.debug('Webpack process completed successfully.', LOG_SOURCE);
+                            resolve();
+                        } else {
+                            Logger.debug(`Webpack process failed with exit code ${code}.`, LOG_SOURCE);
+                            if (!hasLocalWebpack) {
+                                reject(
+                                    new Error(
+                                        `Local webpack executable was not found in ${localWebpackBinPath}, and global webpack could not be executed. ${errorData}`
+                                    )
+                                );
+                            } else {
+                                reject(
+                                    new Error(
+                                        `Webpack failed: ${errorData.indexOf('[tsl] ERROR') > 0 ? errorData.substring(errorData.indexOf('[tsl] ERROR') + 6) : errorData}`
+                                    )
+                                );
+                            }
+                        }
+                    });
+
+                    process.on('error', (err) => reject(err));
+                })
+        );
 }
 
 /**

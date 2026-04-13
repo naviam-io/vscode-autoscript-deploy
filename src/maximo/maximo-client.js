@@ -1557,7 +1557,7 @@ export default class MaximoClient {
 
                             response.data.on('data', (data) => {
                                 if (!this._isLogging) {
-                                    Logger.debug('Log stream handler stopped because logging was disabled.', LOG_SOURCE);
+                                    Logger.trace('Log stream handler stopped because logging was disabled.', LOG_SOURCE);
                                     resolve();
                                 } else {
                                     if (data && data instanceof Uint8Array) {

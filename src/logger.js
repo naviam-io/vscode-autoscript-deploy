@@ -40,6 +40,11 @@ export default class Logger {
         this._channel?.debug(`${prefix}${message}`);
     }
 
+    static trace(message, source = '') {
+        const prefix = source ? `[${source}] ` : '';
+        this._channel?.trace(`${prefix}${message}`);
+    }
+
     static get channel() {
         return this._channel;
     }

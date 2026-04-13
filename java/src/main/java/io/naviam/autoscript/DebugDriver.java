@@ -8,6 +8,7 @@ import org.python.core.Py;
 import org.python.core.PyFrame;
 import org.python.core.ThreadState;
 import org.python.core.TraceFunction;
+import psdi.server.MXServer;
 import psdi.util.MXApplicationException;
 import psdi.util.MXException;
 import psdi.util.logging.MXLogger;
@@ -346,7 +347,16 @@ public final class DebugDriver extends JSR223ScriptDriver {
      */
     @SuppressWarnings("SameParameterValue")
     private String readProperty(String name) {
-        return System.getProperty(name);
+        String value = null;
+
+        try {
+            value = MXServer.getMXServer().getProperty(name);
+        } catch (RemoteException ignored) {
+        }
+        if (value == null || value.isBlank()) {
+            value = System.getProperty(name);
+        }
+        return value != null && value.isBlank() ? null : value;
     }
 
     /**

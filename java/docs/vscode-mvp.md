@@ -163,14 +163,14 @@ Output is buffered to line boundaries before being emitted, which keeps the VS C
 
 Set these properties and restart Maximo:
 
-- `mxe.autoscript.debug.enabled=1`
-- `mxe.autoscript.debug.port=4711`
+- `naviam.autoscript.debug.enabled=1`
+- `naviam.autoscript.debug.port=4711`
 
 Optional behavior:
 
-- `mxe.autoscript.debug.host`
+- `naviam.autoscript.debug.host`
   Defaults to `0.0.0.0` when unset.
-- `mxe.autoscript.debug.js.exclude`
+- `naviam.autoscript.debug.js.exclude`
   Comma- or whitespace-separated list of JavaScript script names that should not be instrumented.
 
 ## VS Code configuration

@@ -35,5 +35,6 @@
     "prettier.trailingComma": "none",
     "files.associations": {
         "*.dbc": "xml"
-    }
+    },
+    "java.configuration.updateBuildConfiguration": "disabled"
 }
