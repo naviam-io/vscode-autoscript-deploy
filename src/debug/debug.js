@@ -132,7 +132,8 @@ export class AutoScriptDebugAdapterDescriptorFactory {
 
         Logger.debug(`Creating debug adapter server for ${host}:${port}`);
 
-        vscode.window.showInformationMessage(`Maximo Automation Script debugger attached to ${host}:${port}`);
+        // Auto-clear after 10 seconds.
+        vscode.window.setStatusBarMessage(`Maximo Automation Script debugger attached to ${host}:${port}`, 10000);
 
         return new vscode.DebugAdapterServer(port, host);
     }
@@ -185,10 +186,7 @@ export class CleanupManager {
         if (session.type !== 'autoscript') {
             return;
         }
-        this.log(`Tracking session ${session.id} from ${source}; installOnAttach=${session.configuration.installOnAttach === true}`);
-        if (!session.configuration.installOnAttach) {
-            return;
-        }
+        this.log(`Tracking session ${session.id} from ${source};`);
         this.trackedSessions.set(session.id, session.configuration);
     }
 

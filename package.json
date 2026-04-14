@@ -3,7 +3,7 @@
     "displayName": "Maximo Development Tools",
     "description": "An extension for developing and deploying Maximo automation scripts, forms, reports and screens from Visual Studio Code.",
     "publisher": "Sharptree",
-    "version": "1.27.4",
+    "version": "1.27.5",
     "galleryBanner": {
         "color": "#18242C",
         "theme": "dark"
@@ -269,10 +269,6 @@
                 ],
                 "configurationAttributes": {
                     "attach": {
-                        "required": [
-                            "host",
-                            "port"
-                        ],
                         "properties": {
                             "name": {
                                 "type": "string",
@@ -292,14 +288,6 @@
                                 ],
                                 "default": "autoscript"
                             },
-                            "host": {
-                                "type": "string",
-                                "default": "127.0.0.1"
-                            },
-                            "port": {
-                                "type": "number",
-                                "default": 4711
-                            },
                             "scriptRoots": {
                                 "type": "array",
                                 "description": "Local folders containing automation scripts to map back from Maximo script names.",
@@ -318,12 +306,9 @@
                         "type": "autoscript",
                         "request": "attach",
                         "name": "Attach to Maximo Automation Script",
-                        "host": "127.0.0.1",
-                        "port": 4711,
                         "scriptRoots": [
                             "${workspaceFolder}"
-                        ],
-                        "installOnAttach": false
+                        ]
                     }
                 ],
                 "configurationSnippets": [
@@ -334,12 +319,9 @@
                             "type": "autoscript",
                             "request": "attach",
                             "name": "Attach to Maximo Automation Script",
-                            "host": "127.0.0.1",
-                            "port": 4711,
                             "scriptRoots": [
                                 "${workspaceFolder}"
-                            ],
-                            "installOnAttach": false
+                            ]
                         }
                     }
                 ]

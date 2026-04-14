@@ -1,4 +1,7 @@
 # Release Notes
+## 1.27.5
+- Remote debugging documentation.
+  
 ## 1.27.4
 - Added trace level logging and moved common client error handling to trace.
 - Fixed webpack resolution

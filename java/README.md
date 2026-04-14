@@ -135,8 +135,7 @@ The extension contributes an attach configuration like this:
   Port for the Maximo debug adapter. Defaults to `4711`.
 - `scriptRoots`
   Local folders scanned recursively for `.py` and `.js` files. Files are indexed by uppercased file stem.
-- `installOnAttach`
-  When `true`, the extension first connects to Maximo over HTTP, uploads the built AutoDebug jar, updates the `mxe.script.drivers` property, and tries to activate the custom driver in the current JVM.
+
 
 If `scriptRoots` is omitted, the extension defaults to `${workspaceFolder}/autoScripts`.
 
