@@ -2,6 +2,7 @@ package io.naviam.autoscript;
 
 import org.openjdk.nashorn.api.tree.BlockTree;
 import org.openjdk.nashorn.api.tree.CaseTree;
+import org.openjdk.nashorn.api.tree.CatchTree;
 import org.openjdk.nashorn.api.tree.CompilationUnitTree;
 import org.openjdk.nashorn.api.tree.ExpressionStatementTree;
 import org.openjdk.nashorn.api.tree.ExpressionTree;
@@ -108,6 +109,18 @@ final class JavaScriptInstrumenter {
             if (initializer != null) {
                 initializer.accept(this, scope);
             }
+            return null;
+        }
+
+        @Override
+        public Void visitCatch(CatchTree node, Scope parentScope) {
+            Scope catchScope = new Scope(parentScope);
+            ExpressionTree parameter = node.getParameter();
+            if (parameter instanceof IdentifierTree identifierTree) {
+                catchScope.add(identifierTree.getName());
+            }
+            scopeByTree.put(node, catchScope);
+            node.getBlock().accept(this, catchScope);
             return null;
         }
 
@@ -312,6 +325,29 @@ final class JavaScriptInstrumenter {
         public Void visitTry(TryTree node, Scope scope) {
             instrumentStatement(node, scope);
             return super.visitTry(node, scope);
+        }
+
+        /**
+         * Instruments each {@code catch} clause to emit an exception event at the catch site so the
+         * debug adapter can pause when caught-exception breakpoints are enabled.
+         */
+        @Override
+        public Void visitCatch(CatchTree node, Scope parentScope) {
+            Scope catchScope = scopeByTree.getOrDefault(node, parentScope);
+            BlockTree block = node.getBlock();
+            int catchLine = lineNumber(node);
+            ExpressionTree parameter = node.getParameter();
+            // Wrap the exception reference in a safe IIFE so that any unexpected identifier
+            // resolution issue does not break the catch body at runtime.
+            String exceptionExpr = (parameter instanceof IdentifierTree identifierTree)
+                    ? "(function(){try{return " + identifierTree.getName() + ";}catch(_e){return undefined;}})()"
+                    : "undefined";
+            plan.insert(
+                    block.getStartPosition() + 1,
+                    DEBUGGER_ALIAS + ".exception_js(" + catchLine + "," + exceptionExpr + "," + catchScope.snapshotExpression() + ");",
+                    70
+            );
+            return super.visitCatch(node, catchScope);
         }
 
         @Override

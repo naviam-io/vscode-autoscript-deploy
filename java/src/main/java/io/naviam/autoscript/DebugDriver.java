@@ -279,7 +279,14 @@ public final class DebugDriver extends JSR223ScriptDriver {
                         + " completed; merged " + engineBindings.size() + " bindings into context");
             }
         } catch (ScriptException e) {
-
+            // Notify the debug adapter before converting so the client can pause at the throw
+            // line while the Nashorn engine state is still available.
+            int lineNumber = resolveExceptionLine(e);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("JavaScript uncaught exception in " + scriptInfo.getName()
+                        + " at line " + lineNumber + ": " + e.getMessage());
+            }
+            DEBUG_ADAPTER_SERVER.traceJavaScriptException(scriptInfo, context, lineNumber, e, null, true);
             throw toScriptException(scriptInfo, e);
         }
     }
@@ -300,6 +307,23 @@ public final class DebugDriver extends JSR223ScriptDriver {
             LOGGER.error("JavaScript automation script " + scriptInfo.getName() + " failed", exception);
         }
         return new MXApplicationException("script", "compileerr", new Object[]{scriptInfo.getName()}, exception);
+    }
+
+    /**
+     * Extracts the 1-based source line number from a Nashorn {@link ScriptException} so the
+     * uncaught-exception stop is positioned at the throw site rather than line 1.
+     *
+     * @param exception the exception thrown by the Nashorn engine
+     * @return 1-based line number, or {@code 1} when line information is unavailable
+     */
+    private int resolveExceptionLine(ScriptException exception) {
+        Throwable cause = exception.getCause();
+        if (cause instanceof NashornException nashornException) {
+            int line = nashornException.getLineNumber();
+            return line > 0 ? line : 1;
+        }
+        int line = exception.getLineNumber();
+        return line > 0 ? line : 1;
     }
 
     /**
@@ -391,6 +415,22 @@ public final class DebugDriver extends JSR223ScriptDriver {
 
         @Override
         public TraceFunction traceException(PyFrame frame, org.python.core.PyException exc) {
+            // Fires when an exception is set in the current frame — covers both caught and
+            // propagating exceptions at the Jython level.  Pause only when inside a script
+            // frame so framework exceptions traversing the stack do not trigger spurious stops.
+            if (isScriptFrame(frame)) {
+                if (!DEBUG_ADAPTER_SERVER.isBreakOnCaughtExceptions()) {
+                    if (LOGGER.isDebugEnabled()) {
+                        int lineNumber = frame.f_lineno > 0 ? frame.f_lineno : 1;
+                        LOGGER.debug("Skipping caught Python exception callback for "
+                                + scriptInfo.getName() + " at line " + lineNumber
+                                + " because caught-exception breakpoints are disabled");
+                    }
+                    return this;
+                }
+                int lineNumber = frame.f_lineno > 0 ? frame.f_lineno : 1;
+                DEBUG_ADAPTER_SERVER.tracePythonException(scriptInfo, context, lineNumber, frame, exc, false);
+            }
             return this;
         }
 

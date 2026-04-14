@@ -12,6 +12,7 @@ import psdi.util.logging.MXLogger;
 import psdi.util.logging.MXLoggerFactory;
 
 import org.python.core.Py;
+import org.python.core.PyException;
 import org.python.core.PyFrame;
 import org.python.core.PyObject;
 import org.python.core.PyStringMap;
@@ -74,6 +75,8 @@ public final class DebugAdapterServer {
     private static final int DEFAULT_CLIENT_IDLE_TIMEOUT_MS = 0;
     private static final int DEFAULT_CLIENT_LIVENESS_POLL_MS = 1000;
     private static final ScriptEngineManager SCRIPT_ENGINE_MANAGER = new ScriptEngineManager();
+    private static final boolean DEFAULT_BREAK_ON_UNCAUGHT = true;
+    private static final boolean DEFAULT_BREAK_ON_EXCEPTION = false;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final AtomicBoolean started = new AtomicBoolean(false);
@@ -84,6 +87,11 @@ public final class DebugAdapterServer {
     private final Map<String, Map<Integer, BreakpointDefinition>> breakpointsByScript = new ConcurrentHashMap<>();
     private final ThreadLocal<Integer> javaScriptFunctionDepth = ThreadLocal.withInitial(() -> 0);
     private final ThreadLocal<JavaScriptTraceState> javaScriptTraceState = ThreadLocal.withInitial(JavaScriptTraceState::new);
+
+    /** Whether the connected client has enabled caught-exception breakpoints ({@code all} filter). */
+    private volatile boolean breakOnCaughtExceptions = DEFAULT_BREAK_ON_EXCEPTION;
+    /** Whether the connected client has enabled uncaught-exception breakpoints ({@code all} or {@code uncaught} filter). */
+    private volatile boolean breakOnUncaughtExceptions = DEFAULT_BREAK_ON_UNCAUGHT;
 
     private volatile ServerSocket serverSocket;
     private volatile Socket clientSocket;
@@ -161,6 +169,8 @@ public final class DebugAdapterServer {
         breakpointsByScript.clear();
         variableReferences.clear();
         pauseState = null;
+        breakOnCaughtExceptions = DEFAULT_BREAK_ON_EXCEPTION;
+        breakOnUncaughtExceptions = DEFAULT_BREAK_ON_UNCAUGHT;
     }
 
     /**
@@ -415,6 +425,100 @@ public final class DebugAdapterServer {
     }
 
     /**
+     * Suspends execution at a JavaScript exception site, snapshots visible locals, and blocks
+     * until the client resumes or disconnects.
+     */
+    private void pauseOnJavaScriptException(
+            ScriptInfo scriptInfo,
+            Map<String, Object> context,
+            String exceptionText,
+            int lineNumber,
+            Object locals,
+            boolean uncaught
+    ) {
+        synchronized (pauseMonitor) {
+            if (pauseState != null) {
+                LOGGER.warn("Skipping exception pause because another script is already suspended");
+                return;
+            }
+            variableReferences.clear();
+            PauseState state = PauseState.fromJavaScriptException(
+                    scriptInfo, context, exceptionText, lineNumber, locals, uncaught);
+            pauseState = state;
+            registerPauseVariables(state);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Pausing on JavaScript exception in " + state.scriptName
+                        + " at line " + lineNumber
+                        + " uncaught=" + uncaught
+                        + " on thread " + state.threadId);
+            }
+            sendEvent("stopped", Map.of(
+                    "reason", "exception",
+                    "threadId", state.threadId,
+                    "allThreadsStopped", true,
+                    "description", state.reason,
+                    "text", state.reason
+            ));
+            try {
+                awaitResumeOrTerminate(state);
+            } finally {
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("JavaScript exception pause completed for " + state.scriptName + " on thread " + state.threadId);
+                }
+                pauseState = null;
+                variableReferences.clear();
+            }
+        }
+    }
+
+    /**
+     * Suspends execution at a Jython exception site, snapshots the active frame, and blocks
+     * until the client resumes or disconnects.
+     */
+    private void pauseOnPythonException(
+            ScriptInfo scriptInfo,
+            Map<String, Object> context,
+            String exceptionText,
+            int lineNumber,
+            PyFrame frame,
+            boolean uncaught
+    ) {
+        synchronized (pauseMonitor) {
+            if (pauseState != null) {
+                LOGGER.warn("Skipping exception pause because another script is already suspended");
+                return;
+            }
+            variableReferences.clear();
+            PauseState state = PauseState.fromPythonException(
+                    scriptInfo, context, exceptionText, lineNumber, frame, uncaught);
+            pauseState = state;
+            registerPauseVariables(state);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Pausing on Python exception in " + state.scriptName
+                        + " at line " + lineNumber
+                        + " uncaught=" + uncaught
+                        + " on thread " + state.threadId);
+            }
+            sendEvent("stopped", Map.of(
+                    "reason", "exception",
+                    "threadId", state.threadId,
+                    "allThreadsStopped", true,
+                    "description", state.reason,
+                    "text", state.reason
+            ));
+            try {
+                awaitResumeOrTerminate(state);
+            } finally {
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Python exception pause completed for " + state.scriptName + " on thread " + state.threadId);
+                }
+                pauseState = null;
+                variableReferences.clear();
+            }
+        }
+    }
+
+    /**
      * Checks whether any line breakpoints are registered for the named script.
      *
      * @param scriptName Maximo automation script name
@@ -451,6 +555,101 @@ public final class DebugAdapterServer {
         return isClientConnected();
     }
 
+    /**
+     * Indicates whether caught-exception breakpoints are currently active.
+     *
+     * @return {@code true} when the client has enabled the {@code all} filter
+     */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    public boolean isBreakOnCaughtExceptions() {
+        return breakOnCaughtExceptions;
+    }
+
+    /**
+     * Indicates whether uncaught-exception breakpoints are currently active.
+     *
+     * @return {@code true} when the client has enabled the {@code all} or {@code uncaught} filter
+     */
+    public boolean isBreakOnUncaughtExceptions() {
+        return breakOnUncaughtExceptions;
+    }
+
+    /**
+     * Evaluates the active exception filter and, when the filter allows it, suspends the script
+     * thread at the point where a JavaScript exception was caught or thrown.
+     *
+     * @param scriptInfo active script metadata
+     * @param context    current script bindings
+     * @param lineNumber 1-based line at the catch clause or throw site
+     * @param exception  the JavaScript exception value; may be a {@link Throwable} or a Nashorn object
+     * @param locals     instrumented locals snapshot at the exception site, or {@code null}
+     * @param uncaught   {@code true} when the exception escaped all script-level handlers
+     */
+    public void traceJavaScriptException(
+            ScriptInfo scriptInfo,
+            Map<String, Object> context,
+            int lineNumber,
+            Object exception,
+            Object locals,
+            boolean uncaught
+    ) {
+        boolean shouldBreak = uncaught ? breakOnUncaughtExceptions : breakOnCaughtExceptions;
+        if (!shouldBreak || !isClientConnected()) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Skipping JavaScript exception stop for script " + scriptInfo.getName()
+                        + " line=" + lineNumber
+                        + " uncaught=" + uncaught
+                        + " shouldBreak=" + shouldBreak
+                        + " clientConnected=" + isClientConnected());
+            }
+            return;
+        }
+        String exceptionText = formatExceptionText(exception);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("JavaScript " + (uncaught ? "uncaught " : "caught ") + "exception in "
+                    + scriptInfo.getName() + " at line " + lineNumber + ": " + exceptionText);
+        }
+        pauseOnJavaScriptException(scriptInfo, context, exceptionText, lineNumber, locals, uncaught);
+    }
+
+    /**
+     * Evaluates the active exception filter and, when the filter allows it, suspends the script
+     * thread at the point where a Jython exception was raised or is being handled.
+     *
+     * @param scriptInfo active script metadata
+     * @param context    current script bindings
+     * @param lineNumber 1-based line at the exception site
+     * @param frame      current Jython frame
+     * @param exc        the active Jython exception
+     * @param uncaught   {@code true} when the exception is propagating unhandled
+     */
+    public void tracePythonException(
+            ScriptInfo scriptInfo,
+            Map<String, Object> context,
+            int lineNumber,
+            PyFrame frame,
+            PyException exc,
+            boolean uncaught
+    ) {
+        boolean shouldBreak = uncaught ? breakOnUncaughtExceptions : breakOnCaughtExceptions;
+        if (!shouldBreak || !isClientConnected()) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Skipping Python exception stop for script " + scriptInfo.getName()
+                        + " line=" + lineNumber
+                        + " uncaught=" + uncaught
+                        + " shouldBreak=" + shouldBreak
+                        + " clientConnected=" + isClientConnected());
+            }
+            return;
+        }
+        String exceptionText = formatPythonException(exc);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Python " + (uncaught ? "uncaught " : "caught ") + "exception in "
+                    + scriptInfo.getName() + " at line " + lineNumber + ": " + exceptionText);
+        }
+        pauseOnPythonException(scriptInfo, context, exceptionText, lineNumber, frame, uncaught);
+    }
+
     private void acceptLoop() {
         while (true) {
             try {
@@ -485,6 +684,12 @@ public final class DebugAdapterServer {
         clientSocket = socket;
         clientInput = new BufferedInputStream(socket.getInputStream());
         clientOutput = new BufferedOutputStream(socket.getOutputStream());
+        breakOnCaughtExceptions = DEFAULT_BREAK_ON_EXCEPTION;
+        breakOnUncaughtExceptions = DEFAULT_BREAK_ON_UNCAUGHT;
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Exception breakpoint defaults reset for new client: caught="
+                + breakOnCaughtExceptions + ", uncaught=" + breakOnUncaughtExceptions);
+        }
         markClientActivity();
         Thread readerThread = new Thread(this::readLoop, "autoscript-debug-client");
         readerThread.setDaemon(true);
@@ -589,7 +794,12 @@ public final class DebugAdapterServer {
                         "supportsStepBack", false,
                         "supportsSetVariable", false,
                         "supportsStepInTargetsRequest", false,
-                        "supportsConditionalBreakpoints", true
+                        "supportsConditionalBreakpoints", true,
+                        "supportsExceptionInfoRequest", true,
+                        "exceptionBreakpointFilters", List.of(
+                                Map.of("filter", "all", "label", "All Exceptions", "default", false),
+                                Map.of("filter", "uncaught", "label", "Uncaught Exceptions", "default", true)
+                        )
                 ));
                 sendEvent("initialized", Map.of());
             }
@@ -599,9 +809,22 @@ public final class DebugAdapterServer {
                 sendResponse(requestSeq, command, true, null, Map.of());
             }
             case "setBreakpoints" -> sendResponse(requestSeq, command, true, null, handleSetBreakpoints(arguments));
-            case "configurationDone", "setExceptionBreakpoints" -> sendResponse(requestSeq, command, true, null, Map.of(
-                    "breakpoints", List.of()
-            ));
+            case "configurationDone" -> sendResponse(requestSeq, command, true, null, Map.of());
+            case "setExceptionBreakpoints" -> {
+                Set<String> requestedFilters = exceptionFilters(arguments);
+                if (requestedFilters.isEmpty()) {
+                    LOGGER.info("Exception breakpoints unchanged (no filters provided): caught="
+                            + breakOnCaughtExceptions + ", uncaught=" + breakOnUncaughtExceptions);
+                } else {
+                    breakOnCaughtExceptions = requestedFilters.contains("all");
+                    breakOnUncaughtExceptions = requestedFilters.contains("all") || requestedFilters.contains("uncaught");
+                    LOGGER.info("Exception breakpoints: caught=" + breakOnCaughtExceptions
+                            + ", uncaught=" + breakOnUncaughtExceptions
+                            + ", requested=" + requestedFilters);
+                }
+                sendResponse(requestSeq, command, true, null, Map.of("breakpoints", List.of()));
+            }
+            case "exceptionInfo" -> sendResponse(requestSeq, command, true, null, buildExceptionInfoBody());
             case "threads" -> sendResponse(requestSeq, command, true, null, Map.of(
                     "threads", List.of(Map.of("id", currentThreadId(), "name", currentThreadName()))
             ));
@@ -1037,7 +1260,6 @@ public final class DebugAdapterServer {
         }
     }
 
-
     @SuppressWarnings("SameParameterValue")
     private boolean readBooleanProperty(String name, boolean defaultValue) {
         String value = readProperty(name);
@@ -1163,6 +1385,100 @@ public final class DebugAdapterServer {
 
         int dotIndex = name.lastIndexOf('.');
         return (dotIndex >= 0 ? name.substring(0, dotIndex) : name).toUpperCase();
+    }
+
+    /**
+     * Returns the body for a DAP {@code exceptionInfo} response using the current pause state.
+     */
+    private Map<String, Object> buildExceptionInfoBody() {
+        PauseState state = pauseState;
+        if (state == null || state.exceptionText == null) {
+            return Map.of("exceptionId", "Exception", "breakMode", "always");
+        }
+        return Map.of(
+                "exceptionId", state.exceptionText,
+                "description", state.exceptionText,
+                "breakMode", state.exceptionUncaught ? "unhandled" : "always"
+        );
+    }
+
+    /**
+     * Produces a short human-readable label for a JavaScript exception value.
+     *
+     * @param exception exception object from Nashorn or a Java {@link Throwable}
+     * @return short label suitable for the DAP stopped-event description
+     */
+    private String formatExceptionText(Object exception) {
+        if (exception == null) {
+            return "Exception";
+        }
+        if (exception instanceof Throwable throwable) {
+            String message = throwable.getMessage();
+            return throwable.getClass().getSimpleName()
+                    + (message != null && !message.isBlank() ? ": " + message : "");
+        }
+        try {
+            return String.valueOf(exception);
+        } catch (Exception e) {
+            return exception.getClass().getSimpleName();
+        }
+    }
+
+    /**
+     * Produces a short human-readable label for a Jython exception.
+     *
+     * @param exc active Jython exception
+     * @return short label combining the Python type name and value
+     */
+    private String formatPythonException(PyException exc) {
+        if (exc == null) {
+            return "Exception";
+        }
+        try {
+            String typeName = exc.type != null ? exc.type.toString() : "Exception";
+            String valueStr = exc.value != null ? exc.value.toString() : "";
+            return valueStr.isBlank() ? typeName : typeName + ": " + valueStr;
+        } catch (Exception ignored) {
+            return "Exception";
+        }
+    }
+
+    /**
+     * Coerces an unknown argument to a {@link List}, returning an empty list when the value
+     * is not a list type.
+     */
+    @SuppressWarnings("unchecked")
+    private List<Object> listValue(Object value) {
+        if (value instanceof List<?> list) {
+            return (List<Object>) list;
+        }
+        return List.of();
+    }
+
+    /**
+     * Extracts exception breakpoint filters from both DAP payload shapes:
+     * {@code filters:["all","uncaught"]} and
+     * {@code filterOptions:[{filterId:"all"},{filterId:"uncaught"}]}.
+     */
+    private Set<String> exceptionFilters(Map<String, Object> arguments) {
+        LinkedHashSet<String> filters = new LinkedHashSet<>();
+
+        for (Object value : listValue(arguments.get("filters"))) {
+            String filter = stringValue(value).trim();
+            if (!filter.isEmpty()) {
+                filters.add(filter);
+            }
+        }
+
+        for (Object option : listValue(arguments.get("filterOptions"))) {
+            Map<String, Object> optionMap = mapValue(option);
+            String filterId = stringValue(optionMap.get("filterId")).trim();
+            if (!filterId.isEmpty()) {
+                filters.add(filterId);
+            }
+        }
+
+        return filters;
     }
 
     private boolean isTruthy(Object value) {
@@ -1472,6 +1788,10 @@ public final class DebugAdapterServer {
         private final Map<Integer, StackFrameState> frameById;
         private final Set<Integer> sourceReferences;
         private final CountDownLatch resumeLatch = new CountDownLatch(1);
+        /** Non-null only for exception-stop events; used by the {@code exceptionInfo} request. */
+        private final String exceptionText;
+        /** {@code true} when this stop represents an unhandled exception. */
+        private final boolean exceptionUncaught;
 
         private PauseState(
                 String scriptName,
@@ -1483,7 +1803,9 @@ public final class DebugAdapterServer {
                 String fileExtension,
                 String mimeType,
                 int frameDepth,
-                List<StackFrameState> frames
+                List<StackFrameState> frames,
+                String exceptionText,
+                boolean exceptionUncaught
         ) {
             this.scriptName = scriptName;
             this.reason = reason;
@@ -1503,6 +1825,8 @@ public final class DebugAdapterServer {
             }
             this.frameById = byId;
             this.sourceReferences = refs;
+            this.exceptionText = exceptionText;
+            this.exceptionUncaught = exceptionUncaught;
         }
 
         private static PauseState from(
@@ -1526,7 +1850,9 @@ public final class DebugAdapterServer {
                     scriptFileExtension(language),
                     scriptMimeType(language),
                     INSTANCE.pythonFrameDepth(frame),
-                    frames
+                    frames,
+                    null,
+                    false
             );
         }
 
@@ -1551,7 +1877,87 @@ public final class DebugAdapterServer {
                     scriptFileExtension(language),
                     scriptMimeType(language),
                     INSTANCE.currentJavaScriptDepth(),
-                    frames
+                    frames,
+                    null,
+                    false
+            );
+        }
+
+        /**
+         * Creates a pause state for an exception stop in an instrumented JavaScript script.
+         *
+         * @param scriptInfo    active script metadata
+         * @param context       current script bindings
+         * @param exceptionText short description of the exception shown in the debugger
+         * @param lineNumber    1-based line at the catch clause or throw site
+         * @param locals        instrumented locals snapshot at the exception site, or {@code null}
+         * @param uncaught      {@code true} when the exception escaped all script-level handlers
+         */
+        private static PauseState fromJavaScriptException(
+                ScriptInfo scriptInfo,
+                Map<String, Object> context,
+                String exceptionText,
+                Integer lineNumber,
+                Object locals,
+                boolean uncaught
+        ) {
+            Thread thread = Thread.currentThread();
+            int threadId = Math.toIntExact(thread.getId());
+            String language = scriptInfo.getScriptLanguge();
+            List<StackFrameState> frames = INSTANCE.captureJavaScriptFrames(scriptInfo, context, locals, lineNumber);
+            String displayReason = exceptionText == null || exceptionText.isBlank() ? "Exception" : exceptionText;
+            return new PauseState(
+                    scriptInfo.getName(),
+                    displayReason,
+                    lineNumber == null ? 1 : lineNumber,
+                    threadId,
+                    thread.getName(),
+                    scriptInfo.getScriptSource(),
+                    scriptFileExtension(language),
+                    scriptMimeType(language),
+                    INSTANCE.currentJavaScriptDepth(),
+                    frames,
+                    displayReason,
+                    uncaught
+            );
+        }
+
+        /**
+         * Creates a pause state for an exception stop in a Jython script.
+         *
+         * @param scriptInfo    active script metadata
+         * @param context       current script bindings
+         * @param exceptionText short description of the exception shown in the debugger
+         * @param lineNumber    1-based line at the exception site
+         * @param frame         current Jython frame
+         * @param uncaught      {@code true} when the exception is propagating unhandled
+         */
+        private static PauseState fromPythonException(
+                ScriptInfo scriptInfo,
+                Map<String, Object> context,
+                String exceptionText,
+                Integer lineNumber,
+                PyFrame frame,
+                boolean uncaught
+        ) {
+            Thread thread = Thread.currentThread();
+            int threadId = Math.toIntExact(thread.getId());
+            String language = scriptInfo.getScriptLanguge();
+            List<StackFrameState> frames = INSTANCE.capturePythonFrames(scriptInfo, context, frame, lineNumber);
+            String displayReason = exceptionText == null || exceptionText.isBlank() ? "Exception" : exceptionText;
+            return new PauseState(
+                    scriptInfo.getName(),
+                    displayReason,
+                    lineNumber == null ? 1 : lineNumber,
+                    threadId,
+                    thread.getName(),
+                    scriptInfo.getScriptSource(),
+                    scriptFileExtension(language),
+                    scriptMimeType(language),
+                    INSTANCE.pythonFrameDepth(frame),
+                    frames,
+                    displayReason,
+                    uncaught
             );
         }
 

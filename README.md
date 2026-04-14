@@ -532,9 +532,7 @@ Add an attach configuration to `.vscode/launch.json` similar to the following:
             "type": "autoscript",
             "request": "attach",
             "name": "Attach to Maximo Automation Script",
-            "scriptRoots": [
-                "${workspaceFolder}"
-            ]
+            "scriptRoots": ["${workspaceFolder}"]
         }
     ]
 }
@@ -561,7 +559,6 @@ Connection settings:
 6. Start the attach configuration from VS Code.
 7. Trigger the automation script in Maximo.
 8. Inspect variables, evaluate expressions, review console output, and step through execution.
-
 
 ## Debugging Features
 
@@ -617,7 +614,7 @@ For JavaScript/Nashorn:
 
 ```javascript
 if (__autoscript_debugger.isEnabled()) {
-    __autoscript_debugger.breakpoint("before save", 42);
+    __autoscript_debugger.breakpoint('before save', 42);
 }
 ```
 
@@ -637,6 +634,8 @@ Do not rely on Java-style `.equals(...)` in conditional breakpoint expressions.
 | naviam.autoscript.debug.host       | Bind host for the adapter listener. Default: `0.0.0.0`                                                                                                      |
 | naviam.autoscript.debug.js.exclude | Exact script names to exclude from JavaScript/Nashorn debugger integration, matching is case-insensitive and separators can be commas, whitespace, or both. |
 
+Caught and uncaught exception stopping is controlled by VS Code exception breakpoints (`All Exceptions` and `Uncaught Exceptions`) for the active debug session.
+
 ## JavaScript / Nashorn Notes
 
 - JavaScript instrumentation is only applied while a debug client is attached.
@@ -648,7 +647,7 @@ Do not rely on Java-style `.equals(...)` in conditional breakpoint expressions.
 ## Limitations
 
 - Source mapping is filename-based rather than driven by authoritative Maximo metadata, so the file name _must_ match the script name.
-    The VS Code extension indexes local `.py` and `.js` files by upper-cased file base name, and if multiple files collapse to the same key, the last indexed file wins.
+  The VS Code extension indexes local `.py` and `.js` files by upper-cased file base name, and if multiple files collapse to the same key, the last indexed file wins.
 - The debugger is built around a single in-process adapter and a single active paused script.
   One VS Code client attaches to one Maximo-hosted TCP listener, and only one script execution can remain suspended at a time. If another script hits a breakpoint while one is already paused, that second pause is skipped.
 - Jython tracing is intentionally limited to the top-level automation script body.

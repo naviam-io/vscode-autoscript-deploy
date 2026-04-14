@@ -1,4 +1,7 @@
 # Release Notes
+## 1.27.6
+- Handle caught and uncaught exceptions.
+  
 ## 1.27.5
 - Remote debugging documentation.
   

@@ -88,6 +88,8 @@ These settings are read from Maximo properties first and then JVM system propert
 - `naviam.autoscript.debug.js.exclude`
   Exact script names to exclude from JavaScript/Nashorn debugger integration. Matching is case-insensitive. Separators can be commas, whitespace, or both, (this is in place as a temporary workaround for the Development Toolkit as it wants to reinstall it's autoscripts every time it runs due to the driver instrumenting the debug framework and the scripts updating at compile time).
 
+Caught and uncaught exception stops are controlled by VS Code exception breakpoints (`All Exceptions` and `Uncaught Exceptions`) through DAP `setExceptionBreakpoints`.
+
 Default excluded JavaScript scripts:
 
 - `NAVIAM.AUTOSCRIPT.ADMIN`

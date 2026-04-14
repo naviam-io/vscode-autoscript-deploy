@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "io.naviam"
-version = "1.0.0"
+version = "1.1.0"
 
 
 val vendor = "Naviam"

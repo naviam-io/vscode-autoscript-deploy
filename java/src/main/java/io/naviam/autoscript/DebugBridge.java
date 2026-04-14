@@ -3,6 +3,8 @@ package io.naviam.autoscript;
 import com.ibm.tivoli.maximo.script.ScriptInfo;
 import org.python.core.Py;
 import org.python.core.PyFrame;
+import psdi.util.logging.MXLogger;
+import psdi.util.logging.MXLoggerFactory;
 
 import java.util.Map;
 
@@ -10,6 +12,7 @@ import java.util.Map;
  * Exposes debugger controls to automation scripts through the injected {@code debugger} binding.
  */
 public final class DebugBridge {
+    private static final MXLogger LOGGER = MXLoggerFactory.getLogger("maximo.naviam.debug");
     private final DebugAdapterServer debugAdapterServer;
     private final ScriptInfo scriptInfo;
     private final Map<String, Object> context;
@@ -121,6 +124,27 @@ public final class DebugBridge {
     @SuppressWarnings("unused")
     public void exit_js() {
         debugAdapterServer.exitJavaScriptFunction();
+    }
+
+    /**
+     * Reports a caught JavaScript exception to the debug adapter, suspending execution if the
+     * client has enabled caught-exception breakpoints.
+     *
+     * @param lineNumber 1-based line of the {@code catch} clause
+     * @param exception  the caught exception value passed through from the catch parameter
+     * @param locals     instrumented snapshot of locals visible at the catch site
+     */
+    @SuppressWarnings("unused")
+    public void exception_js(int lineNumber, Object exception, Object locals) {
+        if (!debugAdapterServer.isBreakOnCaughtExceptions()) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Skipping caught JavaScript exception callback for "
+                        + scriptInfo.getName() + " at line " + lineNumber
+                        + " because caught-exception breakpoints are disabled");
+            }
+            return;
+        }
+        debugAdapterServer.traceJavaScriptException(scriptInfo, context, lineNumber, exception, locals, false);
     }
 
     /**
