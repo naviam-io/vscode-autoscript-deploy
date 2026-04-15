@@ -91,12 +91,7 @@ function setupProperties() {
     addOrUpdateProperty('naviam.autoscript.debug.enabled', 'Naviam Automation Script Debug Enabled or Disabled', 'true', 'YORN', 'PUBLIC');
     addOrUpdateProperty('naviam.autoscript.debug.client.idleTimeout', 'Idle period in milliseconds before the debugger disconnects', '0', 'INTEGER', 'PUBLIC');
     addOrUpdateProperty('naviam.autoscript.debug.client.livenessPoll', 'Liveness poll period in milliseconds', '1000', 'INTEGER', 'PUBLIC');
-    MXServer.getMXServer().reloadMaximoCache('MAXPROP', 'naviam.autoscript.debug.port', true);
-    MXServer.getMXServer().reloadMaximoCache('MAXPROP', 'naviam.autoscript.debug.host', true);
-    MXServer.getMXServer().reloadMaximoCache('MAXPROP', 'naviam.autoscript.debug.js.exclude', true);
-    MXServer.getMXServer().reloadMaximoCache('MAXPROP', 'naviam.autoscript.debug.enabled', true);
-    MXServer.getMXServer().reloadMaximoCache('MAXPROP', 'naviam.autoscript.debug.client.idleTimeout', true);
-    MXServer.getMXServer().reloadMaximoCache('MAXPROP', 'naviam.autoscript.debug.client.livenessPoll', true);
+    MXServer.getMXServer().reloadMaximoCache('MAXPROP', true);
 }
 
 function addOrUpdateProperty(propName, description, value, maxType, secureLevel) {
@@ -121,18 +116,14 @@ function addOrUpdateProperty(propName, description, value, maxType, secureLevel)
 
         property.setValue('DESCRIPTION', description);
 
-        var propValueSet = property.getMboSet('MAXPROPVALUE');
-        var propValue;
-
-        if (propValueSet.isEmpty()) {
-            propValue = propValueSet.add();
-        } else {
-            propValue = propValueSet.moveFirst();
-        }
-
-        propValue.setValue('PROPVALUE', value, MboConstants.NOACCESSCHECK);
-
         propertySet.save();
+
+        if (property.isNull('DISPPROPVALUE')) {
+            propertySet.reset();
+            property = propertySet.getMboForUniqueId(property.getUniqueIDValue());
+            property.setValue('DISPPROPVALUE', value);
+            propertySet.save();
+        }
     } finally {
         _close(propertySet);
     }

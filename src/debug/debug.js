@@ -133,7 +133,7 @@ export class AutoScriptDebugAdapterDescriptorFactory {
         Logger.debug(`Creating debug adapter server for ${host}:${port}`);
 
         // Auto-clear after 10 seconds.
-        vscode.window.setStatusBarMessage(`Maximo Automation Script debugger attached to ${host}:${port}`, 10000);
+        vscode.window.setStatusBarMessage(`Maximo Automation Script debugger attached to ${host}:${port}`, 5000);
 
         return new vscode.DebugAdapterServer(port, host);
     }
@@ -162,7 +162,22 @@ export class AutoScriptDebugAdapterTrackerFactory {
                     }
                 },
                 onError: (error) => {
-                    const detail = error && error.message ? error.message : String(error);
+                    let detail = '';
+                    if (error) {
+                        if (error.message) {
+                            detail = error.message;
+                        } else if (error.stack) {
+                            detail = error.stack;
+                        } else {
+                            try {
+                                detail = JSON.stringify(error);
+                            } catch (e) {
+                                detail = String(error);
+                            }
+                        }
+                    } else {
+                        detail = 'Unknown error (error object was undefined)';
+                    }
                     Logger.error(`Debug adapter tracker error for session ${session.id}: ${detail}`);
                 }
             };

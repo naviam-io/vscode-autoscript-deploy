@@ -15,7 +15,6 @@ java/**
 tsconfig.json
 webpack.config.js
 resources/.vscode/**
-resources/.version
 resources/.git/**
 resources/.gitignore
 .gitmodules

@@ -48,7 +48,7 @@ module.exports = (env, argv) => {
         // Disable eval-based source maps. Webpack's default dev devtool wraps modules in eval()
         // with "use strict", which causes Nashorn to reject function declarations inside eval.
         devtool: false,
-        entry: './src/index.ts',
+        entry: ['./runtime-globals.ts', './src/index.ts'],
         target: ['web', 'es5'],
         performance: {
             hints: false

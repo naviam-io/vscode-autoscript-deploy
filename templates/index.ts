@@ -1,5 +1,5 @@
-// Declare implicit variables like service to avoid TypeScript errors. These will be provided by the Naviam environment at runtime.
-declare var service: any;
+/// <reference path="../globals.d.ts" />
+/// <reference path="../maximo-facade.d.ts" />
 
 main();
 

@@ -41,8 +41,8 @@ export default class MaximoClient {
         this.config = config;
         this.retry = true;
 
-        this.requiredScriptVersion = '1.58.0';
-        this.currentScriptVersion = '1.58.0';
+        this.requiredScriptVersion = '1.59.0';
+        this.currentScriptVersion = '1.59.0';
 
         this.adminModeRetryCount = 0;
 

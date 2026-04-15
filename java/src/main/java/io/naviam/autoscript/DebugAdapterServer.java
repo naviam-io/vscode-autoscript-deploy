@@ -15,7 +15,9 @@ import org.python.core.Py;
 import org.python.core.PyException;
 import org.python.core.PyFrame;
 import org.python.core.PyObject;
+import org.python.core.PySystemState;
 import org.python.core.PyStringMap;
+import org.python.core.Options;
 import org.python.util.PythonInterpreter;
 
 import java.beans.BeanInfo;
@@ -75,7 +77,10 @@ public final class DebugAdapterServer {
     private static final int DEFAULT_CLIENT_IDLE_TIMEOUT_MS = 0;
     private static final int DEFAULT_CLIENT_LIVENESS_POLL_MS = 1000;
     private static final ScriptEngineManager SCRIPT_ENGINE_MANAGER = new ScriptEngineManager();
-    private static final boolean DEFAULT_BREAK_ON_UNCAUGHT = true;
+    private static final Object PYTHON_INTERPRETER_INIT_MONITOR = new Object();
+    private static final String BREAK_ON_EXCEPTION_PROPERTY = "naviam.autoscript.breakOnException";
+    private static final String BREAK_ON_UNCAUGHT_PROPERTY = "naviam.autoscript.breakOnUncaught";
+    private static final boolean DEFAULT_BREAK_ON_UNCAUGHT = false;
     private static final boolean DEFAULT_BREAK_ON_EXCEPTION = false;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -169,8 +174,7 @@ public final class DebugAdapterServer {
         breakpointsByScript.clear();
         variableReferences.clear();
         pauseState = null;
-        breakOnCaughtExceptions = DEFAULT_BREAK_ON_EXCEPTION;
-        breakOnUncaughtExceptions = DEFAULT_BREAK_ON_UNCAUGHT;
+        resetExceptionBreakpointState();
     }
 
     /**
@@ -684,8 +688,7 @@ public final class DebugAdapterServer {
         clientSocket = socket;
         clientInput = new BufferedInputStream(socket.getInputStream());
         clientOutput = new BufferedOutputStream(socket.getOutputStream());
-        breakOnCaughtExceptions = DEFAULT_BREAK_ON_EXCEPTION;
-        breakOnUncaughtExceptions = DEFAULT_BREAK_ON_UNCAUGHT;
+        resetExceptionBreakpointState();
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Exception breakpoint defaults reset for new client: caught="
                 + breakOnCaughtExceptions + ", uncaught=" + breakOnUncaughtExceptions);
@@ -798,7 +801,7 @@ public final class DebugAdapterServer {
                         "supportsExceptionInfoRequest", true,
                         "exceptionBreakpointFilters", List.of(
                                 Map.of("filter", "all", "label", "All Exceptions", "default", false),
-                                Map.of("filter", "uncaught", "label", "Uncaught Exceptions", "default", true)
+                                Map.of("filter", "uncaught", "label", "Uncaught Exceptions", "default", false)
                         )
                 ));
                 sendEvent("initialized", Map.of());
@@ -812,16 +815,7 @@ public final class DebugAdapterServer {
             case "configurationDone" -> sendResponse(requestSeq, command, true, null, Map.of());
             case "setExceptionBreakpoints" -> {
                 Set<String> requestedFilters = exceptionFilters(arguments);
-                if (requestedFilters.isEmpty()) {
-                    LOGGER.info("Exception breakpoints unchanged (no filters provided): caught="
-                            + breakOnCaughtExceptions + ", uncaught=" + breakOnUncaughtExceptions);
-                } else {
-                    breakOnCaughtExceptions = requestedFilters.contains("all");
-                    breakOnUncaughtExceptions = requestedFilters.contains("all") || requestedFilters.contains("uncaught");
-                    LOGGER.info("Exception breakpoints: caught=" + breakOnCaughtExceptions
-                            + ", uncaught=" + breakOnUncaughtExceptions
-                            + ", requested=" + requestedFilters);
-                }
+                applyExceptionBreakpointFilters(requestedFilters, "DAP setExceptionBreakpoints");
                 sendResponse(requestSeq, command, true, null, Map.of("breakpoints", List.of()));
             }
             case "exceptionInfo" -> sendResponse(requestSeq, command, true, null, buildExceptionInfoBody());
@@ -1034,7 +1028,7 @@ public final class DebugAdapterServer {
         try {
             PyObject globals = frame.frameGlobals == null ? Py.newStringMap() : frame.frameGlobals;
             PyObject locals = frame.frameLocals == null ? globals : frame.frameLocals;
-            try (PythonInterpreter interpreter = new PythonInterpreter(globals, Py.getSystemState())) {
+            try (PythonInterpreter interpreter = createPythonInterpreter(globals)) {
                 interpreter.setLocals(locals);
                 Object evaluated = pyToJava(interpreter.eval(expression));
 
@@ -1083,8 +1077,16 @@ public final class DebugAdapterServer {
     private boolean evaluatePythonCondition(String expression, Map<String, Object> context, PyFrame frame) {
         try {
             Map<String, Object> mergedContext = mergeVisibleContext(context, frame);
-            PyObject globals = frame == null || frame.f_globals == null ? Py.newStringMap() : frame.f_globals;
-            try (PythonInterpreter interpreter = new PythonInterpreter(globals, Py.getSystemState())) {
+            PyStringMap globals = new PyStringMap();
+            if (frame != null && frame.f_globals != null) {
+                globals.update(frame.f_globals);
+            }
+            for (Map.Entry<String, Object> entry : mergedContext.entrySet()) {
+                if (entry.getKey() != null) {
+                    globals.__setitem__(entry.getKey(), Py.java2py(entry.getValue()));
+                }
+            }
+            try (PythonInterpreter interpreter = createPythonInterpreter(globals)) {
                 PyStringMap locals = new PyStringMap();
                 for (Map.Entry<String, Object> entry : mergedContext.entrySet()) {
                     if (entry.getKey() != null) {
@@ -1097,6 +1099,38 @@ public final class DebugAdapterServer {
         } catch (Exception e) {
             LOGGER.warn("Failed to evaluate Python breakpoint condition: " + expression, e);
             return false;
+        }
+    }
+
+    /**
+     * Creates an isolated Jython interpreter for debugger-side evaluation without requiring
+     * {@code site} module initialization, which can fail on mixed embedded/test classpaths.
+     */
+    private PythonInterpreter createPythonInterpreter(PyObject globals) {
+        synchronized (PYTHON_INTERPRETER_INIT_MONITOR) {
+            boolean previousImportSite = Options.importSite;
+            boolean previousNoSite = Options.no_site;
+            String previousImportSiteProperty = System.getProperty("python.import.site");
+            try {
+                Options.importSite = false;
+                Options.no_site = true;
+                System.setProperty("python.import.site", "false");
+
+                PySystemState systemState = new PySystemState();
+                ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+                if (contextClassLoader != null) {
+                    systemState.setClassLoader(contextClassLoader);
+                }
+                return new PythonInterpreter(globals == null ? Py.newStringMap() : globals, systemState);
+            } finally {
+                Options.importSite = previousImportSite;
+                Options.no_site = previousNoSite;
+                if (previousImportSiteProperty == null) {
+                    System.clearProperty("python.import.site");
+                } else {
+                    System.setProperty("python.import.site", previousImportSiteProperty);
+                }
+            }
         }
     }
 
@@ -1260,6 +1294,31 @@ public final class DebugAdapterServer {
         }
     }
 
+    /**
+     * Restores exception breakpoint state from Maximo/JVM properties for a fresh adapter lifecycle.
+     */
+    private void resetExceptionBreakpointState() {
+        breakOnCaughtExceptions = readBooleanProperty(BREAK_ON_EXCEPTION_PROPERTY, DEFAULT_BREAK_ON_EXCEPTION);
+        breakOnUncaughtExceptions = readBooleanProperty(BREAK_ON_UNCAUGHT_PROPERTY, DEFAULT_BREAK_ON_UNCAUGHT);
+    }
+
+    /**
+     * Applies the currently requested DAP exception filters.
+     *
+     * <p>An empty filter list is treated as an explicit request to disable both exception stops,
+     * which matches VS Code's behavior when the user clears the checkboxes.</p>
+     *
+     * @param requestedFilters normalized DAP exception filters
+     * @param source           diagnostic label for logs
+     */
+    private void applyExceptionBreakpointFilters(Set<String> requestedFilters, String source) {
+        breakOnCaughtExceptions = requestedFilters.contains("all");
+        breakOnUncaughtExceptions = requestedFilters.contains("all") || requestedFilters.contains("uncaught");
+        LOGGER.info(source + ": caught=" + breakOnCaughtExceptions
+                + ", uncaught=" + breakOnUncaughtExceptions
+                + ", requested=" + requestedFilters);
+    }
+
     @SuppressWarnings("SameParameterValue")
     private boolean readBooleanProperty(String name, boolean defaultValue) {
         String value = readProperty(name);
@@ -1302,6 +1361,8 @@ public final class DebugAdapterServer {
             }
         } catch (RemoteException e) {
             LOGGER.error("Failed to read Maximo property " + name, e);
+        } catch (Exception e) {
+            LOGGER.debug("Unable to read Maximo property " + name + " outside a live MXServer", e);
         }
         return System.getProperty(name);
     }

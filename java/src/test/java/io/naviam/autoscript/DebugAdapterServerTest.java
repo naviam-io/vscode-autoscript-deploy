@@ -210,6 +210,38 @@ public class DebugAdapterServerTest {
     }
 
     @Test
+    public void exceptionBreakpointDefaultsAreDisabledUntilEnabled() throws Exception {
+        DebugAdapterServer server = newServer();
+
+        invoke(server, "resetExceptionBreakpointState", new Class<?>[0]);
+
+        assertFalse((Boolean) getField(server, "breakOnCaughtExceptions"));
+        assertFalse((Boolean) getField(server, "breakOnUncaughtExceptions"));
+    }
+
+    @Test
+    public void emptyExceptionBreakpointFiltersDisableBothStops() throws Exception {
+        DebugAdapterServer server = newServer();
+        setField(server, "breakOnCaughtExceptions", true);
+        setField(server, "breakOnUncaughtExceptions", true);
+
+        invoke(server, "applyExceptionBreakpointFilters", new Class<?>[] { java.util.Set.class, String.class }, java.util.Set.of(), "test");
+
+        assertFalse((Boolean) getField(server, "breakOnCaughtExceptions"));
+        assertFalse((Boolean) getField(server, "breakOnUncaughtExceptions"));
+    }
+
+    @Test
+    public void uncaughtExceptionFilterEnablesOnlyUncaughtStops() throws Exception {
+        DebugAdapterServer server = newServer();
+
+        invoke(server, "applyExceptionBreakpointFilters", new Class<?>[] { java.util.Set.class, String.class }, java.util.Set.of("uncaught"), "test");
+
+        assertFalse((Boolean) getField(server, "breakOnCaughtExceptions"));
+        assertTrue((Boolean) getField(server, "breakOnUncaughtExceptions"));
+    }
+
+    @Test
     public void objectExpansionIncludesInspectorMetadataAndMethods() throws Exception {
         DebugAdapterServer server = newServer();
         SampleBean bean = new SampleBean();
@@ -339,15 +371,15 @@ public class DebugAdapterServerTest {
     }
 
     private Object newBreakpointDefinition(int lineNumber, String condition) throws Exception {
-        Class<?> type = Class.forName("io.naviam.autoscript.debug.DebugAdapterServer$BreakpointDefinition");
+        Class<?> type = Class.forName("io.naviam.autoscript.DebugAdapterServer$BreakpointDefinition");
         Constructor<?> constructor = type.getDeclaredConstructor(int.class, String.class);
         constructor.setAccessible(true);
         return constructor.newInstance(lineNumber, condition);
     }
 
     private Object newStepState(String scriptName, int threadId, int lineNumber, int frameDepth, String modeName) throws Exception {
-        Class<?> stepStateType = Class.forName("io.naviam.autoscript.debug.DebugAdapterServer$StepState");
-        Class<?> stepModeType = Class.forName("io.naviam.autoscript.debug.DebugAdapterServer$StepMode");
+        Class<?> stepStateType = Class.forName("io.naviam.autoscript.DebugAdapterServer$StepState");
+        Class<?> stepModeType = Class.forName("io.naviam.autoscript.DebugAdapterServer$StepMode");
         Constructor<?> constructor = stepStateType.getDeclaredConstructor(String.class, int.class, int.class, int.class, stepModeType);
         constructor.setAccessible(true);
         Object mode = Enum.valueOf(stepModeType.asSubclass(Enum.class), modeName);

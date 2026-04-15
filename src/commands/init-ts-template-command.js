@@ -26,7 +26,17 @@ export default async function initTsTemplateCommand() {
         return;
     }
 
-    const copyFiles = ['.babelrc', 'jsconfig.json', 'package.json', 'tsconfig.json', 'nashorn.d.ts'];
+    const copyFiles = [
+        '.babelrc',
+        'jsconfig.json',
+        'package.json',
+        'tsconfig.json',
+        'nashorn.d.ts',
+        'globals.d.ts',
+        'runtime-globals.ts',
+        'manage-declarations.d.ts',
+        'maximo-facade.d.ts'
+    ];
     const allTemplateFiles = [...copyFiles, 'webpack.config.js', path.join('src', 'index.ts')];
 
     const existing = allTemplateFiles.filter((file) => fs.existsSync(path.join(destRoot, file)));
@@ -72,6 +82,11 @@ export default async function initTsTemplateCommand() {
             fs.copyFileSync(src, dest);
         }
 
+        const manageZip = path.join(destRoot, 'manage.d.ts.zip');
+        fs.copyFileSync(path.join(templateDir, 'manage.d.ts.zip'), manageZip);
+        execSync(`unzip -o "${manageZip}" -d "${destRoot}"`);
+        fs.unlinkSync(manageZip);
+
         // webpack.config.js — replace placeholders
         let webpackContent = fs.readFileSync(path.join(templateDir, 'webpack.config.js'), 'utf8');
         webpackContent = webpackContent.replace(/\{script_name\}/g, scriptName);
@@ -98,7 +113,7 @@ export default async function initTsTemplateCommand() {
     const indexDoc = await workspace.openTextDocument(Uri.file(indexDest));
     await window.showTextDocument(indexDoc);
 
-    window.showInformationMessage(`Maximo TypeScript project initialized for ${scriptName}.`);
+    window.showInformationMessage(`Maximo TypeScript project initialized for ${scriptName}.`, 5000);
 
     // Check if npm is available.
     let npmAvailable = false;
@@ -172,7 +187,7 @@ export default async function initTsTemplateCommand() {
                             });
                         })
                 );
-                window.showInformationMessage('Dependencies installed successfully.');
+                window.showInformationMessage('Dependencies installed successfully.', 5000);
             } catch (error) {
                 window.showErrorMessage(`npm install failed: ${error.message}`, { modal: true });
             }

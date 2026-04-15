@@ -1,4 +1,22 @@
 # Release Notes
+## 1.27.11 
+- Compressed typescript definitions for GitHub publishing.
+
+## 1.27.10
+- Missed version
+  
+## 1.27.9
+- Fixed pipeline issue with publishing to GitHub
+  
+## 1.27.9
+- Fixed missing version number bump for debug jar.
+  
+## 1.27.8
+- Fixed issues with missing .version file and caught/uncaught exception handling.
+  
+## 1.27.7
+- Add support for Maximo types within TypeScript projects.
+  
 ## 1.27.6
 - Handle caught and uncaught exceptions.
   

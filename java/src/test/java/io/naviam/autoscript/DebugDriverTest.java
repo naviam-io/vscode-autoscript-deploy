@@ -49,7 +49,7 @@ public class DebugDriverTest {
     }
 
     private Writer newLineForwardingWriter(Writer delegate, String scriptName, String category) throws Exception {
-        Class<?> type = Class.forName("io.naviam.autoscript.debug.DebugDriver$LineForwardingWriter");
+        Class<?> type = Class.forName("io.naviam.autoscript.DebugDriver$LineForwardingWriter");
         Constructor<?> constructor = type.getDeclaredConstructor(Writer.class, String.class, String.class);
         constructor.setAccessible(true);
         return (Writer) constructor.newInstance(delegate, scriptName, category);
