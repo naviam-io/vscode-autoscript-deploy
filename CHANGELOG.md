@@ -1,4 +1,12 @@
 # Release Notes
+## 1.27.13
+- Fixed index handling.
+- Fixed child logger handling.
+  
+## 1.27.12
+- Minor fix for debugging interface scripts.
+- Allow deploying type script files from any .ts file in the project.
+  
 ## 1.27.11 
 - Compressed typescript definitions for GitHub publishing.
 

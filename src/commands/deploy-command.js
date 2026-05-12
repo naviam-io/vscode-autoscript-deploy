@@ -26,49 +26,46 @@ export default async function deployCommand(client) {
             let fileExt = path.extname(filePath);
             Logger.debug(`Deploy requested for ${filePath} (ext=${fileExt}).`, LOG_SOURCE);
             if (fileExt === '.ts') {
-                const workspaceFolders = workspace.workspaceFolders;
+                const workspaceFolder = workspace.getWorkspaceFolder(document.uri);
 
-                if (workspaceFolders && workspaceFolders.length > 0) {
-                    const rootPath = workspaceFolders[0].uri.fsPath;
-                    Logger.debug(`TypeScript file detected. Preparing webpack compile in ${rootPath}.`, LOG_SOURCE);
-                    const webpackConfigPath = path.join(rootPath, 'webpack.config.js');
-                    if (
-                        fs.existsSync(webpackConfigPath) &&
-                        fs.existsSync(path.join(rootPath, 'tsconfig.json')) &&
-                        fs.existsSync(path.join(rootPath, 'package.json')) &&
-                        fs.existsSync(path.join(rootPath, '.babelrc'))
-                    ) {
-                        // @ts-ignore
-                        // eslint-disable-next-line no-undef
-                        const config = _resolveWebpackConfig(__non_webpack_require__(webpackConfigPath));
+                if (workspaceFolder) {
+                    const rootPath = workspaceFolder.uri.fsPath;
+                    const webpackProject = _findNearestWebpackProject(path.dirname(filePath), rootPath);
 
-                        const outputPath = config?.output?.path;
-                        const outputFileName = config?.output?.filename;
+                    if (webpackProject) {
+                        Logger.debug(
+                            `TypeScript file detected. Preparing webpack compile in ${webpackProject.projectRoot} using ${webpackProject.webpackConfigPath}.`,
+                            LOG_SOURCE
+                        );
 
-                        if (_webpackEntryContainsFile(config?.entry, filePath, rootPath) && outputPath && outputFileName) {
-                            Logger.debug('Active TypeScript file is configured as a webpack entry. Running webpack build.', LOG_SOURCE);
-                            await runWebpack(rootPath);
+                        const config = _loadWebpackConfig(webpackProject.webpackConfigPath);
+                        const outputFilePath = _resolveWebpackOutputFile(config, webpackProject.projectRoot);
+                        const entryPoint = _resolveWebpackEntryPoint(config?.entry, webpackProject.projectRoot);
 
-                            sourceText = fs.readFileSync(path.join(outputPath, outputFileName), 'utf8');
+                        if (config && outputFilePath) {
+                            const outputFileName = path.basename(outputFilePath);
+                            const entryDisplay = entryPoint ? path.basename(entryPoint) : 'unknown source';
+                            Logger.debug(`Webpack config found. Source: ${entryDisplay}. Output: ${outputFileName}. Running webpack build.`, LOG_SOURCE);
+                            await runWebpack(webpackProject.projectRoot);
+
+                            sourceText = fs.readFileSync(outputFilePath, 'utf8');
                             if (sourceText.startsWith('/*! For license information please see bundle.js.LICENSE.txt */')) {
                                 sourceText = sourceText.replace('/*! For license information please see bundle.js.LICENSE.txt */', '').trim();
                             }
-                            Logger.debug(`Webpack build complete. Using bundle output ${path.join(outputPath, outputFileName)}.`, LOG_SOURCE);
+                            Logger.debug(`Webpack build complete. Deploying ${entryDisplay} as ${outputFileName}.`, LOG_SOURCE);
                             fileExt = '.js';
-                        } else if (config?.entry && outputPath && outputFileName) {
-                            Logger.debug('Webpack config found, but selected TypeScript file is not an entry point.', LOG_SOURCE);
-                            window.showErrorMessage(
-                                'The selected TypeScript file is not configured as the entry point in webpack.config.js and cannot be deployed.',
-                                { modal: true }
-                            );
-                            return;
+                            filePath = outputFilePath;
                         }
                     }
+
                     if (fileExt !== '.js') {
                         Logger.debug('TypeScript file did not compile to JavaScript output. Deployment aborted.', LOG_SOURCE);
-                        window.showErrorMessage('The selected file TypeScript file was not successfully compiled to JavaScript and cannot be deployed.', {
-                            modal: true
-                        });
+                        window.showErrorMessage(
+                            'The selected TypeScript file is not in a webpack project with a resolvable JavaScript output and cannot be deployed.',
+                            {
+                                modal: true
+                            }
+                        );
                         return;
                     }
                 } else {
@@ -294,6 +291,111 @@ function ensureWebpackInitialized(rootPath) {
 }
 
 /**
+ * @param {string} startDir
+ * @param {string} workspaceRoot
+ * @returns {{ projectRoot: string, webpackConfigPath: string } | undefined}
+ */
+function _findNearestWebpackProject(startDir, workspaceRoot) {
+    let currentDir = path.resolve(startDir);
+    const boundaryDir = path.resolve(workspaceRoot);
+
+    while (currentDir.startsWith(boundaryDir)) {
+        const webpackConfigPath = path.join(currentDir, 'webpack.config.js');
+        if (fs.existsSync(webpackConfigPath)) {
+            return {
+                projectRoot: currentDir,
+                webpackConfigPath
+            };
+        }
+
+        if (currentDir === boundaryDir) {
+            break;
+        }
+
+        const parentDir = path.dirname(currentDir);
+        if (parentDir === currentDir) {
+            break;
+        }
+        currentDir = parentDir;
+    }
+}
+
+/**
+ * @param {string} webpackConfigPath
+ * @returns {Record<string, any> | undefined}
+ */
+function _loadWebpackConfig(webpackConfigPath) {
+    try {
+        // @ts-ignore
+        // eslint-disable-next-line no-undef
+        return _resolveWebpackConfig(__non_webpack_require__(webpackConfigPath));
+    } catch (error) {
+        Logger.debug(`Failed to load webpack config at ${webpackConfigPath}: ${error && error.message ? error.message : error}`, LOG_SOURCE);
+        return undefined;
+    }
+}
+
+/**
+ * @param {Record<string, any> | undefined} config
+ * @param {string} projectRoot
+ * @returns {string | undefined}
+ */
+function _resolveWebpackOutputFile(config, projectRoot) {
+    const outputPath = config?.output?.path;
+    const outputFileName = config?.output?.filename;
+
+    if (!outputPath || !outputFileName || typeof outputFileName !== 'string') {
+        return undefined;
+    }
+
+    if (/\[[^\]]+\]/.test(outputFileName)) {
+        return undefined;
+    }
+
+    const absoluteOutputPath = path.isAbsolute(outputPath) ? outputPath : path.resolve(projectRoot, outputPath);
+    return path.join(absoluteOutputPath, outputFileName);
+}
+
+/**
+ * @param {unknown} entry
+ * @param {string} projectRoot
+ * @returns {string | undefined}
+ */
+function _resolveWebpackEntryPoint(entry, projectRoot) {
+    if (!entry) {
+        return undefined;
+    }
+
+    // Handle string entry
+    if (typeof entry === 'string') {
+        return path.isAbsolute(entry) ? entry : path.resolve(projectRoot, entry);
+    }
+
+    // Handle array entry (take first)
+    if (Array.isArray(entry) && entry.length > 0) {
+        const firstEntry = entry[0];
+        if (typeof firstEntry === 'string') {
+            return path.isAbsolute(firstEntry) ? firstEntry : path.resolve(projectRoot, firstEntry);
+        }
+    }
+
+    // Handle object entry (take first value)
+    if (typeof entry === 'object' && !Array.isArray(entry)) {
+        const values = Object.values(entry);
+        if (values.length > 0) {
+            const firstValue = values[0];
+            if (typeof firstValue === 'string') {
+                return path.isAbsolute(firstValue) ? firstValue : path.resolve(projectRoot, firstValue);
+            } else if (Array.isArray(firstValue) && firstValue.length > 0 && typeof firstValue[0] === 'string') {
+                return path.isAbsolute(firstValue[0]) ? firstValue[0] : path.resolve(projectRoot, firstValue[0]);
+            }
+        }
+    }
+
+    return undefined;
+}
+
+/**
  * @param {unknown} loadedConfig
  * @returns {Record<string, any> | undefined}
  */
@@ -319,38 +421,4 @@ function _resolveWebpackConfig(loadedConfig) {
     }
 
     return config;
-}
-
-/**
- * @param {unknown} entry
- * @param {string} filePath
- * @param {string} rootPath
- * @returns {boolean}
- */
-function _webpackEntryContainsFile(entry, filePath, rootPath) {
-    if (!entry) {
-        return false;
-    }
-
-    const activeFile = path.resolve(filePath);
-    /** @type {string[]} */
-    const entries = [];
-
-    /** @param {unknown} value */
-    const collectEntries = (value) => {
-        if (typeof value === 'string') {
-            entries.push(value);
-        } else if (Array.isArray(value)) {
-            value.forEach(collectEntries);
-        } else if (value && typeof value === 'object') {
-            Object.values(value).forEach(collectEntries);
-        }
-    };
-
-    collectEntries(entry);
-
-    return entries.some((candidate) => {
-        const candidatePath = path.isAbsolute(candidate) ? candidate : path.resolve(rootPath, candidate);
-        return path.resolve(candidatePath) === activeFile;
-    });
 }

@@ -1,6 +1,6 @@
 # VS Code Maximo Development Tools
 
-Deploy [Maximo Automation Scripts](https://www.ibm.com/docs/en/mam-saas?topic=SS8CCV/com.ibm.mbs.doc/autoscript/c_automation_scripts.htm), inspection forms, reports and screen definitions directly from Visual Studio Code.
+Deploy [Maximo Automation Scripts](https://www.ibm.com/docs/en/masv-and-l/maximo-manage/cd?topic=developing-automation-scripts), inspection forms, reports and screen definitions directly from Visual Studio Code.
 
 The extension allows developers to describe the automation script through the use of a `scriptConfig` variable and then deploy the script directly to Maximo from Visual Studio Code. The provided `NAVIAM.AUTOSCRIPT.DEPLOY` automation script provides support for build pipelines and automated deployment of automation scripts from a Git repository.
 
@@ -661,6 +661,7 @@ Caught and uncaught exception stopping is controlled by VS Code exception breakp
   The debugger prefers read-safe summaries, fields, and selected bean properties over invoking getters that may mutate state, trigger persistence work, or perform expensive remote access.
 - The transport model assumes direct TCP reachability from VS Code to the Maximo JVM host and port.
   There is no built-in authentication, proxying, or remote session brokering in the debugger itself.
+- Debugging only works with Java 17 and does not work with Maximo 7.6.
 
 ## Troubleshooting
 

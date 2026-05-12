@@ -28,7 +28,15 @@ class ReplaceGlobalSelfPlugin {
                             }
 
                             // Replace standalone 'self' references
-                            const newContent = source.replace(/\bself\b/g, 'this');
+                            let newContent = source.replace(/\bself\b/g, 'this');
+
+                            // Keep source style in TypeScript while ensuring emitted JS runs in Nashorn:
+                            // if bundle contains "main(); function main(){...} var scriptConfig",
+                            // rewrite emitted order to "function main(){...} main(); var scriptConfig".
+                            newContent = newContent.replace(
+                                /main\(\);\s*function main\(\)\s*\{([\s\S]*?)\}\s*var scriptConfig/g,
+                                'function main() {$1}\nmain();\nvar scriptConfig'
+                            );
 
                             // 4. Use 'updateAsset' and 'RawSource' (modern Webpack 5 approach)
                             compilation.updateAsset(filename, new webpack.sources.RawSource(newContent));
@@ -61,6 +69,7 @@ module.exports = (env, argv) => {
                 type: 'assign',
                 export: 'default'
             },
+            clean: true,
             globalObject: 'this',
             // Force Webpack to not use arrow functions or async functions in its glue code
             // Also force Webpack to not use const or other modern syntax in its runtime code to maintain ES5 compatibility
@@ -157,6 +166,10 @@ const terserMinimizer = new TerserPlugin({
         ecma: 5,
         compress: {
             ecma: 5,
+            // Emit function declarations before call sites when possible.
+            // This preserves source style (main(); function main(){}) while
+            // avoiding Nashorn runtime resolution quirks in wrapped modules.
+            hoist_funs: true,
             // Prevent treating implicit globals as undefined
             typeofs: false,
             // Don't evaluate typeof expressions - keeps typeof service === 'undefined' as-is

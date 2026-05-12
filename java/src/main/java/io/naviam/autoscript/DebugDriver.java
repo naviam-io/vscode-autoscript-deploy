@@ -169,6 +169,11 @@ public final class DebugDriver extends JSR223ScriptDriver {
             if (!excluded && DEBUG_ADAPTER_SERVER.hasBreakpoints(scriptInfo.getName())) {
                 threadState.tracefunc = new BreakpointTraceFunction(scriptInfo, context);
             }
+
+            if (scriptInfo.isInterfaceScript()) {
+                // This public method handles the private 'set(new HashMap<>())' logic
+                preCompileScript(scriptInfo);
+            }
             super.evalScript(scriptInfo, context);
         } finally {
             CURRENT_SCRIPT_NAME.remove();

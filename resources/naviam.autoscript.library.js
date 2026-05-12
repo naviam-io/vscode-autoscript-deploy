@@ -125,15 +125,18 @@ MaxLogger.prototype.apply = function (mboSet) {
 
             while (child) {
                 if (child.getString('LOGGER').toLowerCase() == this.logger.toLowerCase()) {
-                    child.setValue('ACTIVE', false);
-                    child.delete();
-                    break;
+                   maxLogger = child;
+                   break;
                 }
                 child = children.moveNext();
             }
 
-            maxLogger = children.add();
-            maxLogger.setValue('LOGGER', this.logger);
+            // Create child only if it does not exist
+            if (!maxLogger) {
+                maxLogger = children.add();
+                maxLogger.setValue('LOGGER', this.logger);
+                maxLogger.setValue('LOGKEY', this.logKey);
+            }
         }
     } else {
         sqlFormat = new SqlFormat('logger = :1');
@@ -141,12 +144,11 @@ MaxLogger.prototype.apply = function (mboSet) {
         mboSet.setWhere(sqlFormat.format());
         if (!mboSet.isEmpty()) {
             maxLogger = mboSet.moveFirst();
-            maxLogger.setValue('ACTIVE', false);
-            maxLogger.delete();
+        } else {
+            maxLogger = mboSet.add();
+            maxLogger.setValue('LOGGER', this.logger);
+            maxLogger.setValue('LOGKEY', this.logKey);
         }
-        maxLogger = mboSet.add();
-        maxLogger.setValue('LOGGER', this.logger);
-        maxLogger.setValue('LOGKEY', this.logKey);
     }
 
     maxLogger.setValue('LOGLEVEL', this.logLevel);
@@ -2489,16 +2491,20 @@ MaxObject.prototype.setMboValues = function (mbo) {
             } else if (!index && typeof indexConfig.columns !== 'undefined' && Array.isArray(indexConfig.columns) && indexConfig.columns.length > 0) {
                 index = indexSet.add();
                 index.setValue('NAME', indexConfig.index);
-                index.setValue('UNIQUE', typeof indexConfig.enforceUniqueness === 'undefined' ? false : indexConfig.enforceUniqueness);
-                index.setValue('CLUSTERRULE', typeof indexConfig.clusteredIndex === 'undefined' ? false : indexConfig.clusteredIndex);
+                if (!index.getMboValueData('UNIQUE').isReadOnly()) {
+                    index.setValue('UNIQUE', typeof indexConfig.enforceUniqueness === 'undefined' ? false : indexConfig.enforceUniqueness);
+                }
+                if (!index.getMboValueData('CLUSTERRULE').isReadOnly()) {
+                    index.setValue('CLUSTERRULE', typeof indexConfig.clusteredIndex === 'undefined' ? false : indexConfig.clusteredIndex);
+                }
                 if (!index.getMboValueData('TEXTSEARCH').isReadOnly()) {
                     index.setValue('TEXTSEARCH', typeof indexConfig.textSearchIndex === 'undefined' ? false : indexConfig.textSearchIndex);
                 }
 
                 if (!index.getMboValueData('STORAGEPARTITION').isReadOnly()) {
-                    typeof indexConfig.storagePartition === 'undefined' || indexConfig.storagePartition == null
-                        ? index.setValueNull('STORAGEPARTITION')
-                        : index.setValue('STORAGEPARTITION', indexConfig.storagePartition);
+                    if (typeof indexConfig.storagePartition !== 'undefined' && indexConfig.storagePartition != null) {
+                        index.setValue('STORAGEPARTITION', indexConfig.storagePartition);
+                    }
                 }
 
                 var maxSysKeysSet = index.getMboSet('MAXSYSKEYS');

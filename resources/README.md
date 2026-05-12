@@ -9,6 +9,8 @@ The following is a description of the scripts.
 | Script                    | Description                                                                                                                         |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | naviam.autoscript.admin   | Handles putting the server in Admin Mode and managing administrative functions                                                      |
+| naviam.autoscript.dbc     | Script that handles generating DBC extract files.                                                                                   |
+| naviam.autoscript.debug   | Script that handles remote debugging for the Maximo script runtime.                                                                 |
 | naviam.autoscript.deploy  | Primary script that handles deploying various object types.                                                                         |
 | naviam.autoscript.extract | Extracts objects from the Maximo system in a format applicable for the Maximo Developer Tools, often adding the required meta-data. |
 | naviam.autoscript.form    | Handles operations involving the Maximo Inspection Forms.                                                                           |

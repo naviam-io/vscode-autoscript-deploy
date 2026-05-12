@@ -1,4 +1,8 @@
 # Release Notes
+## 1.3.3
+- Fixed index handling.
+- Fixed child loggers.
+  
 ## 1.3.2
 - Fixed property installation process.
   
