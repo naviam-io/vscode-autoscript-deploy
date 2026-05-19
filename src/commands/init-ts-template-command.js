@@ -3,12 +3,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { window, workspace, ProgressLocation, Uri } from 'vscode';
 import { execSync, exec } from 'child_process';
+import * as yauzl from 'yauzl';
 
+// @ts-ignore
 function toPascalCase(scriptName) {
-    return scriptName
-        .split('.')
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-        .join('');
+    return (
+        scriptName
+            .split('.')
+            // @ts-ignore
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+            .join('')
+    );
 }
 
 export default async function initTsTemplateCommand() {
@@ -82,10 +87,32 @@ export default async function initTsTemplateCommand() {
             fs.copyFileSync(src, dest);
         }
 
-        const manageZip = path.join(destRoot, 'manage.d.ts.zip');
-        fs.copyFileSync(path.join(templateDir, 'manage.d.ts.zip'), manageZip);
-        execSync(`unzip -o "${manageZip}" -d "${destRoot}"`);
-        fs.unlinkSync(manageZip);
+        const manageZipSrc = path.join(templateDir, 'manage.d.ts.zip');
+        await new Promise((resolve, reject) => {
+            yauzl.open(manageZipSrc, { lazyEntries: true }, (err, zipFile) => {
+                if (err) return reject(err);
+                zipFile.readEntry();
+                // @ts-ignore
+                zipFile.on('entry', (entry) => {
+                    if (/\/$/.test(entry.fileName)) {
+                        fs.mkdirSync(path.join(destRoot, entry.fileName), { recursive: true });
+                        zipFile.readEntry();
+                    } else {
+                        zipFile.openReadStream(entry, (err, readStream) => {
+                            if (err) return reject(err);
+                            const destPath = path.join(destRoot, entry.fileName);
+                            fs.mkdirSync(path.dirname(destPath), { recursive: true });
+                            const writeStream = fs.createWriteStream(destPath);
+                            readStream.pipe(writeStream);
+                            writeStream.on('finish', () => zipFile.readEntry());
+                            writeStream.on('error', reject);
+                        });
+                    }
+                });
+                zipFile.on('end', resolve);
+                zipFile.on('error', reject);
+            });
+        });
 
         // webpack.config.js — replace placeholders
         let webpackContent = fs.readFileSync(path.join(templateDir, 'webpack.config.js'), 'utf8');
@@ -105,6 +132,7 @@ export default async function initTsTemplateCommand() {
         indexDest = path.join(srcDir, 'index.ts');
         fs.writeFileSync(indexDest, indexContent, 'utf8');
     } catch (error) {
+        // @ts-ignore
         window.showErrorMessage(`Failed to write project files: ${error.message}`, { modal: true });
         return;
     }
@@ -113,6 +141,7 @@ export default async function initTsTemplateCommand() {
     const indexDoc = await workspace.openTextDocument(Uri.file(indexDest));
     await window.showTextDocument(indexDoc);
 
+    // @ts-ignore
     window.showInformationMessage(`Maximo TypeScript project initialized for ${scriptName}.`, 5000);
 
     // Check if npm is available.
@@ -154,6 +183,7 @@ export default async function initTsTemplateCommand() {
                                     if (error) {
                                         reject(error);
                                     } else {
+                                        // @ts-ignore
                                         resolve();
                                     }
                                 });
@@ -182,13 +212,16 @@ export default async function initTsTemplateCommand() {
                                 if (error) {
                                     reject(error);
                                 } else {
+                                    // @ts-ignore
                                     resolve();
                                 }
                             });
                         })
                 );
+                // @ts-ignore
                 window.showInformationMessage('Dependencies installed successfully.', 5000);
             } catch (error) {
+                // @ts-ignore
                 window.showErrorMessage(`npm install failed: ${error.message}`, { modal: true });
             }
         }

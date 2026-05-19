@@ -1,4 +1,8 @@
 # Release Notes
+## 1.27.14
+- Added stable anchors for documentation
+- Fixed dependency on the zip utility being on the system path.
+  
 ## 1.27.13
 - Fixed index handling.
 - Fixed child logger handling.

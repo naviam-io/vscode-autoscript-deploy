@@ -4,11 +4,66 @@ Deploy [Maximo Automation Scripts](https://www.ibm.com/docs/en/masv-and-l/maximo
 
 The extension allows developers to describe the automation script through the use of a `scriptConfig` variable and then deploy the script directly to Maximo from Visual Studio Code. The provided `NAVIAM.AUTOSCRIPT.DEPLOY` automation script provides support for build pipelines and automated deployment of automation scripts from a Git repository.
 
+# Table of Contents
+- [VS Code Maximo Development Tools](#vs-code-maximo-development-tools)
+- [Table of Contents](#table-of-contents)
+- [Configuration](#configuration)
+  - [Visual Studio Code Settings](#visual-studio-code-settings)
+    - [Maximo Settings](#maximo-settings)
+    - [.devtools-config.json](#devtools-configjson)
+      - [Sample](#sample)
+    - [Multiple Configurations](#multiple-configurations)
+    - [Logging Settings](#logging-settings)
+  - [Maximo Configuration](#maximo-configuration)
+    - [Maximo Configuration Details](#maximo-configuration-details)
+  - [scriptConfig Variable](#scriptconfig-variable)
+    - [On Deploy Properties](#on-deploy-properties)
+    - [JSON Deploy File](#json-deploy-file)
+      - [JSON Pre-deploy File](#json-pre-deploy-file)
+      - [Example Deploy JSON](#example-deploy-json)
+      - [Deploying Maximo Objects](#deploying-maximo-objects)
+    - [Prettier Compatibility](#prettier-compatibility)
+    - [JavaScript / Nashorn Example](#javascript--nashorn-example)
+    - [Python / Jython](#python--jython)
+- [Features](#features)
+  - [Deploy to Maximo](#deploy-to-maximo)
+    - [Deploy Script](#deploy-script)
+    - [Deploy Screen](#deploy-screen)
+    - [Deploy Inspection Form](#deploy-inspection-form)
+    - [Deploy Report](#deploy-report)
+    - [Deployment Manifest](#deployment-manifest)
+      - [Example Manifest](#example-manifest)
+  - [Extract Automation Scripts](#extract-automation-scripts)
+  - [Extract Screen Definitions](#extract-screen-definitions)
+    - [Extracted Metadata](#extracted-metadata)
+  - [Extract Inspection Forms](#extract-inspection-forms)
+  - [Extract Reports](#extract-reports)
+  - [Extract JSON Deploy Files](#extract-json-deploy-files)
+  - [Extract DBC Files](#extract-dbc-files)
+  - [Compare with Maximo](#compare-with-maximo)
+    - [Compare Script](#compare-script)
+    - [Compare Screen](#compare-screen)
+  - [Log Streaming](#log-streaming)
+  - [Insert Unique Id](#insert-unique-id)
+  - [Snippets](#snippets)
+- [Remote Debugging](#remote-debugging)
+  - [Before Starting](#before-starting)
+  - [Attach Configuration Example](#attach-configuration-example)
+  - [Typical Workflow](#typical-workflow)
+  - [Debugging Features](#debugging-features)
+  - [Variable inspection](#variable-inspection)
+  - [Manual and Conditional Breakpoints](#manual-and-conditional-breakpoints)
+  - [Maximo Properties](#maximo-properties)
+  - [JavaScript / Nashorn Notes](#javascript--nashorn-notes)
+  - [Limitations](#limitations)
+  - [Troubleshooting](#troubleshooting)
+- [Requirements](#requirements)
+
 # Configuration
 
 ## Visual Studio Code Settings
 
-After installation you must provide connection details for your target instance of Maximo. The connection settings are found in the VS Code Settings (`⌘ + ,` or `ctrl + ,`) under the `Maximo` heading. The table below provides a list of the available settings.
+After installation the connection details for the target instance of Maximo must be provided. The connection settings are found in the VS Code Settings (`⌘ + ,` or `ctrl + ,`) under the `Maximo` heading. The table below provides a list of the available settings.
 
 ### Maximo Settings
 
@@ -27,7 +82,7 @@ The following are settings available under the `Naviam > Maximo` group.
 | Extract DBC Location              | Current open folder | Directory where extracted screen DBC files will be stored.                                                                                                                  |
 | Host                              |                     | The Maximo host name _without_ the http/s protocol prefix.                                                                                                                  |
 | Maxauth Only                      | false               | Both Maxauth and Basic headers are usually sent for login, however on WebLogic if Basic fails the Maxauth header is ignored. When checked, only the Maxauth header is sent. |
-| Port                              | 443                 | The Maximo port number, 80 for http, 443 for https or your custom port such as 9080.                                                                                        |
+| Port                              | 443                 | The Maximo port number, 80 for http, 443 for https or a custom port such as 9080.                                                                                        |
 | Proxy Host                        |                     | The proxy host name.                                                                                                                                                        |
 | Proxy Port                        | 3128                | The proxy port number.                                                                                                                                                      |
 | Proxy User                        |                     | The proxy username for proxy authentication.                                                                                                                                |
@@ -101,7 +156,7 @@ The following are settings available under the `Naviam > Maximo > Logging` group
 
 ## Maximo Configuration
 
-The very first time you connect to Maximo, this extension will add several required automation scripts to Maximo. To deploy these scripts, the extension requires that you be in the Maximo Administrators group and have access to the `MXSCRIPT` and `MXAPIDOMAIN` object structures. To perform the configuration, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Deploy Automation Script`. You will be prompted for a password and then a dialog will be displayed prompting you to configure Maximo.
+The very first time the extension connects to Maximo, it will add several required automation scripts to Maximo. To deploy these scripts, the extension requires the user be in the Maximo Administrators group and have access to the `MXSCRIPT` and `MXAPIDOMAIN` object structures. To perform the configuration, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Deploy Automation Script`. You will be prompted for a password and then a dialog will be displayed prompting you to configure Maximo.
 
 ![Configure Maximo Prompt](images/install_scripts.png)
 
@@ -505,18 +560,18 @@ When VS Code attaches, the extension checks whether the matching debugger Jar is
 
 ![Remote Debug](./images/remote_debug.gif)
 
-## Before You Start
+## Before Starting
 
 Before starting a debug session, make sure the following are true:
 
 - The target system is Maximo Manage 9.x running on Java 17.
 - The VS Code settings `naviam.maximo.host` and `naviam.maximo.debugPort` point to the target Maximo system and debug port.
 - The Maximo debug adapter is enabled and reachable on the configured port.
-- Your local script file name matches the Maximo automation script name.
-- Your local workspace includes the script directories you want VS Code to map back to Maximo.
-- You can reach the debug port directly or by using port-forwarding.
+- The local script file name matches the Maximo automation script name.
+- The local workspace includes the script directories you want VS Code to map back to Maximo.
+- VS Code can communicate with the debug port directly or by using port-forwarding.
 
-The attach debugger configuration does not define the remote host or port. The extension always uses `naviam.maximo.host` and `naviam.maximo.debugPort` from your Maximo settings when it opens the debug connection.
+The attach debugger configuration does not define the remote host or port. The extension always uses `naviam.maximo.host` and `naviam.maximo.debugPort` from the Maximo settings when it opens the debug connection.
 
 Because source mapping is filename-based, the local file name must match the Maximo script name. Local `.py` and `.js` files are indexed by upper-cased file base name when breakpoints are mapped back to deployed scripts.
 
@@ -553,7 +608,7 @@ Connection settings:
 
 1. Confirm `naviam.maximo.host` and `naviam.maximo.debugPort` are configured in the Maximo VS Code settings.
 2. Confirm the Maximo-side debug properties are configured and the debug port is reachable.
-3. Open the local workspace that contains the automation scripts you want to debug.
+3. Open the local workspace that contains the automation scripts to debug.
 4. Add or select the `Attach to Maximo Automation Script` launch configuration.
 5. Set breakpoints in the local `.py` or `.js` script files.
 6. Start the attach configuration from VS Code.
@@ -585,7 +640,7 @@ The debugger exposes locals and other visible bindings and supports:
 - Reflective Java object inspection
 - Custom higher-signal views for selected Maximo runtime types
 
-For many Java-backed objects you will see:
+For many Java-backed objects the following variables will be visible:
 
 - Bean properties
 - Instance fields
@@ -601,7 +656,7 @@ For Maximo types the debugger adds custom summaries and children for objects suc
 
 ## Manual and Conditional Breakpoints
 
-Standard VS Code line breakpoints work without modifying the script source, but you can also add manual breakpoints in script code when needed.
+Standard VS Code line breakpoints work without modifying the script source, but manual breakpoints can also be added in script code when needed.
 
 For Jython:
 

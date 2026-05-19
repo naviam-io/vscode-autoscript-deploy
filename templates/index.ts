@@ -1,5 +1,5 @@
 /// <reference path="../globals.d.ts" />
-/// <reference path="../maximo-facade.d.ts" />
+/// <reference path="../manage-facade.d.ts" />
 
 main();
 

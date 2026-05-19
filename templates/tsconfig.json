@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
-        "target": "ES2015",
+        "ignoreDeprecations": "6.0",
+        "target": "es5",
         "module": "ES2015",
         "lib": ["ES5", "ES2015.Promise", "ES2015"],
         "allowJs": true,
@@ -12,6 +13,7 @@
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,
         "strict": false,
+        "noUncheckedSideEffectImports": false,
         "noImplicitAny": false,
         "skipLibCheck": true,
         "moduleResolution": "bundler",
