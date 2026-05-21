@@ -39,8 +39,7 @@ export default async function initTsTemplateCommand() {
         'nashorn.d.ts',
         'globals.d.ts',
         'runtime-globals.ts',
-        'manage-declarations.d.ts',
-        'maximo-facade.d.ts'
+        'manage-declarations.d.ts'
     ];
     const allTemplateFiles = [...copyFiles, 'webpack.config.js', path.join('src', 'index.ts')];
 
@@ -114,6 +113,33 @@ export default async function initTsTemplateCommand() {
             });
         });
 
+        const manageFacadeZipSrc = path.join(templateDir, 'manage-facade.d.ts.zip');
+        await new Promise((resolve, reject) => {
+            yauzl.open(manageFacadeZipSrc, { lazyEntries: true }, (err, zipFile) => {
+                if (err) return reject(err);
+                zipFile.readEntry();
+                // @ts-ignore
+                zipFile.on('entry', (entry) => {
+                    if (/\/$/.test(entry.fileName)) {
+                        fs.mkdirSync(path.join(destRoot, entry.fileName), { recursive: true });
+                        zipFile.readEntry();
+                    } else {
+                        zipFile.openReadStream(entry, (err, readStream) => {
+                            if (err) return reject(err);
+                            const destPath = path.join(destRoot, entry.fileName);
+                            fs.mkdirSync(path.dirname(destPath), { recursive: true });
+                            const writeStream = fs.createWriteStream(destPath);
+                            readStream.pipe(writeStream);
+                            writeStream.on('finish', () => zipFile.readEntry());
+                            writeStream.on('error', reject);
+                        });
+                    }
+                });
+                zipFile.on('end', resolve);
+                zipFile.on('error', reject);
+            });
+        });
+
         // webpack.config.js — replace placeholders
         let webpackContent = fs.readFileSync(path.join(templateDir, 'webpack.config.js'), 'utf8');
         webpackContent = webpackContent.replace(/\{script_name\}/g, scriptName);
@@ -142,7 +168,7 @@ export default async function initTsTemplateCommand() {
     await window.showTextDocument(indexDoc);
 
     // @ts-ignore
-    window.showInformationMessage(`Maximo TypeScript project initialized for ${scriptName}.`, 5000);
+    window.setStatusBarMessage(`Maximo TypeScript project initialized for ${scriptName}.`, 5000);
 
     // Check if npm is available.
     let npmAvailable = false;
@@ -219,7 +245,7 @@ export default async function initTsTemplateCommand() {
                         })
                 );
                 // @ts-ignore
-                window.showInformationMessage('Dependencies installed successfully.', 5000);
+                window.setStatusBarMessage('Dependencies successfully installed.', 5000);
             } catch (error) {
                 // @ts-ignore
                 window.showErrorMessage(`npm install failed: ${error.message}`, { modal: true });

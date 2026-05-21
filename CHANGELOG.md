@@ -1,4 +1,7 @@
 # Release Notes
+## 1.27.15
+- Fixed manage-facade.d.ts.zip file handling.
+
 ## 1.27.14
 - Added stable anchors for documentation
 - Fixed dependency on the zip utility being on the system path.
