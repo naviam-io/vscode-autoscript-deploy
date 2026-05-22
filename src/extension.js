@@ -30,6 +30,9 @@ import {
 
 import * as path from 'path';
 import * as fs from 'fs';
+import * as crypto from 'crypto';
+import * as yauzl from 'yauzl';
+import { Buffer } from 'buffer';
 
 import * as temp from 'temp';
 import { TextDecoder, TextEncoder } from 'text-encoding';
@@ -53,6 +56,7 @@ var logClient;
 var statusBar;
 var selectedEnvironment;
 var secretStorage;
+var extensionInstallPath;
 
 let activeCleanupManager = null;
 
@@ -60,6 +64,7 @@ export let fetchedSource = new Map();
 
 export function activate(context) {
     secretStorage = context.secrets;
+    extensionInstallPath = context.extensionPath;
 
     // Initialize the logger once
     Logger.configure('MaximoDevTools');
@@ -73,7 +78,7 @@ export function activate(context) {
         const gitConfigPath = path.join(os.homedir(), '.gitconfig');
         if (fs.existsSync(gitConfigPath)) {
             const content = fs.readFileSync(gitConfigPath, 'utf8');
-            const userSectionMatch = content.match(/\[user\][^\[]*?email\s*=\s*(.+)/i);
+            const userSectionMatch = content.match(/\[user\][^[]*?email\s*=\s*(.+)/i);
             const email = userSectionMatch ? userSectionMatch[1].trim() : '';
             commands.executeCommand('setContext', 'maximo-script-deploy.isNaviamUser', email.endsWith('naviam.io'));
         } else {
@@ -113,6 +118,7 @@ export function activate(context) {
     context.subscriptions.push(selectedEnvironment);
 
     setupEnvironmentSelection();
+    syncWorkspaceMcpServerConfig();
 
     if (workspace.workspaceFolders !== undefined) {
         let workspaceConfigPath = workspace.workspaceFolders[0].uri.fsPath + path.sep + '.devtools-config.json';
@@ -122,16 +128,21 @@ export function activate(context) {
 
         fileWatcher.onDidCreate(() => {
             setupEnvironmentSelection();
+            syncWorkspaceMcpServerConfig();
         });
 
         fileWatcher.onDidDelete(() => {
             setupEnvironmentSelection();
+            syncWorkspaceMcpServerConfig();
         });
     }
 
     // Get notified when a file is saved
-    const saveWatcher = workspace.onDidSaveTextDocument(() => {
+    const saveWatcher = workspace.onDidSaveTextDocument((document) => {
         setupEnvironmentSelection();
+        if (document.fileName.endsWith('.devtools-config.json')) {
+            syncWorkspaceMcpServerConfig();
+        }
     });
 
     context.subscriptions.push(saveWatcher);
@@ -283,7 +294,8 @@ export function activate(context) {
 
     context.subscriptions.push(
         commands.registerCommand('maximo-script-deploy.selectEnvironment', async () => {
-            selectEnvironment(context, selectedEnvironment, getLocalConfig);
+            await selectEnvironment(context, selectedEnvironment, getLocalConfig);
+            syncWorkspaceMcpServerConfig();
         })
     );
 
@@ -531,6 +543,15 @@ function startLogging(config, server) {
 
 function _onConfigurationChange(e) {
     if (this) {
+        if (
+            e.affectsConfiguration('naviam.maximo.host') ||
+            e.affectsConfiguration('naviam.maximo.port') ||
+            e.affectsConfiguration('naviam.maximo.useSSL') ||
+            e.affectsConfiguration('naviam.maximo.apiKey')
+        ) {
+            syncWorkspaceMcpServerConfig();
+        }
+
         if (e.affectsConfiguration('naviam.maximo.logging.follow')) {
             if (currentFollow) {
                 currentFollow.dispose();
@@ -551,6 +572,315 @@ function _onConfigurationChange(e) {
             }
         }
     }
+}
+
+async function syncWorkspaceMcpServerConfig() {
+    try {
+        if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+            return;
+        }
+
+        const workspaceDir = workspace.workspaceFolders[0].uri.fsPath;
+
+        // there must be an encypted key file in the workspace to proceed, because the mcp is encrypted.
+        if (!fs.existsSync(path.join(workspaceDir, 'mcp.key'))) {
+            return;
+        }
+
+        const mcpServer = await resolvePackagedMcpServer(path.join(workspaceDir, 'mcp.key'));
+        if (!mcpServer) {
+            return;
+        }
+
+        const env = await resolveMcpEnvironment(workspaceDir);
+        const mcpConfigPath = resolveWorkspaceMcpConfigPath(workspaceDir);
+        if (!mcpConfigPath) {
+            return;
+        }
+
+        let config = {};
+        if (fs.existsSync(mcpConfigPath)) {
+            const raw = fs.readFileSync(mcpConfigPath, 'utf8');
+            if (raw && raw.trim() !== '') {
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    config = parsed;
+                }
+            }
+        }
+
+        const servers = config.servers && typeof config.servers === 'object' && !Array.isArray(config.servers) ? config.servers : {};
+
+        const existingMaximoServer = servers.maximo && typeof servers.maximo === 'object' && !Array.isArray(servers.maximo) ? servers.maximo : {};
+
+        const existingEnv =
+            existingMaximoServer.env && typeof existingMaximoServer.env === 'object' && !Array.isArray(existingMaximoServer.env)
+                ? existingMaximoServer.env
+                : {};
+
+        const managedEnv = { ...existingEnv };
+        delete managedEnv.MAXIMO_BASE_URL;
+        delete managedEnv.MAXIMO_API_KEY;
+        delete managedEnv.MAXIMO_BASE_URL_ENCRYPTED;
+        delete managedEnv.MAXIMO_API_KEY_ENCRYPTED;
+        delete managedEnv.MAXIMO_WORKSPACE_DIR;
+
+        servers.maximo = {
+            ...existingMaximoServer,
+            type: 'stdio',
+            command: mcpServer.command,
+            args: mcpServer.args,
+            env: {
+                ...managedEnv,
+                ...env
+            }
+        };
+
+        const nextConfig = {
+            ...config,
+            servers
+        };
+
+        fs.mkdirSync(path.dirname(mcpConfigPath), { recursive: true });
+        fs.writeFileSync(mcpConfigPath, JSON.stringify(nextConfig, null, 2) + '\n', 'utf8');
+
+        Logger.debug(
+            `Updated workspace MCP config at ${mcpConfigPath}. baseUrl=${env.MAXIMO_BASE_URL ? 'configured' : 'not-configured'}, apiKey=${env.MAXIMO_API_KEY_ENCRYPTED ? 'configured (encrypted)' : 'not-configured'}.`
+        );
+    } catch (error) {
+        Logger.error(`Could not update workspace MCP config: ${error?.message ?? error}`);
+    }
+}
+
+async function resolvePackagedMcpServer(mcpKeyPath) {
+    if (!extensionInstallPath) {
+        return null;
+    }
+
+    const mcpFolderPath = path.join(extensionInstallPath, 'mcp');
+    const mcpDistPath = path.join(extensionInstallPath, 'mcp', 'index.js');
+    const mcpStylePath = path.join(extensionInstallPath, 'mcp', 'style.md');
+    const mcpDistPathEncrypted = path.join(extensionInstallPath, 'templates', 'encrypted-index.js');
+    const mcpStylePathEncrypted = path.join(extensionInstallPath, 'templates', 'encrypted-style.md');
+    const manageFacadeZipPath = path.join(extensionInstallPath, 'templates', 'manage-facade.d.ts.zip');
+    const manageZipPath = path.join(extensionInstallPath, 'templates', 'manage.d.ts.zip');
+
+    if (!fs.existsSync(mcpDistPath) && fs.existsSync(mcpDistPathEncrypted) && fs.existsSync(mcpKeyPath)) {
+        try {
+            decryptTemplateFile(mcpDistPathEncrypted, mcpDistPath, mcpKeyPath);
+        } catch (error) {
+            Logger.error(`Failed to decrypt packaged MCP file: ${error?.message ?? error}`);
+            return null;
+        }
+
+        await unzipTemplateFile(manageFacadeZipPath, mcpFolderPath);
+        await unzipTemplateFile(manageZipPath, mcpFolderPath);
+    }
+
+    if (!fs.existsSync(mcpStylePath) && fs.existsSync(mcpStylePathEncrypted) && fs.existsSync(mcpKeyPath)) {
+        try {
+            decryptTemplateFile(mcpStylePathEncrypted, mcpStylePath, mcpKeyPath);
+        } catch (error) {
+            Logger.error(`Failed to decrypt packaged style guide file: ${error?.message ?? error}`);
+        }
+    }
+
+    if (fs.existsSync(mcpDistPath)) {
+        return {
+            command: 'node',
+            args: [mcpDistPath]
+        };
+    }
+
+    Logger.error(`Packaged MCP entrypoint not found at ${mcpDistPath}.`);
+    return null;
+}
+
+function decryptTemplateFile(encryptedPath, outputPath, mcpKeyPath) {
+    const encryptedPayload = JSON.parse(fs.readFileSync(encryptedPath, 'utf8'));
+    const encodedKey = fs.readFileSync(mcpKeyPath, 'utf8').trim();
+
+    const key = Buffer.from(encodedKey, 'base64');
+    const iv = Buffer.from(encryptedPayload.iv, 'base64');
+    const authTag = Buffer.from(encryptedPayload.authTag, 'base64');
+    const ciphertext = Buffer.from(encryptedPayload.ciphertext, 'base64');
+
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(authTag);
+    const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, plaintext);
+}
+
+async function unzipTemplateFile(zipPath, destinationDir) {
+    if (!fs.existsSync(zipPath)) {
+        return;
+    }
+
+    try {
+        await extractZip(zipPath, destinationDir);
+    } catch (error) {
+        Logger.error(`Failed to unzip template file ${zipPath}: ${error?.message ?? error}`);
+    }
+}
+
+function extractZip(zipPath, destinationDir) {
+    return new Promise((resolve, reject) => {
+        yauzl.open(zipPath, { lazyEntries: true }, (openError, zipFile) => {
+            if (openError) {
+                reject(openError);
+                return;
+            }
+
+            if (!zipFile) {
+                reject(new Error(`Could not open zip file ${zipPath}.`));
+                return;
+            }
+
+            zipFile.readEntry();
+
+            zipFile.on('entry', (entry) => {
+                const normalizedEntry = path.normalize(entry.fileName);
+                const outputPath = path.join(destinationDir, normalizedEntry);
+                const resolvedOutputPath = path.resolve(outputPath);
+                const resolvedDestination = path.resolve(destinationDir) + path.sep;
+
+                if (!resolvedOutputPath.startsWith(resolvedDestination) && resolvedOutputPath !== path.resolve(destinationDir)) {
+                    zipFile.close();
+                    reject(new Error(`Unsafe zip entry path: ${entry.fileName}`));
+                    return;
+                }
+
+                if (entry.fileName.endsWith('/')) {
+                    fs.mkdirSync(resolvedOutputPath, { recursive: true });
+                    zipFile.readEntry();
+                    return;
+                }
+
+                fs.mkdirSync(path.dirname(resolvedOutputPath), { recursive: true });
+                zipFile.openReadStream(entry, (streamError, readStream) => {
+                    if (streamError) {
+                        zipFile.close();
+                        reject(streamError);
+                        return;
+                    }
+
+                    if (!readStream) {
+                        zipFile.close();
+                        reject(new Error(`Unable to create read stream for ${entry.fileName}.`));
+                        return;
+                    }
+
+                    const writeStream = fs.createWriteStream(resolvedOutputPath);
+
+                    readStream.on('error', (error) => {
+                        zipFile.close();
+                        reject(error);
+                    });
+
+                    writeStream.on('error', (error) => {
+                        zipFile.close();
+                        reject(error);
+                    });
+
+                    writeStream.on('finish', () => {
+                        zipFile.readEntry();
+                    });
+
+                    readStream.pipe(writeStream);
+                });
+            });
+
+            zipFile.on('end', () => {
+                resolve();
+            });
+
+            zipFile.on('error', (error) => {
+                reject(error);
+            });
+        });
+    });
+}
+
+function resolveWorkspaceMcpConfigPath(workspaceDir) {
+    return path.join(workspaceDir, '.vscode', 'mcp.json');
+}
+
+async function resolveMcpEnvironment(workspaceDir) {
+    let selectedConfig = {};
+    let hasLocalConfigSelection = false;
+    const localConfig = await getLocalConfig();
+
+    if (localConfig) {
+        selectedConfig = await localConfig.config;
+    }
+
+    if (!selectedConfig) {
+        selectedConfig = {};
+    } else if (Array.isArray(selectedConfig) && selectedConfig.length > 0) {
+        hasLocalConfigSelection = true;
+        if (selectedConfig.length === 1) {
+            selectedConfig = selectedConfig[0];
+        } else {
+            selectedConfig = selectedConfig.find((config) => config.selected) || {};
+        }
+    } else if (typeof selectedConfig === 'object' && Object.keys(selectedConfig).length > 0) {
+        hasLocalConfigSelection = true;
+    }
+
+    const settings = workspace.getConfiguration('naviam');
+
+    const host = selectedConfig.host ?? settings.get('maximo.host');
+    const useSSL = typeof selectedConfig.useSSL !== 'undefined' ? selectedConfig.useSSL : settings.get('maximo.useSSL');
+    const port = selectedConfig.port ?? settings.get('maximo.port');
+    // When a local environment is selected, use only that environment's apiKey.
+    // This keeps MCP credentials aligned with the selected environment.
+    const apiKey = hasLocalConfigSelection ? selectedConfig.apiKey : settings.get('maximo.apiKey');
+
+    const env = {
+        MAXIMO_WORKSPACE_DIR: workspaceDir
+    };
+
+    const encryptKey = await getOrCreateEncryptKey();
+
+    if (host) {
+        const protocol = useSSL ? 'https' : 'http';
+        const defaultPort = useSSL ? 443 : 80;
+        const includePort = Number(port) !== defaultPort;
+        const baseUrl = `${protocol}://${host}${includePort ? `:${port}` : ''}`;
+        env.MAXIMO_BASE_URL = baseUrl;
+    }
+
+    if (apiKey) {
+        env.MAXIMO_API_KEY_ENCRYPTED = encryptForMcpEnv(apiKey, encryptKey);
+    }
+
+    return env;
+}
+
+async function getOrCreateEncryptKey() {
+    if (!secretStorage) {
+        throw new Error('Secret storage is not initialized.');
+    }
+
+    let encryptKey = await secretStorage.get('encryptKey');
+
+    if (!encryptKey) {
+        encryptKey = Buffer.from(crypto.randomBytes(16)).toString('hex') + Buffer.from(crypto.randomBytes(32)).toString('hex');
+        await secretStorage.store('encryptKey', encryptKey);
+    }
+
+    return encryptKey;
+}
+
+function encryptForMcpEnv(value, encryptKey) {
+    const iv = Buffer.from(encryptKey.slice(0, 32), 'hex');
+    const key = Buffer.from(encryptKey.slice(32), 'hex');
+    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+    let encryptedValue = cipher.update(value, 'utf-8', 'hex');
+    encryptedValue += cipher.final('hex');
+    return `{encrypted}${encryptedValue}`;
 }
 
 export async function getMaximoConfig() {

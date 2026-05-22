@@ -19,4 +19,4 @@ resources/.git/**
 resources/.gitignore
 .gitmodules
 azure-pipelines.yml
-
+mcp

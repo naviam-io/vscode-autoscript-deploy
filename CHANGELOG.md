@@ -1,4 +1,7 @@
 # Release Notes
+## 1.28.0
+- Added support for Maximo MCP
+  
 ## 1.27.15
 - Fixed manage-facade.d.ts.zip file handling.
 

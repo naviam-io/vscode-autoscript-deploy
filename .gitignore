@@ -15,3 +15,10 @@ src/.DS_Store
 java/src/main/resources/autoscript-debug-version.txt
 
 java/.jython_cache/
+
+mcp/keys
+mcp/index.js
+mcp/style.md
+templates/encrypted-index.js
+
+templates/encrypted-style.md
