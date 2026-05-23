@@ -1,4 +1,7 @@
 # Release Notes
+## 1.28.1
+- Change how environment variables are passed to the MCP.
+  
 ## 1.28.0
 - Added support for Maximo MCP
   

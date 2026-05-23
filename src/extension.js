@@ -587,7 +587,7 @@ async function syncWorkspaceMcpServerConfig() {
             return;
         }
 
-        const mcpServer = await resolvePackagedMcpServer(path.join(workspaceDir, 'mcp.key'));
+        const mcpServer = await resolvePackagedMcpServer(path.join(workspaceDir, 'mcp.key'), workspaceDir);
         if (!mcpServer) {
             return;
         }
@@ -652,14 +652,14 @@ async function syncWorkspaceMcpServerConfig() {
     }
 }
 
-async function resolvePackagedMcpServer(mcpKeyPath) {
+async function resolvePackagedMcpServer(mcpKeyPath, workspaceDir) {
     if (!extensionInstallPath) {
         return null;
     }
 
-    const mcpFolderPath = path.join(extensionInstallPath, 'mcp');
-    const mcpDistPath = path.join(extensionInstallPath, 'mcp', 'index.js');
-    const mcpStylePath = path.join(extensionInstallPath, 'mcp', 'style.md');
+    const mcpFolderPath = path.join(workspaceDir, 'mcp');
+    const mcpDistPath = path.join(workspaceDir, 'mcp', 'index.js');
+    const mcpStylePath = path.join(workspaceDir, 'mcp', 'style.md');
     const mcpDistPathEncrypted = path.join(extensionInstallPath, 'templates', 'encrypted-index.js');
     const mcpStylePathEncrypted = path.join(extensionInstallPath, 'templates', 'encrypted-style.md');
     const manageFacadeZipPath = path.join(extensionInstallPath, 'templates', 'manage-facade.d.ts.zip');
@@ -842,8 +842,6 @@ async function resolveMcpEnvironment(workspaceDir) {
         MAXIMO_WORKSPACE_DIR: workspaceDir
     };
 
-    const encryptKey = await getOrCreateEncryptKey();
-
     if (host) {
         const protocol = useSSL ? 'https' : 'http';
         const defaultPort = useSSL ? 443 : 80;
@@ -853,7 +851,11 @@ async function resolveMcpEnvironment(workspaceDir) {
     }
 
     if (apiKey) {
-        env.MAXIMO_API_KEY_ENCRYPTED = encryptForMcpEnv(apiKey, encryptKey);
+        const mcpKeyPath = path.join(workspaceDir, 'mcp.key');
+        if (fs.existsSync(mcpKeyPath)) {
+            const mcpKeyBase64 = fs.readFileSync(mcpKeyPath, 'utf8').trim();
+            env.MAXIMO_API_KEY_ENCRYPTED = encryptForMcpEnv(apiKey, mcpKeyBase64);
+        }
     }
 
     return env;
@@ -874,13 +876,13 @@ async function getOrCreateEncryptKey() {
     return encryptKey;
 }
 
-function encryptForMcpEnv(value, encryptKey) {
-    const iv = Buffer.from(encryptKey.slice(0, 32), 'hex');
-    const key = Buffer.from(encryptKey.slice(32), 'hex');
-    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
-    let encryptedValue = cipher.update(value, 'utf-8', 'hex');
-    encryptedValue += cipher.final('hex');
-    return `{encrypted}${encryptedValue}`;
+function encryptForMcpEnv(value, mcpKeyBase64) {
+    const key = Buffer.from(mcpKeyBase64, 'base64');
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    const encrypted = Buffer.concat([cipher.update(value, 'utf-8'), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+    return `{encrypted-gcm}${iv.toString('base64')}.${authTag.toString('base64')}.${encrypted.toString('base64')}`;
 }
 
 export async function getMaximoConfig() {
