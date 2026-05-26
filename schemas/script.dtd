@@ -18,7 +18,7 @@
 	specify_crossover_domain|drop_domain|specify_table_domain|add_sigoption|drop_sigoption|create_maxvar|modify_maxvar|drop_maxvar|modify_domain_type|
 	add_service|modify_service|drop_service|create_app|modify_app|drop_app|create_module|modify_module|drop_module|create_app_menu|additional_app_menu|
 	define_view|modify_view|drop_view|drop_view_attribute|add_view_attribute|modify_view_attributes|add_property|set_property|drop_property|module_app|
-	insert|logical_relationship|delete|update|remove_menu_option|add_update_autoscript|remove_autoscript)* >
+	insert|logical_relationship|delete|update|remove_menu_option)* >
 
 <!--This section defines the checks to make before running the script.
 If any query returns a row, the information will be logged and usually the script will be skipped.
@@ -741,14 +741,4 @@ Don't include a terminator - ; or go.-->
 	status (unverified|verified|invalidated) #REQUIRED
 	description CDATA #IMPLIED
 	number CDATA #IMPLIED
->
-
-<!ELEMENT add_update_autoscript EMPTY >
-<!ATTLIST add_update_autoscript
-		path CDATA #REQUIRED
-		language (javascript|python) #REQUIRED
->
-<!ELEMENT remove_autoscript EMPTY >
-<!ATTLIST remove_autoscript
-		name CDATA #REQUIRED
 >

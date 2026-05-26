@@ -1,0 +1,383 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/sharptree/vscode-autoscript-deploy/main/schemas/script-config-schema.json",
+    "title": "Naviam Automation Script scriptConfig",
+    "description": "Schema for the scriptConfig object parsed and deployed by NAVIAM.AUTOSCRIPT.DEPLOY.",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+        "autoscript": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique automation script name."
+        },
+        "description": {
+            "type": "string",
+            "description": "Automation script description."
+        },
+        "version": {
+            "type": "string",
+            "description": "Script version label."
+        },
+        "active": {
+            "type": "boolean",
+            "description": "Whether the automation script is active."
+        },
+        "logLevel": {
+            "type": "string",
+            "description": "Maximo automation script log level."
+        },
+        "allowInvokingScriptFunctions": {
+            "type": "boolean",
+            "description": "Maps to AUTOSCRIPT.INTERFACE."
+        },
+        "_delete": {
+            "type": "boolean",
+            "description": "Delete the automation script when true."
+        },
+        "autoScriptVars": {
+            "type": "array",
+            "description": "Script variables to create on AUTOSCRIPTVARS.",
+            "items": {
+                "$ref": "#/definitions/autoScriptVar"
+            }
+        },
+        "scriptLaunchPoints": {
+            "type": "array",
+            "description": "Launch points to create on SCRIPTLAUNCHPOINT.",
+            "items": {
+                "$ref": "#/definitions/scriptLaunchPoint"
+            }
+        },
+        "messages": {
+            "type": "array",
+            "description": "MAXMESSAGES entries to create or update.",
+            "items": {
+                "$ref": "#/definitions/message"
+            }
+        },
+        "maxvars": {
+            "type": "array",
+            "description": "MAXVARTYPE/MAXVARS entries to create or update.",
+            "items": {
+                "$ref": "#/definitions/maxvar"
+            }
+        },
+        "properties": {
+            "type": "array",
+            "description": "MAXPROP entries to create or update.",
+            "items": {
+                "$ref": "#/definitions/property"
+            }
+        },
+        "onDeploy": {
+            "type": "string",
+            "description": "Function name in the deployed script to invoke after deployment."
+        },
+        "onDeployScript": {
+            "type": "string",
+            "description": "Name of a separate deploy script to run after deployment."
+        },
+        "deleteDeployScript": {
+            "type": "boolean",
+            "description": "Delete the deploy script after execution."
+        }
+    },
+    "required": ["autoscript"],
+    "definitions": {
+        "autoScriptVar": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "varname": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "description": {
+                    "type": "string"
+                },
+                "varBindingType": {
+                    "type": "string"
+                },
+                "varType": {
+                    "type": "string"
+                },
+                "allowOverride": {
+                    "type": "boolean"
+                },
+                "noValidation": {
+                    "type": "boolean"
+                },
+                "noAccessCheck": {
+                    "type": "boolean"
+                },
+                "noAction": {
+                    "type": "boolean"
+                },
+                "literalDataType": {
+                    "type": "string"
+                },
+                "varBindingValue": {
+                    "type": ["string", "number", "boolean", "null"]
+                }
+            },
+            "required": ["varname"]
+        },
+        "launchPointVar": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "varName": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "varBindingValue": {
+                    "type": ["string", "number", "boolean", "null"]
+                }
+            },
+            "required": ["varName", "varBindingValue"]
+        },
+        "scriptLaunchPoint": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "launchPointName": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "launchPointType": {
+                    "type": "string",
+                    "enum": ["OBJECT", "ATTRIBUTE", "ACTION", "CUSTOMCONDITION"]
+                },
+                "active": {
+                    "type": "boolean"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "objectName": {
+                    "type": "string"
+                },
+                "condition": {
+                    "type": "string"
+                },
+                "attributeName": {
+                    "type": "string"
+                },
+                "actionName": {
+                    "type": "string"
+                },
+                "initializeValue": {
+                    "type": "boolean"
+                },
+                "validateApplication": {
+                    "type": "boolean"
+                },
+                "allowObjectCreation": {
+                    "type": "boolean"
+                },
+                "allowObjectDeletion": {
+                    "type": "boolean"
+                },
+                "save": {
+                    "type": "boolean"
+                },
+                "add": {
+                    "type": "boolean"
+                },
+                "update": {
+                    "type": "boolean"
+                },
+                "delete": {
+                    "type": "boolean"
+                },
+                "beforeSave": {
+                    "type": "boolean"
+                },
+                "afterSave": {
+                    "type": "boolean"
+                },
+                "afterCommit": {
+                    "type": "boolean"
+                },
+                "initializeAccessRestriction": {
+                    "type": "boolean"
+                },
+                "validate": {
+                    "type": "boolean"
+                },
+                "retrieveList": {
+                    "type": "boolean"
+                },
+                "runAction": {
+                    "type": "boolean"
+                },
+                "launchPointVars": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/launchPointVar"
+                    }
+                }
+            },
+            "required": ["launchPointName", "launchPointType"],
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "launchPointType": {
+                                "const": "OBJECT"
+                            }
+                        },
+                        "required": ["launchPointType"]
+                    },
+                    "then": {
+                        "required": ["objectName"]
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "launchPointType": {
+                                "const": "ATTRIBUTE"
+                            }
+                        },
+                        "required": ["launchPointType"]
+                    },
+                    "then": {
+                        "required": ["objectName", "attributeName"]
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "launchPointType": {
+                                "const": "ACTION"
+                            }
+                        },
+                        "required": ["launchPointType"]
+                    },
+                    "then": {
+                        "required": ["actionName"]
+                    }
+                }
+            ]
+        },
+        "message": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "msgGroup": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "msgKey": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "value": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "prefix": {
+                    "type": "string",
+                    "default": "BMXZZ"
+                },
+                "suffix": {
+                    "type": "string",
+                    "default": "E"
+                },
+                "displayMethod": {
+                    "type": "string",
+                    "default": "MSGBOX"
+                },
+                "delete": {
+                    "type": "boolean"
+                }
+            },
+            "required": ["msgGroup", "msgKey", "value"]
+        },
+        "maxvar": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "varName": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "varType": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "defaultValue": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "orgId": {
+                    "type": "string"
+                },
+                "siteId": {
+                    "type": "string"
+                },
+                "varValue": {
+                    "type": ["string", "number", "boolean", "null"]
+                },
+                "delete": {
+                    "type": "boolean"
+                }
+            },
+            "required": ["varName", "varType"]
+        },
+        "property": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "propName": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "secureLevel": {
+                    "type": "integer"
+                },
+                "maxType": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "encrypted": {
+                    "type": "boolean"
+                },
+                "masked": {
+                    "type": "boolean"
+                },
+                "globalOnly": {
+                    "type": "boolean"
+                },
+                "onlineChanges": {
+                    "type": "boolean"
+                },
+                "liveRefresh": {
+                    "type": "boolean"
+                },
+                "domainId": {
+                    "type": "string"
+                },
+                "nullsAllowed": {
+                    "type": "boolean"
+                },
+                "propValue": {
+                    "type": ["string", "number", "boolean", "null"]
+                },
+                "initialPropValue": {
+                    "type": ["string", "number", "boolean", "null"]
+                },
+                "delete": {
+                    "type": "boolean"
+                }
+            },
+            "required": ["propName"]
+        }
+    }
+}

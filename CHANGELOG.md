@@ -1,4 +1,7 @@
 # Release Notes
+## 1.28.2
+- Update MCP with general query capabilities.
+  
 ## 1.28.1
 - Change how environment variables are passed to the MCP.
   
