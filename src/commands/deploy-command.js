@@ -39,20 +39,23 @@ export default async function deployCommand(client) {
                         );
 
                         const config = _loadWebpackConfig(webpackProject.webpackConfigPath);
-                        const outputFilePath = _resolveWebpackOutputFile(config, webpackProject.projectRoot);
-                        const entryPoint = _resolveWebpackEntryPoint(config?.entry, webpackProject.projectRoot);
+                        const outputFilePath = _resolveWebpackOutputForSourceFile(config, webpackProject.projectRoot, filePath);
+                        const sourceTopLevelFolder = _getTopLevelFolder(filePath, webpackProject.projectRoot);
 
                         if (config && outputFilePath) {
                             const outputFileName = path.basename(outputFilePath);
-                            const entryDisplay = entryPoint ? path.basename(entryPoint) : 'unknown source';
-                            Logger.debug(`Webpack config found. Source: ${entryDisplay}. Output: ${outputFileName}. Running webpack build.`, LOG_SOURCE);
+                            const folderDisplay = sourceTopLevelFolder || 'unknown folder';
+                            Logger.debug(
+                                `Webpack config found. Active folder: ${folderDisplay}. Output: ${outputFileName}. Running webpack build.`,
+                                LOG_SOURCE
+                            );
                             await runWebpack(webpackProject.projectRoot);
 
                             sourceText = fs.readFileSync(outputFilePath, 'utf8');
                             if (sourceText.startsWith('/*! For license information please see bundle.js.LICENSE.txt */')) {
                                 sourceText = sourceText.replace('/*! For license information please see bundle.js.LICENSE.txt */', '').trim();
                             }
-                            Logger.debug(`Webpack build complete. Deploying ${entryDisplay} as ${outputFileName}.`, LOG_SOURCE);
+                            Logger.debug(`Webpack build complete. Deploying ${folderDisplay} as ${outputFileName}.`, LOG_SOURCE);
                             fileExt = '.js';
                             filePath = outputFilePath;
                         }
@@ -357,6 +360,100 @@ function _resolveWebpackOutputFile(config, projectRoot) {
 }
 
 /**
+ * @param {Record<string, any> | Array<Record<string, any>> | undefined} config
+ * @param {string} projectRoot
+ * @param {string} sourceFilePath
+ * @returns {string | undefined}
+ */
+function _resolveWebpackOutputForSourceFile(config, projectRoot, sourceFilePath) {
+    if (!config) {
+        return undefined;
+    }
+
+    const configs = Array.isArray(config) ? config : [config];
+    if (configs.length === 1) {
+        return _resolveWebpackOutputFile(configs[0], projectRoot);
+    }
+
+    const sourceTopLevelFolder = _getTopLevelFolder(sourceFilePath, projectRoot);
+    if (!sourceTopLevelFolder) {
+        return undefined;
+    }
+
+    for (const cfg of configs) {
+        const entryFolders = _extractTopLevelFoldersFromEntry(cfg?.entry, projectRoot);
+        if (entryFolders.has(sourceTopLevelFolder)) {
+            return _resolveWebpackOutputFile(cfg, projectRoot);
+        }
+    }
+
+    return undefined;
+}
+
+/**
+ * @param {string} filePath
+ * @param {string} projectRoot
+ * @returns {string | undefined}
+ */
+function _getTopLevelFolder(filePath, projectRoot) {
+    const relativePath = path.relative(projectRoot, filePath);
+    if (!relativePath || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+        return undefined;
+    }
+
+    const [topLevelFolder] = relativePath.split(path.sep);
+    if (!topLevelFolder || topLevelFolder === '.') {
+        return undefined;
+    }
+
+    return topLevelFolder;
+}
+
+/**
+ * @param {unknown} entry
+ * @param {string} projectRoot
+ * @returns {Set<string>}
+ */
+function _extractTopLevelFoldersFromEntry(entry, projectRoot) {
+    const folders = new Set();
+
+    /** @type {string[]} */
+    const entryFiles = [];
+
+    if (typeof entry === 'string') {
+        entryFiles.push(entry);
+    } else if (Array.isArray(entry)) {
+        for (const item of entry) {
+            if (typeof item === 'string') {
+                entryFiles.push(item);
+            }
+        }
+    } else if (entry && typeof entry === 'object') {
+        for (const value of Object.values(entry)) {
+            if (typeof value === 'string') {
+                entryFiles.push(value);
+            } else if (Array.isArray(value)) {
+                for (const item of value) {
+                    if (typeof item === 'string') {
+                        entryFiles.push(item);
+                    }
+                }
+            }
+        }
+    }
+
+    for (const entryFile of entryFiles) {
+        const absoluteEntryPath = path.isAbsolute(entryFile) ? entryFile : path.resolve(projectRoot, entryFile);
+        const topLevelFolder = _getTopLevelFolder(absoluteEntryPath, projectRoot);
+        if (topLevelFolder) {
+            folders.add(topLevelFolder);
+        }
+    }
+
+    return folders;
+}
+
+/**
  * @param {unknown} entry
  * @param {string} projectRoot
  * @returns {string | undefined}
@@ -414,10 +511,6 @@ function _resolveWebpackConfig(loadedConfig) {
                 return undefined;
             }
         }
-    }
-
-    if (Array.isArray(config)) {
-        return config[0];
     }
 
     return config;

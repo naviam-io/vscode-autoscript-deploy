@@ -98,14 +98,6 @@ export default class MaximoClient {
 
                 // If the requested URL is the login endpoint, the inject the auth headers.
                 if (request.url === 'login') {
-                    if (this.config.apiKey) {
-                        if (request.params) {
-                            request.params['apikey'] = config.apiKey;
-                        } else {
-                            request.params = { apikey: config.apiKey };
-                        }
-                    }
-
                     if (request.params) {
                         request.params['csrf'] = '1';
                     } else {
@@ -122,24 +114,12 @@ export default class MaximoClient {
                     // // https://www.ibm.com/docs/en/mema"s?topic=imam-downloading-work-orders-by-using-maximo-mxapiwodetail-api
                     request.headers['x-public-uri'] = this.config.baseURL;
 
-                    if (this.config.apiKey) {
-                        if (request.params) {
-                            request.params['apikey'] = config.apiKey;
-                            request.params['lean'] = this.config.lean ? 'true' : 'false';
-                        } else {
-                            request.params = {
-                                lean: this.config.lean ? 'true' : 'false',
-                                apikey: this.config.apiKey
-                            };
-                        }
+                    if (request.params) {
+                        request.params['lean'] = this.config.lean ? 'true' : 'false';
                     } else {
-                        if (request.params) {
-                            request.params['lean'] = this.config.lean ? 'true' : 'false';
-                        } else {
-                            request.params = {
-                                lean: this.config.lean ? 'true' : 'false'
-                            };
-                        }
+                        request.params = {
+                            lean: this.config.lean ? 'true' : 'false'
+                        };
                     }
                 }
 
@@ -339,6 +319,8 @@ export default class MaximoClient {
             request.withCredentials = true;
             Logger.debug(`Configured MAXAUTH headers for ${this._getRequestSummary(request)}.`, LOG_SOURCE);
         } else {
+            request.headers = request.headers || {};
+            request.headers['apikey'] = this.config.apiKey;
             Logger.debug(`Using API key authentication for ${this._getRequestSummary(request)}.`, LOG_SOURCE);
         }
     }

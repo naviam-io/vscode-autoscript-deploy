@@ -7,6 +7,7 @@ function main(): void {
     // Your script's main logic goes here. You can use the 'service' variable to interact with the Naviam environment.
 }
 
+/** @maximoGlobal */
 var scriptConfig = {
     autoscript: '${script_name}',
     description: '${script_description}',

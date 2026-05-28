@@ -1,4 +1,9 @@
 # Release Notes
+## 1.28.3
+- Add annotation support for maximoGlobal
+- Add support for multiple TypeScript files
+- Fixed compile time path encoding for MCP
+
 ## 1.28.2
 - Update MCP with general query capabilities.
   

@@ -1,7 +1,63 @@
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
 const webpack = require('webpack');
 const TerserPlugin = require('terser-webpack-plugin');
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
+
+const embeddedAnnotationLoaderSource = `
+const annotationTagPattern = /@maximoGlobal\\b/;
+const jsDocFunctionPattern = /\\/\\*\\*[\\s\\S]*?@maximoGlobal\\b[\\s\\S]*?\\*\\/\\s*(?:export\\s+)?function\\s+([A-Za-z_$][\\w$]*)\\s*\\(/g;
+const jsDocVarPattern = /\\/\\*\\*[\\s\\S]*?@maximoGlobal\\b[\\s\\S]*?\\*\\/\\s*(?:export\\s+)?var\\s+([A-Za-z_$][\\w$]*)\\s*(?:=|;)/g;
+const lineFunctionPattern = /\\/\\/\\s*@maximoGlobal\\b[^\\n]*\\n\\s*(?:export\\s+)?function\\s+([A-Za-z_$][\\w$]*)\\s*\\(/g;
+const lineVarPattern = /\\/\\/\\s*@maximoGlobal\\b[^\\n]*\\n\\s*(?:export\\s+)?var\\s+([A-Za-z_$][\\w$]*)\\s*(?:=|;)/g;
+
+function collectNames(source, pattern, names) {
+    pattern.lastIndex = 0;
+    let match = pattern.exec(source);
+    while (match) {
+        names.add(match[1]);
+        match = pattern.exec(source);
+    }
+}
+
+module.exports = function maximoGlobalAnnotationLoader(source) {
+    if (typeof source !== "string") {
+        return source;
+    }
+
+    if (!annotationTagPattern.test(source) || source.indexOf("/* maximo-annotated-globals */") !== -1) {
+        return source;
+    }
+
+    const names = new Set();
+    collectNames(source, jsDocFunctionPattern, names);
+    collectNames(source, jsDocVarPattern, names);
+    collectNames(source, lineFunctionPattern, names);
+    collectNames(source, lineVarPattern, names);
+
+    if (names.size === 0) {
+        return source;
+    }
+
+    const assignmentLines = ["/* maximo-annotated-globals */", 'var __maximoGlobalScope = Function("return this")();'];
+    names.forEach((name) => {
+        assignmentLines.push("__maximoGlobalScope." + name + " = " + name + ";");
+    });
+
+    return source + "\\n\\n" + assignmentLines.join("\\n") + "\\n";
+};
+`;
+
+function getEmbeddedAnnotationLoaderPath() {
+    const loaderPath = path.join(os.tmpdir(), 'maximo-global-annotation-loader.cjs');
+    if (!fs.existsSync(loaderPath) || fs.readFileSync(loaderPath, 'utf8') !== embeddedAnnotationLoaderSource) {
+        fs.writeFileSync(loaderPath, embeddedAnnotationLoaderSource, 'utf8');
+    }
+    return loaderPath;
+}
+
+const embeddedAnnotationLoaderPath = getEmbeddedAnnotationLoaderPath();
 
 // Custom plugin to replace 'self' with 'this' for Nashorn compatibility
 class ReplaceGlobalSelfPlugin {
@@ -38,6 +94,7 @@ class ReplaceGlobalSelfPlugin {
                                 'function main() {$1}\nmain();\nvar scriptConfig'
                             );
 
+                            // Removed late injection call
                             // 4. Use 'updateAsset' and 'RawSource' (modern Webpack 5 approach)
                             compilation.updateAsset(filename, new webpack.sources.RawSource(newContent));
                         }
@@ -63,7 +120,7 @@ module.exports = (env, argv) => {
         },
         output: {
             path: path.resolve(__dirname, './dist'),
-            filename: '{script_name}.js',
+            filename: '${script_name}.js',
             library: {
                 name: '${library_name}',
                 type: 'assign',
@@ -89,13 +146,19 @@ module.exports = (env, argv) => {
         optimization: {
             // Set this to false to disable minification during the build and make debugging easier
             minimize: isProduction,
+            // Removed late injection call
             minimizer: [terserMinimizer]
         },
         module: {
             rules: [
                 {
                     test: /\.ts$/,
-                    use: 'ts-loader',
+                    use: [
+                        'ts-loader',
+                        {
+                            loader: embeddedAnnotationLoaderPath
+                        }
+                    ],
                     exclude: /node_modules/
                 },
                 {

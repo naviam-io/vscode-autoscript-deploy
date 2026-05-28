@@ -142,7 +142,7 @@ export default async function initTsTemplateCommand() {
 
         // webpack.config.js — replace placeholders
         let webpackContent = fs.readFileSync(path.join(templateDir, 'webpack.config.js'), 'utf8');
-        webpackContent = webpackContent.replace(/\{script_name\}/g, scriptName);
+        webpackContent = webpackContent.replace(/\$\{script_name\}/g, scriptName);
         webpackContent = webpackContent.replace(/\$\{library_name\}/g, libraryName);
         const webpackDest = path.join(destRoot, 'webpack.config.js');
         fs.writeFileSync(webpackDest, webpackContent, 'utf8');
