@@ -15,6 +15,18 @@ export default async function extractObjectCommand(client) {
 
     quickPick.items = [
         {
+            label: 'Actions',
+            group: 'actions',
+            sort: (a, b) => {
+                const groupCompare = a.action.localeCompare(b.action);
+                if (groupCompare !== 0) return groupCompare;
+                return a.action.localeCompare(b.action);
+            },
+            filter: (a1, a2) => {
+                return [...a1, ...a2.filter((b) => !a1.some((a) => a.action === b.action))];
+            },
+        },
+        {
             label: 'Cron Tasks',
             group: 'cronTasks',
             sort: (a, b) => {
@@ -24,6 +36,18 @@ export default async function extractObjectCommand(client) {
             },
             filter: (a1, a2) => {
                 return [...a1, ...a2.filter((b) => !a1.some((a) => a.cronTaskName === b.cronTaskName))];
+            },
+        },
+        {
+            label: 'Escalations',
+            group: 'escalations',
+            sort: (a, b) => {
+                const groupCompare = a.escalation.localeCompare(b.escalation);
+                if (groupCompare !== 0) return groupCompare;
+                return a.escalation.localeCompare(b.escalation);
+            },
+            filter: (a1, a2) => {
+                return [...a1, ...a2.filter((b) => !a1.some((a) => a.escalation === b.escalation))];
             },
         },
         {
@@ -40,7 +64,7 @@ export default async function extractObjectCommand(client) {
         },
         {
             label: 'Integration Objects',
-            group: 'intObjects',
+            group: 'integrationObjects',
             sort: (a, b) => {
                 const groupCompare = a.intObjectName.localeCompare(b.intObjectName);
                 if (groupCompare !== 0) return groupCompare;
@@ -84,6 +108,23 @@ export default async function extractObjectCommand(client) {
             },
             filter: (a1, a2) => {
                 return [...a1, ...a2.filter((b) => !a1.some((a) => a.propName === b.propName))];
+            },
+        },
+        {
+            label: 'Queries',
+            group: 'queries',
+            sort: (a, b) => {
+                const appCompare = a.app.localeCompare(b.app);
+                if (appCompare !== 0) return appCompare;
+                const nameCompare = a.clauseName.localeCompare(b.clauseName);
+                if (nameCompare !== 0) return nameCompare;
+                return a.owner.localeCompare(b.owner);
+            },
+            filter: (a1, a2) => {
+                return [
+                    ...a1,
+                    ...a2.filter((b) => !a1.some((a) => a.app === b.app && a.clauseName === b.clauseName && a.owner === b.owner)),
+                ];
             },
         },
     ];

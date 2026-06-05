@@ -29,20 +29,285 @@
             "items": { "$ref": "#/definitions/domain" },
             "description": "An array of Maximo domains to be deployed to the target system."
         },
-        "intObjects": {
+        "integrationObjects": {
             "type": "array",
-            "items": { "$ref": "#/definitions/intObject" },
+            "items": { "$ref": "#/definitions/integrationObject" },
             "description": "An array of Maximo integration objects."
+        },
+        "actions": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/action" },
+            "description": "An array of Maximo actions."
+        },
+        "escalations": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/escalation" },
+            "description": "An array of Maximo escalations."
+        },
+        "queries": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/query" },
+            "description": "An array of Maximo queries."
         }
     },
     "definitions": {
-        "intObject": {
+        "action": {
+            "title": "Maximo Action",
+            "description": "A Maximo action",
+            "type": "object",
+            "properties": {
+                "_delete": {
+                    "description": "Flag to indicate that the action should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "action": {
+                    "description": "The name of the Maximo action (ACTION.ACTION)",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "The description of the Maximo action (ACTION.DESCRIPTION)",
+                    "type": "string"
+                },
+                "senderSysId": {
+                    "description": "The sender system ID for the Maximo action (ACTION.SENDERSYSID)",
+                    "type": "string",
+                    "default": "MX"
+                },
+                "type": {
+                    "description": "The type of Maximo action (ACTION.TYPE)",
+                    "type": "string",
+                    "enum": ["APPACTION", "CHANGESTATUS", "CUSTOM", "EXECUTABLE", "GROUP", "SETVALUE"],
+                    "default": "CUSTOM"
+                },
+                "useWith": {
+                    "description": "Indicates where the Maximo action can be used (ACTION.USEWITH)",
+                    "type": "string",
+                    "default": "ALL"
+                },
+                "value": {
+                    "description": "The action value. CUSTOM actions deploy to ACTION.VALUE; other action types deploy to ACTION.VALUE2.",
+                    "type": "string"
+                },
+                "objectName": {
+                    "description": "The object associated with the Maximo action (ACTION.OBJECTNAME)",
+                    "type": "string"
+                },
+                "parameter": {
+                    "description": "The action parameter (ACTION.PARAMETER)",
+                    "type": "string"
+                },
+                "memo": {
+                    "description": "The status change memo (ACTION.MEMO)",
+                    "type": "string"
+                },
+                "actionGroup": {
+                    "description": "An array of group members for GROUP actions.",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "member": {
+                                "description": "The member action name (ACTIONGROUP.MEMBER)",
+                                "type": "string"
+                            },
+                            "sequence": {
+                                "description": "The member sequence (ACTIONGROUP.SEQUENCE)",
+                                "type": "integer"
+                            }
+                        },
+                        "required": ["member", "sequence"]
+                    }
+                }
+            },
+            "required": ["action", "type", "useWith"]
+        },
+        "query": {
+            "title": "Maximo Query",
+            "description": "A Maximo saved query",
+            "type": "object",
+            "properties": {
+                "_delete": {
+                    "description": "Flag to indicate that the query should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "app": {
+                    "description": "The application for the Maximo query (QUERY.APP)",
+                    "type": "string"
+                },
+                "clause": {
+                    "description": "The where clause for the Maximo query (QUERY.CLAUSE)",
+                    "type": "string"
+                },
+                "clauseName": {
+                    "description": "The name of the Maximo query (QUERY.CLAUSENAME)",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "The description of the Maximo query (QUERY.DESCRIPTION)",
+                    "type": "string"
+                },
+                "intObjectName": {
+                    "description": "The integration object name for the Maximo query (QUERY.INTOBJECTNAME)",
+                    "type": ["string", "null"]
+                },
+                "isPublic": {
+                    "description": "Whether the Maximo query is public (QUERY.ISPUBLIC)",
+                    "type": "boolean"
+                },
+                "isUserList": {
+                    "description": "Whether the Maximo query is used as a user list (QUERY.ISUSERLIST)",
+                    "type": "boolean"
+                },
+                "notes": {
+                    "description": "The notes for the Maximo query (QUERY.NOTES)",
+                    "type": ["string", "null"]
+                },
+                "owner": {
+                    "description": "The owner of the Maximo query (QUERY.OWNER)",
+                    "type": "string"
+                },
+                "priority": {
+                    "description": "The priority of the Maximo query (QUERY.PRIORITY)",
+                    "type": ["integer", "null"]
+                }
+            },
+            "required": ["app", "clause", "clauseName", "description", "isPublic", "isUserList", "owner"]
+        },
+        "escalation": {
+            "title": "Maximo Escalation",
+            "description": "A Maximo escalation",
+            "type": "object",
+            "properties": {
+                "_delete": {
+                    "description": "Flag to indicate that the escalation should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "escalation": {
+                    "description": "The name of the Maximo escalation (ESCALATION.ESCALATION)",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "The description of the Maximo escalation (ESCALATION.DESCRIPTION)",
+                    "type": "string"
+                },
+                "objectName": {
+                    "description": "The object associated with the Maximo escalation (ESCALATION.OBJECTNAME)",
+                    "type": "string"
+                },
+                "condition": {
+                    "description": "The escalation condition (ESCALATION.CONDITION)",
+                    "type": "string"
+                },
+                "active": {
+                    "description": "Whether the Maximo escalation is active (ESCALATION.ACTIVE)",
+                    "type": "boolean",
+                    "default": false
+                },
+                "schedule": {
+                    "description": "The escalation schedule (ESCALATION.SCHEDULE)",
+                    "type": "string",
+                    "default": "1h,*,0,*,*,*,*,*,*,*"
+                },
+                "cronTaskName": {
+                    "description": "The escalation cron task name (ESCALATION.CRONTASKNAME)",
+                    "type": "string",
+                    "default": "ESCALATION"
+                },
+                "instanceName": {
+                    "description": "The escalation cron task instance name (ESCALATION.INSTANCENAME)",
+                    "type": "string"
+                },
+                "escStatusFlag": {
+                    "description": "Whether the escalation status flag is enabled (ESCALATION.ESCSTATUSFLAG)",
+                    "type": "boolean",
+                    "default": false
+                },
+                "escCalendar": {
+                    "description": "The escalation calendar (ESCALATION.ESCCALENDAR)",
+                    "type": "string"
+                },
+                "escShift": {
+                    "description": "The escalation shift (ESCALATION.ESCSHIFT)",
+                    "type": "string"
+                },
+                "escCalOrgId": {
+                    "description": "The escalation calendar organization (ESCALATION.ESCCALORGID)",
+                    "type": "string"
+                },
+                "slaNum": {
+                    "description": "The SLA associated with the escalation (ESCALATION.SLANUM)",
+                    "type": "string"
+                },
+                "langCode": {
+                    "description": "The escalation language code (ESCALATION.LANGCODE)",
+                    "type": "string"
+                },
+                "orgId": {
+                    "description": "The escalation organization (ESCALATION.ORGID)",
+                    "type": "string"
+                },
+                "siteId": {
+                    "description": "The escalation site (ESCALATION.SITEID)",
+                    "type": "string"
+                },
+                "escRefPoint": {
+                    "description": "An array of escalation points.",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "refPointNum": {
+                                "description": "The escalation point number (ESCREFPOINT.REFPOINTNUM)",
+                                "type": "integer"
+                            },
+                            "eventAttribute": {
+                                "description": "The escalation point event attribute (ESCREFPOINT.EVENTATTRIBUTE)",
+                                "type": "string"
+                            },
+                            "elapsedInterval": {
+                                "description": "The escalation point elapsed interval (ESCREFPOINT.ELAPSEDINTERVAL)",
+                                "type": "number"
+                            },
+                            "intervalUom": {
+                                "description": "The escalation point interval unit of measure (ESCREFPOINT.INTERVALUOM)",
+                                "type": "string"
+                            },
+                            "repeat": {
+                                "description": "Whether the escalation point repeats (ESCREFPOINT.REPEAT)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "escNotification": {
+                                "description": "An array of notifications for the escalation point.",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "templateId": {
+                                            "description": "The communication template ID (ESCNOTIFICATION.TEMPLATEID)",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": ["templateId"]
+                                }
+                            }
+                        },
+                        "required": ["refPointNum"]
+                    }
+                }
+            },
+            "required": ["escalation", "objectName"]
+        },
+        "integrationObject": {
             "title": "Maximo Integration Object",
             "description": "A Maximo Integration Object",
             "type": "object",
             "properties": {
                 "_delete": {
-                    "description": "Flag to indicate that the domain should be deleted if it exists from the target system.",
+                    "description": "Flag to indicate that the integration object should be deleted if it exists from the target system.",
                     "type": "boolean",
                     "default": false
                 },
@@ -450,11 +715,6 @@
                     "type": "boolean",
                     "default": false
                 },
-                "delete": {
-                    "description": "Flag to indicate that the domain should be deleted if it exists from the target system.",
-                    "type": "boolean",
-                    "default": false
-                },
                 "domainId": {
                     "description": "The domain ID for the Maximo domain (MAXDOMAIN.DOMAINID)",
                     "type": "string"
@@ -777,11 +1037,6 @@
             "type": "object",
             "properties": {
                 "_delete": {
-                    "description": "Flag to indicate that the domain should be deleted if it exists from the target system.",
-                    "type": "boolean",
-                    "default": false
-                },
-                "delete": {
                     "description": "Flag to indicate that the cron task should be deleted if it exists from the target system.",
                     "type": "boolean",
                     "default": false
@@ -874,11 +1129,6 @@
             "type": "object",
             "properties": {
                 "_delete": {
-                    "description": "Flag to indicate that the domain should be deleted if it exists from the target system.",
-                    "type": "boolean",
-                    "default": false
-                },
-                "delete": {
                     "description": "Flag to indicate that the logger should be deleted if it exists from the target system.",
                     "type": "boolean",
                     "default": false
@@ -920,14 +1170,13 @@
             "type": "object",
             "properties": {
                 "_delete": {
-                    "description": "Flag to indicate that the domain should be deleted if it exists from the target system.",
-                    "type": "boolean",
-                    "default": false
-                },
-                "delete": {
                     "description": "Flag to indicate that the message should be deleted if it exists from the target system.",
                     "type": "boolean",
                     "default": false
+                },
+                "msgId": {
+                    "description": "The full message ID for the Maximo message (MAXMESSAGES.MSGID)",
+                    "type": "string"
                 },
                 "msgGroup": {
                     "description": "The group for the Maximo message (MAXMESSAGES.MSGGROUP)",
@@ -948,11 +1197,11 @@
                     "default": "MSGBOX"
                 },
                 "options": {
-                    "description": "The display options for the Maximo message, values are derived from the UI labels and translated to the internal integer value (MAXMESSAGES.OPTIONS)",
+                    "description": "The display options for the Maximo message (MAXMESSAGES.OPTIONS)",
                     "type": "array",
                     "items": {
                         "type": "string",
-                        "enum": ["ok", "close", "cancel", "yes", "no"],
+                        "enum": ["close", "ok", "cancel", "yes", "no", "warning", "stop", "exclamation"],
                         "default": "ok"
                     },
                     "minItems": 1,
@@ -994,11 +1243,6 @@
             "type": "object",
             "properties": {
                 "_delete": {
-                    "description": "Flag to indicate that the domain should be deleted if it exists from the target system.",
-                    "type": "boolean",
-                    "default": false
-                },
-                "delete": {
                     "description": "Flag to indicate that the property should be deleted if it exists from the target system.",
                     "type": "boolean",
                     "default": false

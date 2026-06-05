@@ -1,4 +1,12 @@
 # Release Notes
+## 1.29.0
+- Added JSON deploy and extract support for actions, escalations and queries.
+- Migrated the shared JSON deployment library to TypeScript.
+- Updated TypeScript project templates and deployment handling for the shared library build.
+- Updated JSON key for integration objects to `integrationObjects`, dropped support for the shorter `intObjects` key for consistency.
+- Updated JSON deploy delete markers to use `_delete`, dropped support for `delete` key for consistency.
+- Fixed TypeScript definition references used by generated projects.
+
 ## 1.28.3
 - Add annotation support for maximoGlobal
 - Add support for multiple TypeScript files

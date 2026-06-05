@@ -1,4 +1,15 @@
 
 autoscript-debug.jar
-
+naviam.autoscript.library.js
+library/node_modules/
 .version
+
+library/.tmp-tsc-check/
+
+library/.vscode/deploy-schema.json
+
+library/.vscode/devtools-config-schema.json
+
+library/.vscode/predeploy-schema.json
+
+library/.devtools-config.json

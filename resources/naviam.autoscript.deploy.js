@@ -33,11 +33,6 @@ scriptSource = '';
 
 var logger = MXLoggerFactory.getLogger('maximo.naviam.devtools');
 
-load({
-    script: ScriptCache.getInstance().getScriptInfo('NAVIAM.AUTOSCRIPT.LIBRARY').getScriptSource(),
-    name: 'NAVIAM.AUTOSCRIPT.LIBRARY'
-});
-
 if (typeof httpMethod !== 'undefined') {
     main();
 }
@@ -89,7 +84,12 @@ function main() {
                     _close(autoScriptSet);
                 }
             } else if (action && action == 'config') {
-                deployConfig(JSON.parse(requestBody), request);
+                var configContext = new HashMap();
+                configContext.put('requestBody', requestBody);
+                configContext.put('request', request);
+                configContext.put('userInfo', userInfo);
+                configContext.put('service', service);
+                service.invokeScript('NAVIAM.AUTOSCRIPT.LIBRARY', configContext);
                 return;
             }
         } else if (typeof request !== 'undefined' && typeof httpMethod !== 'undefined') {

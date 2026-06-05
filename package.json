@@ -3,7 +3,7 @@
     "displayName": "Maximo Development Tools",
     "description": "An extension for developing and deploying Maximo automation scripts, forms, reports and screens from Visual Studio Code.",
     "publisher": "Sharptree",
-    "version": "1.28.3",
+    "version": "1.29.0",
     "galleryBanner": {
         "color": "#18242C",
         "theme": "dark"
@@ -333,10 +333,13 @@
         "pretest": "npm run lint",
         "test": "node ./test/runTest.js",
         "webpack": "webpack --mode production",
-        "webpack-dev": "webpack --mode development --watch",
-        "package": "webpack --mode production --devtool hidden-source-map",
+        "webpack-dev:root": "webpack --mode development --watch",
+        "webpack-dev:library": "npm --prefix resources/library run webpack-dev",
+        "webpack-dev": "sh -c 'npm run webpack-dev:root & npm run webpack-dev:library & wait'",
+        "package": "webpack --mode production",
+        "package:library": "npm --prefix resources/library run package",
         "vscode:prepublish": "npm run package",
-        "vsce:package": "vsce package"
+        "vsce:package": "npm run package && npm run package:library && vsce package"
     },
     "devDependencies": {
         "@types/glob": "^7.1.4",
@@ -363,7 +366,6 @@
         "temp": "^0.9.4",
         "text-encoding": "^0.7.0",
         "tough-cookie": "^4.1.2",
-        "uuid": "^10.0.0",
         "webpack-node-externals": "^3.0.0",
         "xml-formatter": "^2.6.1",
         "xml2js": "^0.6.0",

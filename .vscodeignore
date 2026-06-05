@@ -17,6 +17,7 @@ webpack.config.js
 resources/.vscode/**
 resources/.git/**
 resources/.gitignore
+resources/library/node_modules/**
 .gitmodules
 azure-pipelines.yml
 mcp

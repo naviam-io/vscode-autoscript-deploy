@@ -223,7 +223,7 @@ When using a script for deploy actions, that script file may be named the same a
 
 As of version `1.13.0` a JSON document can be used to define select objects to deploy along with the script. Providing a JSON file with the same name as the primary script, with a `.json` file extension will cause the tooling to deploy the objects defined in the JSON document along with the script.
 
-Currently Cron Tasks, Domains, Loggers, Maximo Objects, Messages and Properties are available. Additional Maximo data types will be added in future releases based on feedback and demand. The JSON schemas for these objects are provided in the project under the `.vscode` directory and your `.vscode/settings.json` will be updated to provide intellisense support in configuration json files.
+Currently Actions, Cron Tasks, Domains, Escalations, Integration Objects, Loggers, Messages, Properties and Queries are available. The JSON schemas for these objects are provided in the project under the `.vscode` directory and your `.vscode/settings.json` will be updated to provide intellisense support in configuration json files.
 
 #### JSON Pre-deploy File
 
@@ -251,7 +251,7 @@ Below is an example deploy JSON that will create or update two messages and a pr
             "value": "An example message 2"
         },
         {
-            "delete": true,
+            "_delete": true,
             "msgGroup": "example",
             "msgKey": "exampleMessage3"
         }
@@ -464,12 +464,15 @@ To extract JSON deploy files from Maximo, bring up the Visual Studio Code Comman
 
 | Type                | Description                                          |
 | :------------------ | :--------------------------------------------------- |
+| Actions             | Maximo actions                                       |
 | Cron Tasks          | Maximo cron tasks, including instances and parameter |
 | Domains             | Domains and the domain values                        |
-| Integration Objects | Integration end points                               |
+| Escalations         | Maximo escalations                                   |
+| Integration Objects | Maximo integration object structures                 |
 | Loggers             | Maximo logger definitions                            |
 | Messages            | Maximo messages                                      |
 | Properties          | Maximo system properties                             |
+| Queries             | Maximo queries                                       |
 
 Once the type has been selected a list of available objects will be displayed and the list desired objects can be selected. Once the list of objects is selected click the `OK` button to extract the configurations. If a script file is currently selected the corresponding `.json` file will appended to if it exists or a new deploy file will be created. If the deploy `.json` file is selected the results will be appended to the existing file. If neither the script or deploy file are selected the results will be copied to the local clipboard and can be pasted to a deployment json file later.
 

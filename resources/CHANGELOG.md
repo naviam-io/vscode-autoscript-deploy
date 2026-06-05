@@ -1,4 +1,11 @@
 # Release Notes
+## 1.4.0
+- Rebuilt the shared deployment library from TypeScript sources.
+- Support for cron tasks, domains, loggers, integration objects, messages and properties was converted to TypeScript.
+- Added JSON deploy support for actions, escalations and queries.
+- Improved server-sent deployment progress events for consistency.
+- Updated JSON deploy delete markers to use `_delete`, dropped support for `delete` key for consistency.
+
 ## 1.3.3
 - Fixed index handling.
 - Fixed child loggers.

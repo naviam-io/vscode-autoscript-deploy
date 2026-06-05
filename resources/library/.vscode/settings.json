@@ -1,0 +1,39 @@
+{
+    "cSpell.words": [
+        "autoscript",
+        "domainid",
+        "errorgroup",
+        "errorkey",
+        "evalresult",
+        "fnames",
+        "mboname",
+        "mboset",
+        "mbovalue",
+        "Nashorn",
+        "naviam",
+        "onadd",
+        "ondelete",
+        "thisvalue",
+        "typeofs",
+        "wfinstance"
+    ],
+    "json.schemas": [
+        {
+            "fileMatch": [
+                "*.predeploy.json",
+                "*-predeploy.json"
+            ],
+            "url": "./.vscode/predeploy-schema.json"
+        },
+        {
+            "fileMatch": [],
+            "url": "./.vscode/deploy-schema.json"
+        },
+        {
+            "fileMatch": [
+                ".devtools-config.json"
+            ],
+            "url": "./.vscode/devtools-config-schema.json"
+        }
+    ]
+}

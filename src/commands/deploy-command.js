@@ -147,7 +147,18 @@ export default async function deployCommand(client) {
 
 function _isConfigFile(json) {
     // List of configuration properties to check for.
-    var properties = ['intObjects', 'properties', 'messages', 'loggers', 'cronTasks', 'domains', 'scripts'];
+    var properties = [
+        'integrationObjects',
+        'properties',
+        'messages',
+        'loggers',
+        'cronTasks',
+        'domains',
+        'actions',
+        'escalations',
+        'queries',
+        'scripts',
+    ];
 
     if (json && typeof json.inspformnum !== 'undefined') {
         return false;

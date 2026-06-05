@@ -21,36 +21,48 @@ function main() {
         };
 
         if (objectType !== null) {
+            objectType = objectType.toLowerCase();
             if (action == 'list') {
-                objectType = objectType.toLowerCase();
                 if (objectType === 'messages') {
                     response.data = getMessages();
+                } else if (objectType === 'actions') {
+                    response.data = getActions();
                 } else if (objectType === 'properties') {
                     response.data = getProperties();
                 } else if (objectType === 'domains') {
                     response.data = getDomains();
                 } else if (objectType === 'crontasks') {
                     response.data = getCronTasks();
+                } else if (objectType === 'escalations') {
+                    response.data = getEscalations();
                 } else if (objectType === 'loggers') {
                     response.data = getLoggers();
-                } else if (objectType === 'intobjects') {
+                } else if (objectType === 'integrationobjects') {
                     response.data = getIntObjects();
+                } else if (objectType === 'queries') {
+                    response.data = getQueries();
                 }
             } else if (action == 'detail') {
                 var id = request.getQueryParam('id');
                 if (id != null) {
                     if (objectType === 'messages') {
                         response.data = getMessage(id);
+                    } else if (objectType === 'actions') {
+                        response.data = getAction(id);
                     } else if (objectType === 'properties') {
                         response.data = getProperty(id);
                     } else if (objectType === 'domains') {
                         response.data = getDomain(id);
                     } else if (objectType === 'crontasks') {
                         response.data = getCronTask(id);
+                    } else if (objectType === 'escalations') {
+                        response.data = getEscalation(id);
                     } else if (objectType === 'loggers') {
                         response.data = getLogger(id);
-                    } else if (objectType === 'intobjects') {
+                    } else if (objectType === 'integrationobjects') {
                         response.data = getIntObject(id);
+                    } else if (objectType === 'queries') {
+                        response.data = getQuery(id);
                     }
                 } else {
                     response.status = 'error';
@@ -68,13 +80,157 @@ function main() {
     }
 }
 
+function getActions() {
+    var actionSet = MXServer.getMXServer().getMboSet('ACTION', MXServer.getMXServer().getSystemUserInfo());
+    try {
+        actionSet.setOrderBy('ACTION');
+        actionSet.setFlag(MboConstants.DISCARDABLE, true);
+        var actionMbo = actionSet.moveFirst();
+        var actions = [];
+        while (actionMbo != null) {
+            var action = {
+                id: actionMbo.getUniqueIDValue(),
+                label: actionMbo.getString('ACTION'),
+                description: actionMbo.getString('DESCRIPTION'),
+            };
+
+            actions.push(action);
+            actionMbo = actionSet.moveNext();
+        }
+        return actions;
+    } finally {
+        _close(actionSet);
+    }
+}
+
+function getAction(id) {
+    var actionSet = MXServer.getMXServer().getMboSet('ACTION', MXServer.getMXServer().getSystemUserInfo());
+    try {
+        var actionMbo = actionSet.getMboForUniqueId(id);
+
+        if (actionMbo != null) {
+            var action = {
+                action: actionMbo.getString('ACTION'),
+                description: actionMbo.getString('DESCRIPTION'),
+                type: actionMbo.getString('TYPE'),
+                useWith: actionMbo.getString('USEWITH'),
+            };
+
+            if (!actionMbo.isNull('SENDERSYSID')) {
+                action.senderSysId = actionMbo.getString('SENDERSYSID');
+            }
+
+            if (action.type === 'CUSTOM') {
+                if (!actionMbo.isNull('VALUE')) {
+                    action.value = actionMbo.getString('VALUE');
+                }
+            } else if (!actionMbo.isNull('VALUE2')) {
+                action.value = actionMbo.getString('VALUE2');
+            }
+
+            if (action.type !== 'GROUP') {
+                if (!actionMbo.isNull('OBJECTNAME')) {
+                    action.objectName = actionMbo.getString('OBJECTNAME');
+                }
+
+                if (!actionMbo.isNull('PARAMETER')) {
+                    action.parameter = actionMbo.getString('PARAMETER');
+                }
+            }
+
+            if (action.type === 'CHANGESTATUS' && !actionMbo.isNull('MEMO')) {
+                action.memo = actionMbo.getString('MEMO');
+            }
+
+            var actionGroupSet = actionMbo.getMboSet('ACTION_MEMBERS');
+            var actionGroupMbo = actionGroupSet.moveFirst();
+
+            if (actionGroupMbo != null) {
+                action.actionGroup = [];
+            }
+
+            while (actionGroupMbo != null) {
+                var group = {
+                    member: actionGroupMbo.getString('MEMBER'),
+                    sequence: actionGroupMbo.getInt('SEQUENCE'),
+                };
+
+                action.actionGroup.push(group);
+                actionGroupMbo = actionGroupSet.moveNext();
+            }
+
+            return action;
+        }
+    } finally {
+        _close(actionSet);
+    }
+}
+
+function getQueries() {
+    var querySet = MXServer.getMXServer().getMboSet('QUERY', MXServer.getMXServer().getSystemUserInfo());
+    try {
+        querySet.setOrderBy('APP, CLAUSENAME, OWNER');
+        querySet.setFlag(MboConstants.DISCARDABLE, true);
+        var queryMbo = querySet.moveFirst();
+        var queries = [];
+        while (queryMbo != null) {
+            var query = {
+                id: queryMbo.getUniqueIDValue(),
+                label: queryMbo.getString('APP') + ': ' + queryMbo.getString('CLAUSENAME'),
+                description: queryMbo.getString('DESCRIPTION'),
+            };
+
+            queries.push(query);
+            queryMbo = querySet.moveNext();
+        }
+        return queries;
+    } finally {
+        _close(querySet);
+    }
+}
+
+function getQuery(id) {
+    var querySet = MXServer.getMXServer().getMboSet('QUERY', MXServer.getMXServer().getSystemUserInfo());
+    try {
+        var queryMbo = querySet.getMboForUniqueId(id);
+
+        if (queryMbo != null) {
+            var query = {
+                app: queryMbo.getString('APP'),
+                clause: queryMbo.getString('CLAUSE'),
+                clauseName: queryMbo.getString('CLAUSENAME'),
+                description: queryMbo.getString('DESCRIPTION'),
+                isPublic: queryMbo.getBoolean('ISPUBLIC'),
+                isUserList: queryMbo.getBoolean('ISUSERLIST'),
+                owner: queryMbo.getString('OWNER'),
+            };
+
+            if (!queryMbo.isNull('INTOBJECTNAME')) {
+                query.intObjectName = queryMbo.getString('INTOBJECTNAME');
+            }
+
+            if (!queryMbo.isNull('NOTES')) {
+                query.notes = queryMbo.getString('NOTES');
+            }
+
+            if (!queryMbo.isNull('PRIORITY')) {
+                query.priority = queryMbo.getInt('PRIORITY');
+            }
+
+            return query;
+        }
+    } finally {
+        _close(querySet);
+    }
+}
+
 function getIntObjects() {
     var maxIntObjectSet = MXServer.getMXServer().getMboSet('MAXINTOBJECT', MXServer.getMXServer().getSystemUserInfo());
     try {
         maxIntObjectSet.setOrderBy('intobjectname');
         maxIntObjectSet.setFlag(MboConstants.DISCARDABLE, true);
         var maxIntObject = maxIntObjectSet.moveFirst();
-        var intObjects = [];
+        var integrationObjects = [];
         while (maxIntObject != null) {
             var intObject = {
                 id: maxIntObject.getUniqueIDValue(),
@@ -82,10 +238,10 @@ function getIntObjects() {
                 description: maxIntObject.getString('DESCRIPTION'),
             };
 
-            intObjects.push(intObject);
+            integrationObjects.push(intObject);
             maxIntObject = maxIntObjectSet.moveNext();
         }
-        return intObjects;
+        return integrationObjects;
     } finally {
         _close(maxIntObjectSet);
     }
@@ -586,6 +742,116 @@ function getCronTask(id) {
     }
 }
 
+function getEscalations() {
+    var escalationSet = MXServer.getMXServer().getMboSet('ESCALATION', MXServer.getMXServer().getSystemUserInfo());
+    try {
+        escalationSet.setOrderBy('ESCALATION');
+        escalationSet.setFlag(MboConstants.DISCARDABLE, true);
+        var escalationMbo = escalationSet.moveFirst();
+        var escalations = [];
+        while (escalationMbo != null) {
+            var escalation = {
+                id: escalationMbo.getUniqueIDValue(),
+                label: escalationMbo.getString('ESCALATION'),
+                description: escalationMbo.getString('DESCRIPTION'),
+            };
+
+            escalations.push(escalation);
+            escalationMbo = escalationSet.moveNext();
+        }
+        return escalations;
+    } finally {
+        _close(escalationSet);
+    }
+}
+
+function getEscalation(id) {
+    var escalationSet = MXServer.getMXServer().getMboSet('ESCALATION', MXServer.getMXServer().getSystemUserInfo());
+    try {
+        var escalationMbo = escalationSet.getMboForUniqueId(id);
+        if (escalationMbo != null) {
+            var escalation = {
+                escalation: escalationMbo.getString('ESCALATION'),
+                description: escalationMbo.getString('DESCRIPTION'),
+                objectName: escalationMbo.getString('OBJECTNAME'),
+                condition: escalationMbo.getString('CONDITION'),
+                active: escalationMbo.getBoolean('ACTIVE'),
+                schedule: escalationMbo.getString('SCHEDULE'),
+                cronTaskName: escalationMbo.getString('CRONTASKNAME'),
+                instanceName: escalationMbo.getString('INSTANCENAME'),
+                escStatusFlag: escalationMbo.getBoolean('ESCSTATUSFLAG'),
+            };
+
+            if (!escalationMbo.isNull('ESCCALENDAR')) {
+                escalation.escCalendar = escalationMbo.getString('ESCCALENDAR');
+            }
+
+            if (!escalationMbo.isNull('ESCSHIFT')) {
+                escalation.escShift = escalationMbo.getString('ESCSHIFT');
+            }
+
+            if (!escalationMbo.isNull('ESCCALORGID')) {
+                escalation.escCalOrgId = escalationMbo.getString('ESCCALORGID');
+            }
+
+            if (!escalationMbo.isNull('SLANUM')) {
+                escalation.slaNum = escalationMbo.getString('SLANUM');
+            }
+
+            if (!escalationMbo.isNull('LANGCODE')) {
+                escalation.langCode = escalationMbo.getString('LANGCODE');
+            }
+
+            if (!escalationMbo.isNull('ORGID')) {
+                escalation.orgId = escalationMbo.getString('ORGID');
+            }
+
+            if (!escalationMbo.isNull('SITEID')) {
+                escalation.siteId = escalationMbo.getString('SITEID');
+            }
+
+            var escRefPointSet = escalationMbo.getMboSet('ESCREFPOINT');
+            var escRefPointMbo = escRefPointSet.moveFirst();
+
+            if (escRefPointMbo != null) {
+                escalation.escRefPoint = [];
+            }
+
+            while (escRefPointMbo != null) {
+                var refPoint = {
+                    refPointNum: escRefPointMbo.getInt('REFPOINTNUM'),
+                    eventAttribute: escRefPointMbo.getString('EVENTATTRIBUTE'),
+                    elapsedInterval: escRefPointMbo.getDouble('ELAPSEDINTERVAL'),
+                    intervalUom: escRefPointMbo.getString('INTERVALUOM'),
+                    repeat: escRefPointMbo.getBoolean('REPEAT'),
+                };
+
+                var escNotificationSet = escRefPointMbo.getMboSet('ESCNOTIFICATION');
+                var escNotificationMbo = escNotificationSet.moveFirst();
+
+                if (escNotificationMbo != null) {
+                    refPoint.escNotification = [];
+                }
+
+                while (escNotificationMbo != null) {
+                    var notification = {
+                        templateId: escNotificationMbo.getString('TEMPLATEID'),
+                    };
+                    refPoint.escNotification.push(notification);
+                    escNotificationMbo = escNotificationSet.moveNext();
+                }
+
+                escalation.escRefPoint.push(refPoint);
+                escRefPointMbo = escRefPointSet.moveNext();
+            }
+
+            return escalation;
+        }
+    } finally {
+        _close(escalationSet);
+    }
+}
+
 function getDomains() {
     var maxDomainSet = MXServer.getMXServer().getMboSet('MAXDOMAIN', MXServer.getMXServer().getSystemUserInfo());
     try {
@@ -1040,6 +1306,7 @@ function getMessage(id) {
                 var message = {
                     msgGroup: maxMessage.getString('MSGGROUP'),
                     msgKey: maxMessage.getString('MSGKEY'),
+                    msgId: maxMessage.getString('MSGID'),
                     value: maxMessage.getString('VALUE'),
                     displayMethod: maxMessage.getString('DISPLAYMETHOD'),
                     prefix: maxMessage.getString('MSGIDPREFIX'),
@@ -1054,29 +1321,12 @@ function getMessage(id) {
                 if (!maxMessage.isNull('ADMINRESPONSE')) {
                     message.adminResponse = maxMessage.getString('ADMINRESPONSE');
                 }
+
                 if (!maxMessage.isNull('SYSTEMACTION')) {
                     message.systemAction = maxMessage.getString('SYSTEMACTION');
                 }
 
-                if (maxMessage.getBoolean('OK')) {
-                    message.options.push('ok');
-                }
-
-                if (maxMessage.getBoolean('CLOSE')) {
-                    message.options.push('close');
-                }
-
-                if (maxMessage.getBoolean('CANCEL')) {
-                    message.options.push('cancel');
-                }
-
-                if (maxMessage.getBoolean('YES')) {
-                    message.options.push('yes');
-                }
-
-                if (maxMessage.getBoolean('NO')) {
-                    message.options.push('no');
-                }
+                message.options = getMessageOptions(maxMessage);
 
                 return message;
             }
@@ -1084,6 +1334,19 @@ function getMessage(id) {
             _close(maxMessageSet);
         }
     }
+}
+
+function getMessageOptions(maxMessage) {
+    var options = [];
+    var messageOptions = ['close', 'ok', 'cancel', 'yes', 'no', 'warning', 'stop', 'exclamation'];
+
+    messageOptions.forEach(function (messageOption) {
+        if (maxMessage.getBoolean(messageOption)) {
+            options.push(messageOption);
+        }
+    });
+
+    return options;
 }
 
 function getMessages() {

@@ -140,6 +140,11 @@ export default async function initTsTemplateCommand() {
             });
         });
 
+        const manageFacadeZip = path.join(destRoot, 'manage-facade.d.ts.zip');
+        fs.copyFileSync(path.join(templateDir, 'manage-facade.d.ts.zip'), manageFacadeZip);
+        execSync(`unzip -o "${manageFacadeZip}" -d "${destRoot}"`);
+        fs.unlinkSync(manageFacadeZip);
+
         // webpack.config.js — replace placeholders
         let webpackContent = fs.readFileSync(path.join(templateDir, 'webpack.config.js'), 'utf8');
         webpackContent = webpackContent.replace(/\$\{script_name\}/g, scriptName);
