@@ -4,11 +4,15 @@ import { commands, ProgressLocation, window, Uri } from 'vscode';
 
 // get a reference to the fetched source object
 import { fetchedSource } from '../extension';
+import Logger from '../logger';
 
 // @ts-ignore
 import * as format from 'xml-formatter';
 
+const LOG_SOURCE = 'CompareCommand';
+
 export default async function compareCommand(client) {
+    Logger.info('Compare command requested.', LOG_SOURCE);
     // Get the active text editor
     const editor = window.activeTextEditor;
 
@@ -18,6 +22,7 @@ export default async function compareCommand(client) {
         if (document) {
             let fileName = path.basename(document.fileName);
             let fileExt = path.extname(fileName);
+            Logger.info(`Comparing ${document.fileName}.`, LOG_SOURCE);
             if (fileExt === '.js' || fileExt === '.py' || fileExt === '.jy') {
                 // Get the document text
                 const script = document.getText();
@@ -45,6 +50,7 @@ export default async function compareCommand(client) {
 
                             if (result) {
                                 if (result.status === 'error') {
+                                    Logger.error(`Script compare failed for ${fileName}: ${result.message || JSON.stringify(result)}`, null, LOG_SOURCE);
                                     if (result.message) {
                                         window.showErrorMessage(
                                             result.message,
@@ -89,7 +95,9 @@ export default async function compareCommand(client) {
                                             serverScript,
                                             '↔ server ' + fileName
                                         );
+                                        Logger.info(`Opened script comparison for ${fileName}.`, LOG_SOURCE);
                                     } else {
+                                        Logger.error(`Script ${fileName} was not found on the server.`, null, LOG_SOURCE);
                                         window.showErrorMessage(
                                             `The ${fileName} was not found.\n\nCheck that the scriptConfig.autoscript value matches a script on the server.`,
                                             { modal: true }
@@ -97,6 +105,7 @@ export default async function compareCommand(client) {
                                     }
                                 }
                             } else {
+                                Logger.error(`Script compare did not receive a response from Maximo for ${fileName}.`, null, LOG_SOURCE);
                                 window.showErrorMessage(
                                     'Did not receive a response from Maximo.',
                                     { modal: true }
@@ -106,6 +115,7 @@ export default async function compareCommand(client) {
                         }
                     );
                 } else {
+                    Logger.error(`Selected automation script ${fileName} is empty.`, null, LOG_SOURCE);
                     window.showErrorMessage(
                         'The selected Automation Script cannot be empty.',
                         { modal: true }
@@ -118,6 +128,7 @@ export default async function compareCommand(client) {
                 if (screen && screen.trim().length > 0) {
                     parseString(screen, function (error, result) {
                         if (error) {
+                            Logger.error(`Error parsing ${fileName}: ${error.message}`, null, LOG_SOURCE);
                             window.showErrorMessage(error.message, {
                                 modal: true,
                             });
@@ -128,6 +139,7 @@ export default async function compareCommand(client) {
                             } else if (result.systemlib) {
                                 screenName = result.systemlib.$.id;
                             } else {
+                                Logger.error(`Current XML document ${fileName} is not a presentation or systemlib.`, null, LOG_SOURCE);
                                 window.showErrorMessage(
                                     'Current XML document does not have an root element of "presentation" or "systemlib".',
                                     {
@@ -140,6 +152,7 @@ export default async function compareCommand(client) {
                     });
 
                     if (!screenName) {
+                        Logger.error(`Unable to find presentation or systemlib id in ${fileName}.`, null, LOG_SOURCE);
                         window.showErrorMessage(
                             'Unable to find presentation or systemlib id from current document. Cannot fetch screen from server to compare.',
                             { modal: true }
@@ -170,6 +183,7 @@ export default async function compareCommand(client) {
 
                             if (result) {
                                 if (result.status === 'error') {
+                                    Logger.error(`Screen compare failed for ${fileName}: ${result.message || JSON.stringify(result)}`, null, LOG_SOURCE);
                                     if (result.message) {
                                         window.showErrorMessage(
                                             result.message,
@@ -214,7 +228,9 @@ export default async function compareCommand(client) {
                                             serverScreen,
                                             '↔ server ' + fileName
                                         );
+                                        Logger.info(`Opened screen comparison for ${fileName}.`, LOG_SOURCE);
                                     } else {
+                                        Logger.error(`Screen ${fileName} was not found on the server.`, null, LOG_SOURCE);
                                         window.showErrorMessage(
                                             `The ${fileName} was not found.\n\nCheck that the presentation id attribute value matches a Screen Definition on the server.`,
                                             { modal: true }
@@ -222,6 +238,7 @@ export default async function compareCommand(client) {
                                     }
                                 }
                             } else {
+                                Logger.error(`Screen compare did not receive a response from Maximo for ${fileName}.`, null, LOG_SOURCE);
                                 window.showErrorMessage(
                                     'Did not receive a response from Maximo.',
                                     { modal: true }
@@ -231,24 +248,28 @@ export default async function compareCommand(client) {
                         }
                     );
                 } else {
+                    Logger.error(`Selected screen definition ${fileName} is empty.`, null, LOG_SOURCE);
                     window.showErrorMessage(
                         'The selected Screen Definition cannot be empty.',
                         { modal: true }
                     );
                 }
             } else {
+                Logger.error(`Unsupported file extension selected for compare: ${fileExt}.`, null, LOG_SOURCE);
                 window.showErrorMessage(
                     "The selected file must have a Javascript ('.js'), Python ('.py') or Jython ('.jy') file extension for an automation script or ('.xml') for a Screen Definition.",
                     { modal: true }
                 );
             }
         } else {
+            Logger.error('Compare requested, but no active document was found.', null, LOG_SOURCE);
             window.showErrorMessage(
                 'An Automation Script or Screen Definition must be selected to compare.',
                 { modal: true }
             );
         }
     } else {
+        Logger.error('Compare requested, but no active editor was found.', null, LOG_SOURCE);
         window.showErrorMessage(
             'An Automation Script or Screen Definition must be selected to compare.',
             { modal: true }

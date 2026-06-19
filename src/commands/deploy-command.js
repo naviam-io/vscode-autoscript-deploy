@@ -78,19 +78,21 @@ export default async function deployCommand(client) {
             }
 
             if (fileExt === '.js' || fileExt === '.py' || fileExt === '.jy') {
-                Logger.debug(`Deploying script file ${filePath}.`, LOG_SOURCE);
+                Logger.info(`Deploying script file ${filePath}.`, LOG_SOURCE);
                 await deployScript(client, filePath, sourceText);
+                Logger.info(`Deploy command completed for ${filePath}.`, LOG_SOURCE);
             } else if (fileExt === '.xml') {
-                Logger.debug(`Deploying screen definition ${filePath}.`, LOG_SOURCE);
+                Logger.info(`Deploying screen definition ${filePath}.`, LOG_SOURCE);
                 await deployScreen(client, filePath, sourceText);
+                Logger.info(`Deploy command completed for ${filePath}.`, LOG_SOURCE);
             } else if (fileExt === '.json') {
                 try {
                     let json = JSON.parse(sourceText);
                     if (_isConfigFile(json)) {
-                        Logger.debug(`Deploying configuration JSON ${filePath}.`, LOG_SOURCE);
+                        Logger.info(`Deploying configuration JSON ${filePath}.`, LOG_SOURCE);
                         await deployConfig(client, json);
                     } else if (json && Object.prototype.hasOwnProperty.call(json, 'manifest') && Array.isArray(json.manifest)) {
-                        Logger.debug(`Processing manifest deployment from ${filePath} with ${json.manifest.length} item(s).`, LOG_SOURCE);
+                        Logger.info(`Processing manifest deployment from ${filePath} with ${json.manifest.length} item(s).`, LOG_SOURCE);
                         const directory = path.dirname(filePath);
                         for (const item of json.manifest) {
                             let itemValue = item;
@@ -116,19 +118,21 @@ export default async function deployCommand(client) {
                             }
                         }
                     } else {
-                        Logger.debug(`Deploying inspection form JSON ${filePath}.`, LOG_SOURCE);
+                        Logger.info(`Deploying inspection form JSON ${filePath}.`, LOG_SOURCE);
                         await deployForm(client, filePath, document.getText());
                     }
+                    Logger.info(`Deploy command completed for ${filePath}.`, LOG_SOURCE);
                 } catch (error) {
                     Logger.error('Unexpected error while parsing/deploying JSON.', error, LOG_SOURCE);
                     window.showErrorMessage('Unexpected Error: ' + error);
                     return;
                 }
             } else if (fileExt === '.rptdesign') {
-                Logger.debug(`Deploying BIRT report ${filePath}.`, LOG_SOURCE);
+                Logger.info(`Deploying BIRT report ${filePath}.`, LOG_SOURCE);
                 await deployReport(client, filePath, document.getText());
+                Logger.info(`Deploy command completed for ${filePath}.`, LOG_SOURCE);
             } else {
-                Logger.debug(`Unsupported file extension selected for deployment: ${fileExt}.`, LOG_SOURCE);
+                Logger.error(`Unsupported file extension selected for deployment: ${fileExt}.`, null, LOG_SOURCE);
                 window.showErrorMessage(
                     // eslint-disable-next-line quotes
                     "The selected file must have a Javascript ('.js') or Python ('.py') file extension for an automation script, ('.xml') for a screen definition, ('.rptdesign') for a BIRT report or ('.json') for an inspection form.",
@@ -136,11 +140,11 @@ export default async function deployCommand(client) {
                 );
             }
         } else {
-            Logger.debug('Deploy requested, but no active document was found.', LOG_SOURCE);
+            Logger.error('Deploy requested, but no active document was found.', null, LOG_SOURCE);
             window.showErrorMessage('An automation script, screen definition, BIRT report or inspection form must be selected to deploy.', { modal: true });
         }
     } else {
-        Logger.debug('Deploy requested, but no active editor was found.', LOG_SOURCE);
+        Logger.error('Deploy requested, but no active editor was found.', null, LOG_SOURCE);
         window.showErrorMessage('An automation script, screen definition, BIRT report or inspection form must be selected to deploy.', { modal: true });
     }
 }
@@ -199,7 +203,7 @@ function runWebpack(rootPath) {
 
                     const process = cp.exec(webpackCommand, { cwd: rootPath }, (err) => {
                         if (err) {
-                            console.log(errorData);
+                            Logger.error(`Webpack command failed: ${errorData}`, err, LOG_SOURCE);
                             return;
                         }
                     });

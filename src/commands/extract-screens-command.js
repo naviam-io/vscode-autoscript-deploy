@@ -10,14 +10,19 @@ import { ProgressLocation, window, workspace } from 'vscode';
 
 // get a reference to the Maximo configuration object
 import { getMaximoConfig, asyncForEach } from '../extension';
+import Logger from '../logger';
+
+const LOG_SOURCE = 'ExtractScreensCommand';
 
 export default async function extractScreensCommand(client) {
+    Logger.info('Extract screen definitions command requested.', LOG_SOURCE);
     let extractLoc = (await getMaximoConfig()).extractLocationScreens;
     // if the extract location has not been specified use the workspace folder.
     if (typeof extractLoc === 'undefined' || !extractLoc) {
         if (workspace.workspaceFolders !== undefined) {
             extractLoc = workspace.workspaceFolders[0].uri.fsPath;
         } else {
+            Logger.error('Extract screens command failed because no working folder or extract folder is configured.', null, LOG_SOURCE);
             window.showErrorMessage('A working folder must be selected or an export folder configured before exporting screen definitions.', {
                 modal: true,
             });
@@ -38,9 +43,11 @@ export default async function extractScreensCommand(client) {
     }
 
     if (!fs.existsSync(extractLoc)) {
+        Logger.error(`Screen extract folder does not exist: ${extractLoc}.`, null, LOG_SOURCE);
         window.showErrorMessage(`The screen extract folder ${extractLoc} does not exist.`, { modal: true });
         return;
     }
+    Logger.info(`Extracting screen definitions to ${extractLoc}.`, LOG_SOURCE);
 
     const quickPick = window.createQuickPick();
     quickPick.canSelectMany = true;
@@ -62,6 +69,7 @@ export default async function extractScreensCommand(client) {
             const screenNames = quickPick.selectedItems.map((item) => item.label);
 
             if (screenNames.length > 0) {
+                Logger.info(`Extracting ${screenNames.length} screen definition(s).`, LOG_SOURCE);
                 await window.withProgress(
                     {
                         title: 'Extracting Screen Definitions',
@@ -133,15 +141,18 @@ export default async function extractScreensCommand(client) {
 
                         if (!cancelToken.isCancellationRequested) {
                             window.showInformationMessage('Screen definitions extracted.', { modal: true });
+                            Logger.info(`${screenNames.length} screen definition(s) extracted.`, LOG_SOURCE);
                         }
                     }
                 );
             } else {
+                Logger.info('Extract screens command cancelled without a selection.', LOG_SOURCE);
                 quickPick.hide();
             }
         });
     } else {
         quickPick.hide();
+        Logger.error('No screen definitions were found to extract.', null, LOG_SOURCE);
         window.showErrorMessage('No screen definitions were found to extract.', { modal: true });
     }
 }

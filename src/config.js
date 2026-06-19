@@ -140,8 +140,8 @@ export default class LocalConfiguration {
             }
         } catch (error) {
             if (error.code === 'ERR_OSSL_BAD_DECRYPT') {
-                Logger.error(
-                    'Warning: Unable to decrypt configuration. This may be due to an encryption key change. Please re-enter your sensitive information in the configuration and save it to encrypt with the new key.'
+                Logger.warn(
+                    'Unable to decrypt configuration. This may be due to an encryption key change. Please re-enter your sensitive information in the configuration and save it to encrypt with the new key.'
                 );
                 vscode.window.showWarningMessage(
                     'Unable to decrypt configuration. Did you copy the configuration from another machine? Encryption keys are unique to each machine, you will need to re-add password, apiKey and proxyPassword values.',

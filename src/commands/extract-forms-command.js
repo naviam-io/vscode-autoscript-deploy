@@ -5,14 +5,19 @@ import { ProgressLocation, window, workspace } from 'vscode';
 
 // get a reference to the Maximo configuration object
 import { getMaximoConfig, asyncForEach } from '../extension';
+import Logger from '../logger';
+
+const LOG_SOURCE = 'ExtractFormsCommand';
 
 export default async function extractFormsCommand(client) {
+    Logger.info('Extract inspection forms command requested.', LOG_SOURCE);
     let extractLoc = (await getMaximoConfig()).extractLocationForms;
     // if the extract location has not been specified use the workspace folder.
     if (typeof extractLoc === 'undefined' || !extractLoc) {
         if (workspace.workspaceFolders !== undefined) {
             extractLoc = workspace.workspaceFolders[0].uri.fsPath;
         } else {
+            Logger.error('Extract forms command failed because no working folder or extract folder is configured.', null, LOG_SOURCE);
             window.showErrorMessage('A working folder must be selected or an export folder configured before exporting inspection forms.', {
                 modal: true,
             });
@@ -21,9 +26,11 @@ export default async function extractFormsCommand(client) {
     }
 
     if (!fs.existsSync(extractLoc)) {
+        Logger.error(`Inspection form extract folder does not exist: ${extractLoc}.`, null, LOG_SOURCE);
         window.showErrorMessage(`The inspection form extract folder ${extractLoc} does not exist.`, { modal: true });
         return;
     }
+    Logger.info(`Extracting inspection forms to ${extractLoc}.`, LOG_SOURCE);
 
     const quickPick = window.createQuickPick();
     quickPick.canSelectMany = true;
@@ -44,6 +51,7 @@ export default async function extractFormsCommand(client) {
         quickPick.onDidAccept(async () => {
             const forms = quickPick.selectedItems;
             if (forms.length > 0) {
+                Logger.info(`Extracting ${forms.length} inspection form(s).`, LOG_SOURCE);
                 await window.withProgress(
                     {
                         title: 'Extracting Forms',
@@ -115,15 +123,18 @@ export default async function extractFormsCommand(client) {
 
                         if (!cancelToken.isCancellationRequested) {
                             window.showInformationMessage(forms.length + (forms.length > 1 ? ' forms' : ' form') + ' extracted.', { modal: true });
+                            Logger.info(`${forms.length} inspection form(s) extracted.`, LOG_SOURCE);
                         }
                     }
                 );
             } else {
+                Logger.info('Extract forms command cancelled without a selection.', LOG_SOURCE);
                 quickPick.hide();
             }
         });
     } else {
         quickPick.hide();
+        Logger.error('No inspection forms were found to extract.', null, LOG_SOURCE);
         window.showErrorMessage('No inspection forms were found to extract.', {
             modal: true,
         });

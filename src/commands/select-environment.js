@@ -5,12 +5,16 @@ import { workspace } from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import LocalConfiguration from '../config';
+import Logger from '../logger';
+
+const LOG_SOURCE = 'SelectEnvironmentCommand';
 
 export default async function selectEnvironment(
     context,
     statusBar,
     getLocalConfig
 ) {
+    Logger.info('Select environment command requested.', LOG_SOURCE);
     let config = await (await getLocalConfig()).config;
     let items = [];
 
@@ -35,6 +39,7 @@ export default async function selectEnvironment(
     });
 
     if (result) {
+        Logger.info(`Selected Maximo environment ${result.label}.`, LOG_SOURCE);
         statusBar.text = `${result.label}`;
         statusBar.tooltip = `${result.description}`;
 
@@ -56,9 +61,12 @@ export default async function selectEnvironment(
                 );
                 if (localConfig.configAvailable) {
                     await localConfig.encrypt(config);
+                    Logger.info('Updated selected environment in workspace configuration.', LOG_SOURCE);
                 }
             }
         }
+    } else {
+        Logger.info('Select environment command cancelled.', LOG_SOURCE);
     }
 
     // window.showInformationMessage(`Got: ${result}`);

@@ -1,4 +1,7 @@
 # Release Notes
+## 1.29.1
+- Improved VS Code logging for all commands.
+
 ## 1.29.0
 - Added JSON deploy and extract support for actions, escalations and queries.
 - Migrated the shared JSON deployment library to TypeScript.

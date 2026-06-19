@@ -9,19 +9,25 @@ import { PassThrough } from 'stream';
 import { window, ProgressLocation } from 'vscode';
 
 import MaximoClient from '../maximo/maximo-client';
+import Logger from '../logger';
+
+const LOG_SOURCE = 'DeployReportCommand';
 
 export default async function deployReport(client, filePath, report) {
+    Logger.info(`Deploying report from ${filePath || 'unknown file'}.`, LOG_SOURCE);
     if (
         !client ||
         client === null ||
         client instanceof MaximoClient === false
     ) {
+        Logger.error('Deploy report command failed because the Maximo client is invalid.', null, LOG_SOURCE);
         throw new Error(
             'The client parameter is required and must be an instance of the MaximoClient class.'
         );
     }
 
     if (!filePath || filePath === null || !fs.existsSync(filePath)) {
+        Logger.error(`Deploy report command failed because the file path is invalid: ${filePath || 'empty'}.`, null, LOG_SOURCE);
         throw new Error(
             'The filePath parameter is required and must be a valid file path to a report file.'
         );
@@ -32,6 +38,7 @@ export default async function deployReport(client, filePath, report) {
     }
 
     if (!report || report.trim().length <= 0) {
+        Logger.error(`Report ${filePath} is empty.`, null, LOG_SOURCE);
         window.showErrorMessage('The selected report cannot be empty.', {
             modal: true,
         });
@@ -51,6 +58,7 @@ export default async function deployReport(client, filePath, report) {
     let reportsXML = folderPath + '/reports.xml';
 
     if (!fs.existsSync(reportsXML)) {
+        Logger.error(`Report deploy failed because ${reportsXML} does not exist.`, null, LOG_SOURCE);
         window.showErrorMessage(
             'The selected report must have a reports.xml in the same folder that describes the report parameters.',
             { modal: true }
@@ -80,6 +88,7 @@ export default async function deployReport(client, filePath, report) {
         reportConfig === null ||
         reportConfig.attribute.length === 0
     ) {
+        Logger.error(`Report ${fileName} does not have a valid reports.xml entry.`, null, LOG_SOURCE);
         window.showErrorMessage(
             'The selected report does not have an entry that contains at least one attribute value in the reports.xml.',
             { modal: true }
@@ -235,6 +244,7 @@ export default async function deployReport(client, filePath, report) {
 
             if (result) {
                 if (result.status === 'error') {
+                    Logger.error(`Report deploy failed for ${fileName}: ${result.message || JSON.stringify(result)}`, null, LOG_SOURCE);
                     if (result.message) {
                         window.showErrorMessage(result.message, {
                             modal: true,
@@ -257,8 +267,10 @@ export default async function deployReport(client, filePath, report) {
                         message: `Successfully deployed ${fileName}`,
                     });
                     await new Promise((resolve) => setTimeout(resolve, 2000));
+                    Logger.info(`Report ${fileName} deployed successfully.`, LOG_SOURCE);
                 }
             } else {
+                Logger.error(`Report deploy did not receive a response from Maximo for ${fileName}.`, null, LOG_SOURCE);
                 window.showErrorMessage(
                     'Did not receive a response from Maximo.',
                     { modal: true }
@@ -285,15 +297,17 @@ async function createZipFromFolder(folderPath) {
         // Good practice to catch warnings (like stat failures and other non-blocking errors)
         archive.on('warning', function (err) {
             if (err.code === 'ENOENT') {
-                console.warn(err);
+                Logger.warn(err.message || String(err), LOG_SOURCE);
             } else {
                 // Throw error for any unexpected warning
+                Logger.error(`Report resource archive failed for ${folderPath}.`, err, LOG_SOURCE);
                 reject(err);
             }
         });
 
         // Catch errors explicitly
         archive.on('error', function (err) {
+            Logger.error(`Report resource archive failed for ${folderPath}.`, err, LOG_SOURCE);
             reject(err);
         });
 

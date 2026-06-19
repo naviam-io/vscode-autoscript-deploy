@@ -28,11 +28,16 @@ export default class Logger {
         this._channel?.info(`${prefix}${message}`);
     }
 
+    static warn(message, source = '') {
+        const prefix = source ? `[${source}] ` : '';
+        this._channel?.warn(`${prefix}${message}`);
+    }
+
     static error(message, error, source = '') {
         const prefix = source ? `[${source}] ` : '';
         // If an error object is passed, log its stack trace
-        const detail = error?.stack ? `\n${error.stack}` : error;
-        this._channel?.error(`${prefix}${message} ${detail}`);
+        const detail = error?.stack ? `\n${error.stack}` : error ? ` ${error}` : '';
+        this._channel?.error(`${prefix}${message}${detail}`);
     }
 
     static debug(message, source = '') {

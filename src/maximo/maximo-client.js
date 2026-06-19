@@ -457,7 +457,7 @@ export default class MaximoClient {
                 await this.client.post('logout', { withCredentials: true });
                 Logger.debug('Logout request completed.', LOG_SOURCE);
             } catch (error) {
-                Logger.error('Warning disconnecting: ' + JSON.stringify(error));
+                Logger.warn('Failed to disconnect cleanly: ' + JSON.stringify(error), LOG_SOURCE);
             }
         } else {
             Logger.debug('Disconnect requested while client was already disconnected.', LOG_SOURCE);
@@ -793,6 +793,7 @@ export default class MaximoClient {
                                                         switch (event.event) {
                                                             case 'progress':
                                                                 if (typeof event.data === 'string') {
+                                                                    Logger.info(event.data, LOG_SOURCE);
                                                                     if (typeof progress !== 'undefined' && progress !== null) {
                                                                         progress.report({
                                                                             message: event.data
@@ -802,15 +803,17 @@ export default class MaximoClient {
                                                                 break;
                                                             case 'warning':
                                                                 if (typeof event.data === 'string') {
-                                                                    Logger.debug(`Configuration deploy warning: ${event.data}`, LOG_SOURCE);
-                                                                    progress.report({
-                                                                        message: '⚠️ ' + event.data
-                                                                    });
+                                                                    Logger.warn(event.data, LOG_SOURCE);
+                                                                    if (typeof progress !== 'undefined' && progress !== null) {
+                                                                        progress.report({
+                                                                            message: '⚠️ ' + event.data
+                                                                        });
+                                                                    }
                                                                 }
                                                                 break;
                                                             case 'error':
                                                                 if (typeof event.data === 'string') {
-                                                                    Logger.debug(`Configuration deploy error event: ${event.data}`, LOG_SOURCE);
+                                                                    Logger.error(event.data, null, LOG_SOURCE);
                                                                     resolve({ status: 'error', message: event.data });
                                                                 }
                                                                 break;
@@ -833,7 +836,7 @@ export default class MaximoClient {
                     });
 
                     response.data.on('error', (error) => {
-                        Logger.debug(`Configuration deploy stream error: ${error.message}`, LOG_SOURCE);
+                        Logger.error(`Configuration deploy stream error: ${error.message}`, error, LOG_SOURCE);
                         reject({ status: 'error', message: error.message });
                     });
                 }
@@ -843,21 +846,24 @@ export default class MaximoClient {
                 if (result.message.startsWith('psdi.util')) {
                     result.message = result.message.substring(result.message.indexOf(':') + 1).trim();
                 }
-                Logger.debug(`Configuration deploy finished with an error: ${result.message}`, LOG_SOURCE);
+                Logger.error(`Configuration deploy finished with an error: ${result.message}`, null, LOG_SOURCE);
                 window.showErrorMessage('Error applying configuration:\n' + result.message, { modal: true });
             } else {
-                Logger.debug('Configuration deploy completed successfully.', LOG_SOURCE);
+                Logger.info('Configuration deploy completed successfully.', LOG_SOURCE);
             }
         } else {
             Logger.debug('Configuration deploy returned a non-stream response.', LOG_SOURCE);
             if (typeof response.data.status !== 'undefined' && response.data.status === 'error') {
+                Logger.error(`Error applying JSON configuration: ${response.data.message}`, null, LOG_SOURCE);
                 throw new MaximoError('Error applying JSON configuration: ' + response.data.message);
             }
+            Logger.info('Configuration deploy completed successfully.', LOG_SOURCE);
         }
     }
 
     async postScript(script, progress, fileName, deployScript, cancelToken) {
         let isPython = fileName.endsWith('.py') || fileName.endsWith('.jy');
+        Logger.info(`Deploying script ${fileName}.`, LOG_SOURCE);
         Logger.debug(`Deploying script ${fileName} (language=${isPython ? 'python' : 'javascript'}, preDeploy=${Boolean(deployScript)}).`, LOG_SOURCE);
 
         progress.report({
@@ -976,7 +982,7 @@ export default class MaximoClient {
                     if (typeof checkResult.data.progress !== 'undefined' && Array.isArray(checkResult.data.progress) && checkResult.data.progress.length > 0) {
                         const lastMessage = checkResult.data.progress[checkResult.data.progress.length - 1];
                         if (lastMessage.message !== lastProgressMessage) {
-                            Logger.debug(`Post-deploy progress for ${fileName}: ${lastMessage.message}`, LOG_SOURCE);
+                            Logger.info(`Post-deploy progress for ${fileName}: ${lastMessage.message}`, LOG_SOURCE);
                             lastProgressMessage = lastMessage.message;
                         }
                         progress.report({

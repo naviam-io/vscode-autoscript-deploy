@@ -4,13 +4,19 @@ import * as path from 'path';
 import { window, ProgressLocation } from 'vscode';
 
 import MaximoClient from '../maximo/maximo-client';
+import Logger from '../logger';
+
+const LOG_SOURCE = 'DeployScriptCommand';
 
 export default async function deployScript(client, filePath, script) {
+    Logger.info(`Deploying script from ${filePath || 'unknown file'}.`, LOG_SOURCE);
     if (!client || client === null || client instanceof MaximoClient === false) {
+        Logger.error('Deploy script command failed because the Maximo client is invalid.', null, LOG_SOURCE);
         throw new Error('The client parameter is required and must be an instance of the MaximoClient class.');
     }
 
     if (!filePath || filePath === null || !fs.existsSync(filePath)) {
+        Logger.error(`Deploy script command failed because the file path is invalid: ${filePath || 'empty'}.`, null, LOG_SOURCE);
         throw new Error('The filePath parameter is required and must be a valid file path to a script file.');
     }
 
@@ -25,6 +31,7 @@ export default async function deployScript(client, filePath, script) {
     }
 
     if (!script || script.trim().length <= 0) {
+        Logger.error(`Script ${filePath} is empty.`, null, LOG_SOURCE);
         window.showErrorMessage('The selected script cannot be empty.', {
             modal: true
         });
@@ -93,6 +100,7 @@ export default async function deployScript(client, filePath, script) {
 
                 if (result) {
                     if (result.status === 'error') {
+                        Logger.error(`Script deploy failed for ${fileName}: ${result.message || result.error || JSON.stringify(result)}`, null, LOG_SOURCE);
                         if (result.message) {
                             window.showErrorMessage(result.message, {
                                 modal: true
@@ -130,28 +138,33 @@ export default async function deployScript(client, filePath, script) {
                                 increment: 100,
                                 message: `Successfully deleted ${fileName}`
                             });
+                            Logger.info(`Script ${fileName} deleted successfully.`, LOG_SOURCE);
                         } else {
                             progress.report({
                                 increment: 100,
                                 message: `Successfully deployed ${fileName}`
                             });
+                            Logger.info(`Script ${fileName} deployed successfully.`, LOG_SOURCE);
                         }
 
                         await new Promise((resolve) => setTimeout(resolve, 2000));
                     }
                 } else {
+                    Logger.error(`Script deploy did not receive a response from Maximo for ${fileName}.`, null, LOG_SOURCE);
                     window.showErrorMessage('Did not receive a response from Maximo.', { modal: true });
                 }
                 return result;
             }
         );
     } else {
+        Logger.error(`Automation script ${filePath} is empty.`, null, LOG_SOURCE);
         window.showErrorMessage('The selected Automation Script cannot be empty.', { modal: true });
     }
 }
 
 async function performDatabaseConfiguration(client, config) {
     if (await client.dbConfigRequired()) {
+        Logger.info('Database configuration is required for script deployment.', LOG_SOURCE);
         const adminModeRequired = await client.dbConfigRequiresAdminMode();
 
         if (adminModeRequired) {
@@ -164,6 +177,7 @@ async function performDatabaseConfiguration(client, config) {
                 );
 
                 if (userConfirmation !== 'Yes') {
+                    Logger.info('User declined Admin Mode for database configuration.', LOG_SOURCE);
                     await window.showInformationMessage(
                         'The script cannot be deployed until the database configurations have been applied.\n\nThe configurations have been added to Maximo and can be manually applied by an administrator.',
                         { modal: true }
@@ -225,6 +239,7 @@ async function performDatabaseConfiguration(client, config) {
                                 var messageList = messages.split('\n');
                                 messageList.forEach((message) => {
                                     if (regex.test(message) || message.startsWith('BMXAA6819I')) {
+                                        Logger.error(`Database configuration failed: ${message}`, null, LOG_SOURCE);
                                         throw new Error('An error occurred during database configuration: ' + message);
                                     }
                                 });
@@ -272,6 +287,7 @@ async function performDatabaseConfiguration(client, config) {
                     }
                 );
             } else {
+                Logger.info('Skipping automatic Admin Mode because deployment configuration disallows it.', LOG_SOURCE);
                 await window.showInformationMessage(
                     'The script deployment specifies that Admin Mode should not be applied, but the script cannot be deployed until the database configurations have been applied.\n\nThe configurations have been added to Maximo and can be manually applied by an administrator.',
                     { modal: true }

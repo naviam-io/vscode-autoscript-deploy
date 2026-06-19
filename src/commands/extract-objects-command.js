@@ -5,8 +5,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { ProgressLocation, window, env, Uri, workspace, commands } from 'vscode';
+import Logger from '../logger';
+
+const LOG_SOURCE = 'ExtractObjectsCommand';
 
 export default async function extractObjectCommand(client) {
+    Logger.info('Extract Maximo JSON command requested.', LOG_SOURCE);
     const quickPick = window.createQuickPick();
     quickPick.step = 1;
     quickPick.totalSteps = 2;
@@ -132,13 +136,17 @@ export default async function extractObjectCommand(client) {
     quickPick.onDidAccept(async () => {
         const selection = quickPick.selectedItems[0];
         if (!selection) {
+            Logger.info('Extract Maximo JSON command cancelled without selecting a type.', LOG_SOURCE);
             return;
         }
+        Logger.info(`Selected ${selection.label} for JSON extraction.`, LOG_SOURCE);
 
         let selectedObjects = await displayObjectList(client, selection.group, selection.label);
         let results = [];
 
         if (typeof selectedObjects !== 'undefined' && Array.isArray(selectedObjects) && selectedObjects.length > 0) {
+            const selectedLabels = selectedObjects.map((obj) => obj.label).join(', ');
+            Logger.info(`Extracting ${selectedObjects.length} ${selection.label.toLowerCase()} item(s): ${selectedLabels}.`, LOG_SOURCE);
             let cancelled = false;
             await window.withProgress(
                 {
@@ -175,6 +183,7 @@ export default async function extractObjectCommand(client) {
             );
 
             if (!cancelled && results.length > 0) {
+                Logger.info(`Extracted ${results.length} ${selection.label.toLowerCase()} item(s).`, LOG_SOURCE);
                 const editor = window.activeTextEditor;
 
                 if (editor) {
@@ -262,12 +271,18 @@ export default async function extractObjectCommand(client) {
                             });
                         });
                     } else {
+                        Logger.info(`Copied extracted ${selection.label} to the clipboard.`, LOG_SOURCE);
                         copyToClipboard(results, `Copied extracted ${selection.label} to the clipboard.`);
                     }
                 } else {
+                    Logger.info(`Copied extracted ${selection.label} to the clipboard.`, LOG_SOURCE);
                     copyToClipboard(results, `Copied extracted ${selection.label} to the clipboard.`);
                 }
+            } else if (cancelled) {
+                Logger.info(`Extract ${selection.label} command was cancelled.`, LOG_SOURCE);
             }
+        } else {
+            Logger.info(`Extract ${selection.label} command cancelled without selecting objects.`, LOG_SOURCE);
         }
     });
 

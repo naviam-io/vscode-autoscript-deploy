@@ -12,14 +12,19 @@ import { ProgressLocation, window, workspace } from 'vscode';
 
 // get a reference to the Maximo configuration object
 import { getMaximoConfig, asyncForEach } from '../extension';
+import Logger from '../logger';
+
+const LOG_SOURCE = 'ExtractReportsCommand';
 
 export default async function extractReportsCommand(client) {
+    Logger.info('Extract reports command requested.', LOG_SOURCE);
     let extractLoc = (await getMaximoConfig()).extractLocationReports;
     // if the extract location has not been specified use the workspace folder.
     if (typeof extractLoc === 'undefined' || !extractLoc) {
         if (workspace.workspaceFolders !== undefined) {
             extractLoc = workspace.workspaceFolders[0].uri.fsPath;
         } else {
+            Logger.error('Extract reports command failed because no working folder or extract folder is configured.', null, LOG_SOURCE);
             window.showErrorMessage('A working folder must be selected or an export folder configured before exporting reports.', {
                 modal: true,
             });
@@ -38,6 +43,7 @@ export default async function extractReportsCommand(client) {
     if (!fs.existsSync(extractLoc)) {
         fs.mkdirSync(extractLoc, { recursive: true });
     }
+    Logger.info(`Extracting reports to ${extractLoc}.`, LOG_SOURCE);
 
     const quickPick = window.createQuickPick();
     quickPick.canSelectMany = true;
@@ -59,6 +65,7 @@ export default async function extractReportsCommand(client) {
             const reports = quickPick.selectedItems;
 
             if (reports.length > 0) {
+                Logger.info(`Extracting ${reports.length} report(s).`, LOG_SOURCE);
                 await window.withProgress(
                     {
                         title: 'Extracting Reports',
@@ -136,15 +143,18 @@ export default async function extractReportsCommand(client) {
 
                         if (!cancelToken.isCancellationRequested) {
                             window.showInformationMessage(reports.length + (reports.length > 1 ? ' reports' : ' report') + ' extracted.', { modal: true });
+                            Logger.info(`${reports.length} report(s) extracted.`, LOG_SOURCE);
                         }
                     }
                 );
             } else {
+                Logger.info('Extract reports command cancelled without a selection.', LOG_SOURCE);
                 quickPick.hide();
             }
         });
     } else {
         quickPick.hide();
+        Logger.error('No reports were found to extract.', null, LOG_SOURCE);
         window.showErrorMessage('No reports were found to extract.', { modal: true });
     }
 }
@@ -381,7 +391,7 @@ export async function writeResources(reportInfo, extractLoc) {
                     }
                 });
                 zipFile.on('end', () => {
-                    console.log(`Extraction complete for report "${reportName}"`);
+                    Logger.info(`Extraction complete for report "${reportName}".`, LOG_SOURCE);
                 });
             });
         });

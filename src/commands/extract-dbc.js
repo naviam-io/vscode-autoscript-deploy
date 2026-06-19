@@ -7,14 +7,19 @@ import * as os from 'os';
 
 import { ProgressLocation, window, env, Uri, workspace, commands } from 'vscode';
 import { getMaximoConfig } from '../extension';
+import Logger from '../logger';
+
+const LOG_SOURCE = 'ExtractDBCCommand';
 
 export default async function extractDBCCommand(client) {
+    Logger.info('Extract DBC command requested.', LOG_SOURCE);
     let extractLoc = (await getMaximoConfig()).extractLocationDBC;
     // if the extract location has not been specified use the workspace folder.
     if (typeof extractLoc === 'undefined' || !extractLoc) {
         if (workspace.workspaceFolders !== undefined) {
             extractLoc = workspace.workspaceFolders[0].uri.fsPath;
         } else {
+            Logger.error('Extract DBC command failed because no working folder or extract folder is configured.', null, LOG_SOURCE);
             window.showErrorMessage('A working folder must be selected or an export folder configured before exporting reports.', {
                 modal: true,
             });
@@ -33,6 +38,7 @@ export default async function extractDBCCommand(client) {
     if (!fs.existsSync(extractLoc)) {
         fs.mkdirSync(extractLoc, { recursive: true });
     }
+    Logger.info(`Extracting DBC files to ${extractLoc}.`, LOG_SOURCE);
 
     const quickPick = window.createQuickPick();
     quickPick.step = 1;
@@ -124,8 +130,10 @@ export default async function extractDBCCommand(client) {
     quickPick.onDidAccept(async () => {
         const selection = quickPick.selectedItems[0];
         if (!selection) {
+            Logger.info('Extract DBC command cancelled without selecting a type.', LOG_SOURCE);
             return;
         }
+        Logger.info(`Selected ${selection.label} for DBC extraction.`, LOG_SOURCE);
 
         let selectedObjects;
 
@@ -145,6 +153,7 @@ export default async function extractDBCCommand(client) {
 
             let where = null;
             if (fileName) {
+                Logger.info(`Extracting ${selectedObjects.length} ${selection.plural.toLowerCase()} to ${fileName}.`, LOG_SOURCE);
                 if (selection.group === 'byos' || selection.group === 'table') {
                     where = await window.showInputBox({
                         prompt: 'Please a where clause for the records to extract:',
@@ -181,12 +190,14 @@ export default async function extractDBCCommand(client) {
                                 `Create ${selectedObjects.length > 1 ? selection.plural : selection.label} ${objectListDisplay}`
                             );
                             if (result && result.status === 'error') {
+                                Logger.error(`Error extracting DBC: ${result.message}`, null, LOG_SOURCE);
                                 window.showErrorMessage('Error extracting DBC:\n' + result.message, { modal: true });
                             } else {
                                 const filePath = path.join(extractLoc, fileName);
 
                                 // Write content to file
                                 fs.writeFileSync(filePath, result, 'utf8');
+                                Logger.info(`DBC extract written to ${filePath}.`, LOG_SOURCE);
 
                                 // Close any existing editor for this file
                                 const openEditors = window.visibleTextEditors;
@@ -213,11 +224,16 @@ export default async function extractDBCCommand(client) {
                                 });
                             }
                         } catch (error) {
+                            Logger.error(`Error extracting DBC to ${fileName}.`, error, LOG_SOURCE);
                             window.showErrorMessage('Error extracting DBC:\n' + error.message, { modal: true });
                         }
                     }
                 );
+            } else {
+                Logger.info('Extract DBC command cancelled without selecting an output file.', LOG_SOURCE);
             }
+        } else {
+            Logger.info(`Extract ${selection.label} command cancelled without selecting objects.`, LOG_SOURCE);
         }
     });
 
@@ -259,6 +275,7 @@ async function getFileName(fileType, totalSteps = 3) {
         // Fallback to workspace root
         folderPath = workspace.workspaceFolders[0].uri.fsPath;
     } else {
+        Logger.error('No workspace folder or active editor found to determine DBC file location.', null, LOG_SOURCE);
         window.showErrorMessage('No workspace folder or active editor found to determine file location.', { modal: true });
         return undefined;
     }

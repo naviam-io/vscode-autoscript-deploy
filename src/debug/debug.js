@@ -215,11 +215,11 @@ export class CleanupManager {
     async cleanupById(sessionId, sessionConfiguration, source) {
         this.trackedSessions.delete(sessionId);
         if (this.pendingCleanups.has(sessionId)) {
-            Logger.info(`Skipping duplicate cleanup for session ${sessionId} from ${source}`);
+            Logger.debug(`Skipping duplicate cleanup for session ${sessionId} from ${source}`);
             return;
         }
 
-        Logger.info(`Starting cleanup for session ${sessionId} from ${source}`);
+        Logger.debug(`Starting cleanup for session ${sessionId} from ${source}`);
 
         const cleanupPromise = ensureDebuggerUninstalled()
             .catch((error) => {

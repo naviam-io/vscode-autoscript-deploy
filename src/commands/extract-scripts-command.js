@@ -8,14 +8,19 @@ import { ProgressLocation, window, workspace } from 'vscode';
 
 // get a reference to the fetched source object
 import { getMaximoConfig, asyncForEach } from '../extension';
+import Logger from '../logger';
+
+const LOG_SOURCE = 'ExtractScriptsCommand';
 
 export default async function extractScriptsCommand(client) {
+    Logger.info('Extract automation scripts command requested.', LOG_SOURCE);
     let extractLoc = (await getMaximoConfig()).extractLocation;
     // if the extract location has not been specified use the workspace folder.
     if (typeof extractLoc === 'undefined' || !extractLoc) {
         if (workspace.workspaceFolders !== undefined) {
             extractLoc = workspace.workspaceFolders[0].uri.fsPath;
         } else {
+            Logger.error('Extract scripts command failed because no working folder or extract folder is configured.', null, LOG_SOURCE);
             window.showErrorMessage('A working folder must be selected or an export folder configured before exporting automation scripts. ', {
                 modal: true,
             });
@@ -34,6 +39,7 @@ export default async function extractScriptsCommand(client) {
     if (!fs.existsSync(extractLoc)) {
         fs.mkdirSync(extractLoc, { recursive: true });
     }
+    Logger.info(`Extracting automation scripts to ${extractLoc}.`, LOG_SOURCE);
 
     const quickPick = window.createQuickPick();
     quickPick.canSelectMany = true;
@@ -54,6 +60,7 @@ export default async function extractScriptsCommand(client) {
         quickPick.onDidAccept(async () => {
             const scriptNames = quickPick.selectedItems.map((item) => item.label);
             if (scriptNames.length > 0) {
+                Logger.info(`Extracting ${scriptNames.length} automation script(s).`, LOG_SOURCE);
                 await window.withProgress(
                     {
                         title: 'Extracting Automation Script',
@@ -123,15 +130,18 @@ export default async function extractScriptsCommand(client) {
 
                         if (!cancelToken.isCancellationRequested) {
                             window.showInformationMessage('Automation scripts extracted.', { modal: true });
+                            Logger.info(`${scriptNames.length} automation script(s) extracted.`, LOG_SOURCE);
                         }
                     }
                 );
             } else {
+                Logger.info('Extract scripts command cancelled without a selection.', LOG_SOURCE);
                 quickPick.hide();
             }
         });
     } else {
         quickPick.hide();
+        Logger.error('No automation scripts were found to extract.', null, LOG_SOURCE);
         window.showErrorMessage('No scripts were found to extract.', {
             modal: true,
         });

@@ -4,6 +4,9 @@ import * as path from 'path';
 import { window, workspace, ProgressLocation, Uri } from 'vscode';
 import { execSync, exec } from 'child_process';
 import * as yauzl from 'yauzl';
+import Logger from '../logger';
+
+const LOG_SOURCE = 'InitTsTemplateCommand';
 
 // @ts-ignore
 function toPascalCase(scriptName) {
@@ -17,7 +20,9 @@ function toPascalCase(scriptName) {
 }
 
 export default async function initTsTemplateCommand() {
+    Logger.info('Initialize TypeScript template command requested.', LOG_SOURCE);
     if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+        Logger.error('TypeScript template initialization failed because no workspace folder is open.', null, LOG_SOURCE);
         window.showErrorMessage('A workspace folder must be open to initialize a TypeScript project.', { modal: true });
         return;
     }
@@ -27,6 +32,7 @@ export default async function initTsTemplateCommand() {
 
     // Verify the template directory exists within the extension.
     if (!fs.existsSync(templateDir)) {
+        Logger.error(`TypeScript template directory is missing: ${templateDir}.`, null, LOG_SOURCE);
         window.showErrorMessage('The template directory is missing from the extension installation. Please reinstall the extension.', { modal: true });
         return;
     }
@@ -45,6 +51,7 @@ export default async function initTsTemplateCommand() {
 
     const existing = allTemplateFiles.filter((file) => fs.existsSync(path.join(destRoot, file)));
     if (existing.length > 0) {
+        Logger.error(`TypeScript template initialization blocked because project files already exist: ${existing.join(', ')}.`, null, LOG_SOURCE);
         window.showErrorMessage('Initialization cannot be completed: A project already exists in this directory.', { modal: true });
         return;
     }
@@ -64,6 +71,7 @@ export default async function initTsTemplateCommand() {
     });
 
     if (!scriptName) {
+        Logger.info('TypeScript template initialization cancelled before script name was entered.', LOG_SOURCE);
         return;
     }
 
@@ -73,6 +81,7 @@ export default async function initTsTemplateCommand() {
     });
 
     if (typeof description === 'undefined') {
+        Logger.info('TypeScript template initialization cancelled before description was entered.', LOG_SOURCE);
         return;
     }
 
@@ -164,6 +173,7 @@ export default async function initTsTemplateCommand() {
         fs.writeFileSync(indexDest, indexContent, 'utf8');
     } catch (error) {
         // @ts-ignore
+        Logger.error('Failed to write TypeScript template project files.', error, LOG_SOURCE);
         window.showErrorMessage(`Failed to write project files: ${error.message}`, { modal: true });
         return;
     }
@@ -174,6 +184,7 @@ export default async function initTsTemplateCommand() {
 
     // @ts-ignore
     window.setStatusBarMessage(`Maximo TypeScript project initialized for ${scriptName}.`, 5000);
+    Logger.info(`TypeScript project initialized for ${scriptName}.`, LOG_SOURCE);
 
     // Check if npm is available.
     let npmAvailable = false;
@@ -199,6 +210,7 @@ export default async function initTsTemplateCommand() {
             }
 
             if (!canAutoInstall) {
+                Logger.error('npm automatic installation is unavailable because Homebrew is not available.', null, LOG_SOURCE);
                 window.showErrorMessage(
                     'npm could not be installed automatically because Homebrew is not available. Please install Node.js from https://nodejs.org before running the project.',
                     { modal: true }
@@ -222,7 +234,9 @@ export default async function initTsTemplateCommand() {
                     );
                     npmAvailable = true;
                     window.showInformationMessage('npm installed successfully.');
+                    Logger.info('npm installed successfully.', LOG_SOURCE);
                 } catch (error) {
+                    Logger.error('Failed to install npm automatically.', error, LOG_SOURCE);
                     window.showErrorMessage('Failed to install npm automatically. Please install Node.js from https://nodejs.org and try again.', {
                         modal: true
                     });
@@ -251,8 +265,10 @@ export default async function initTsTemplateCommand() {
                 );
                 // @ts-ignore
                 window.setStatusBarMessage('Dependencies successfully installed.', 5000);
+                Logger.info('TypeScript template dependencies installed successfully.', LOG_SOURCE);
             } catch (error) {
                 // @ts-ignore
+                Logger.error('npm install failed for TypeScript template project.', error, LOG_SOURCE);
                 window.showErrorMessage(`npm install failed: ${error.message}`, { modal: true });
             }
         }
