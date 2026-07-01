@@ -25,7 +25,6 @@ import * as path from 'path';
 
 import MaximoConfig from './maximo-config';
 import { TextDecoder } from 'util';
-import { window } from 'vscode';
 
 import Logger from '../logger';
 
@@ -41,8 +40,8 @@ export default class MaximoClient {
         this.config = config;
         this.retry = true;
 
-        this.requiredScriptVersion = '1.62.0';
-        this.currentScriptVersion = '1.62.0';
+        this.requiredScriptVersion = '1.63.0';
+        this.currentScriptVersion = '1.63.0';
 
         this.adminModeRetryCount = 0;
 

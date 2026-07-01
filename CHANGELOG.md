@@ -1,4 +1,7 @@
 # Release Notes
+## 1.29.3
+- Updated the library scripts to fix pre-deploy issues.
+  
 ## 1.29.2
 - Reinstated JSON predeploy support for Maximo objects.
 - Fixed property deployment errors related to instance only handling.

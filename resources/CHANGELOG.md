@@ -1,4 +1,7 @@
 # Release Notes
+## 1.4.2
+- Fixed error where ENTITYNAME and CLASSNAME were removed if not specified.
+  
 ## 1.4.1
 - Reinstated JSON predeploy support for Maximo objects.
 - Fixed property deployment errors related to instance only handling.

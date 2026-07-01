@@ -89,10 +89,6 @@ function applyObjectValues(mbo: psdi.mbo.MboRemote, maxObject: MaximoObject): vo
 }
 
 function applyObjectHeaderValues(mbo: psdi.mbo.MboRemote, maxObject: MaximoObject): void {
-    applyValues(mbo, [
-        ['ENTITYNAME', maxObject.entity],
-        ['CLASSNAME', maxObject.class]
-    ]);
     applyOptionalValues(mbo, [
         ['DESCRIPTION', maxObject.description],
         ['SERVICENAME', maxObject.service],
@@ -100,6 +96,8 @@ function applyObjectHeaderValues(mbo: psdi.mbo.MboRemote, maxObject: MaximoObjec
     ]);
     applyNonNullWritableValues(mbo, [
         ['SITEORGTYPE', maxObject.level],
+        ['ENTITYNAME', maxObject.entity],
+        ['CLASSNAME', maxObject.class],
         ['TRIGROOT', maxObject.triggerRoot]
     ]);
     applyWritableValues(mbo, [['TEXTDIRECTION', maxObject.textDirection]]);
@@ -213,6 +211,8 @@ function applyAttributeValues(attribute: psdi.mbo.MboRemote, item: MaximoAttribu
         ['MLINUSE', item.multilanguageInUse],
         ['ESIGENABLED', item.eSignatureEnabled]
     ]);
+
+    // These are set separately because the SAMEASATTRIBUTE value is read-only until the SAMEASOBJECT value is set first.  So we have to set them in two steps.
     setValue(attribute, 'SAMEASOBJECT', item.sameAsObject, MboConstants.NOACCESSCHECK);
     setValue(attribute, 'SAMEASATTRIBUTE', item.sameAsAttribute, MboConstants.NOACCESSCHECK);
     setValue(attribute, 'PRIMARYKEYCOLSEQ', item.primaryColumn, MboConstants.NOACCESSCHECK);
