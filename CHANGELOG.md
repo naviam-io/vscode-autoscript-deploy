@@ -1,4 +1,13 @@
 # Release Notes
+## 1.29.2
+- Reinstated JSON predeploy support for Maximo objects.
+- Fixed property deployment errors related to instance only handling.
+- Fixed logger deployment errors related to parent-child logger relations.
+- Updated pre-deployment and deployment schemas for consistency.
+- Improved JSON configuration deployment error handling so streamed deployment errors are surfaced consistently.
+- Fixed script deployment flow to stop after database configuration is deferred or declined.
+- Fixed session cookie handling for Maximo/MAS responses that return an incorrect cookie domain.
+
 ## 1.29.1
 - Improved VS Code logging for all commands.
 

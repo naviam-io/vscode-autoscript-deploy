@@ -84,10 +84,30 @@ export function applyValues(mbo: psdi.mbo.MboRemote, updates: Array<[string, any
     });
 }
 
+export function applyWritableValues(mbo: psdi.mbo.MboRemote, updates: Array<[string, any]>): void {
+    updates.forEach(function (update) {
+        if (isWritable(mbo, update[0])) {
+            setValue(mbo, update[0], update[1]);
+        }
+    });
+}
+
+export function applyNonNullWritableValues(mbo: psdi.mbo.MboRemote, updates: Array<[string, any]>): void {
+    updates.forEach(function (update) {
+        if (update[1] !== null && typeof update[1] !== 'undefined' && isWritable(mbo, update[0])) {
+            setValue(mbo, update[0], update[1]);
+        }
+    });
+}
+
 export function applyOptionalValues(mbo: psdi.mbo.MboRemote, updates: Array<[string, any]>): void {
     updates.forEach(function (update) {
         if (update[1] !== null) {
             setValue(mbo, update[0], update[1]);
         }
     });
+}
+
+export function isWritable(mbo: psdi.mbo.MboRemote, field: string): boolean {
+    return !(mbo as any).getMboValue(field).isReadOnly();
 }

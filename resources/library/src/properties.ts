@@ -1,7 +1,7 @@
 /// <reference path="../globals.d.ts" />
 /// <reference path="../manage-facade.d.ts" />
 
-import { applyValues, close, updateProgress, valueOrDefault } from './util';
+import { applyValues, applyWritableValues, close, updateProgress, valueOrDefault } from './util';
 
 var MXServer = Java.type('psdi.server.MXServer');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
@@ -87,10 +87,10 @@ function applyCustomPropertyValues(mbo: psdi.mbo.MboRemote, property: MaximoProp
         ['ENCRYPTED', property.encrypted],
         ['MASKED', property.masked]
     ]);
+
     applyWritableValues(mbo, [
         ['DOMAINID', property.domainId],
         ['GLOBALONLY', property.globalOnly],
-        ['INSTANCEONLY', property.instanceOnly],
         ['LIVEREFRESH', property.liveRefresh],
         ['MAXTYPE', property.maxType],
         ['NULLSALLOWED', property.nullsAllowed],
@@ -98,18 +98,11 @@ function applyCustomPropertyValues(mbo: psdi.mbo.MboRemote, property: MaximoProp
         ['SECURELEVEL', property.secureLevel]
     ]);
 
+    mbo.setValue('INSTANCEONLY', property.instanceOnly, MboConstants.NOACCESSCHECK);
+
     if (!property.instanceOnly) {
         applyValues(mbo, [['DISPPROPVALUE', property.propValue]]);
     }
-}
-
-function applyWritableValues(mbo: psdi.mbo.MboRemote, updates: Array<[string, any]>): void {
-    applyValues(
-        mbo,
-        updates.filter(function (update) {
-            return !(mbo as any).getMboValue(update[0]).isReadOnly();
-        })
-    );
 }
 
 function applyPropertyInstances(mbo: psdi.mbo.MboRemote, property: MaximoProperty): void {

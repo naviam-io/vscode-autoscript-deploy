@@ -77,7 +77,9 @@ export default async function deployScript(client, filePath, script) {
                 (typeof preDeployConfig.objects !== 'undefined' && Array.isArray(preDeployConfig.objects) && preDeployConfig.objects.length > 0)
             ) {
                 if (typeof preDeployConfig.noDBConfig === 'undefined' || preDeployConfig.noDBConfig === false) {
-                    await performDatabaseConfiguration(client, preDeployConfig);
+                    if (!(await performDatabaseConfiguration(client, preDeployConfig))) {
+                        return;
+                    }
                 }
             }
         }
@@ -130,7 +132,9 @@ export default async function deployScript(client, filePath, script) {
                                 Array.isArray(deployConfig.maxObjects) &&
                                 deployConfig.maxObjects.length > 0
                             ) {
-                                await performDatabaseConfiguration(client, deployConfig);
+                                if (!(await performDatabaseConfiguration(client, deployConfig))) {
+                                    return;
+                                }
                             }
                         }
                         if (typeof result.deleted !== 'undefined' && result.deleted === true) {
@@ -182,7 +186,7 @@ async function performDatabaseConfiguration(client, config) {
                         'The script cannot be deployed until the database configurations have been applied.\n\nThe configurations have been added to Maximo and can be manually applied by an administrator.',
                         { modal: true }
                     );
-                    return;
+                    return false;
                 }
 
                 //put the server in admin mode, then do the config.
@@ -292,7 +296,7 @@ async function performDatabaseConfiguration(client, config) {
                     'The script deployment specifies that Admin Mode should not be applied, but the script cannot be deployed until the database configurations have been applied.\n\nThe configurations have been added to Maximo and can be manually applied by an administrator.',
                     { modal: true }
                 );
-                return;
+                return false;
             }
         } else {
             // just do the config.
@@ -322,5 +326,7 @@ async function performDatabaseConfiguration(client, config) {
                 }
             );
         }
+
+        return true;
     }
 }

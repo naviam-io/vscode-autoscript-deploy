@@ -1,4 +1,9 @@
 # Release Notes
+## 1.4.1
+- Reinstated JSON predeploy support for Maximo objects.
+- Fixed property deployment errors related to instance only handling.
+- Fixed logger deployment errors related to parent-child logger relations.
+
 ## 1.4.0
 - Rebuilt the shared deployment library from TypeScript sources.
 - Support for cron tasks, domains, loggers, integration objects, messages and properties was converted to TypeScript.

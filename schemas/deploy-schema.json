@@ -1160,6 +1160,10 @@
                 "appenders": {
                     "description": "A comma delimited list of appenders  Maximo logger (MAXLOGGER.APPENDERS)",
                     "type": "string"
+                },
+                "parent": {
+                    "description": "Alternate way to specify the parent logger without using the full key, provided for convenience and ease. The parentLogKey is derived by prefixing this value with 'log4j.logger.maximo.'",
+                    "type": "string"
                 }
             },
             "required": ["logger"]

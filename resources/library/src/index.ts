@@ -12,6 +12,7 @@ import { MaximoIntegrationObject, process as processIntegrationObject } from './
 import { MaximoAction, process as processAction } from './actions';
 import { MaximoEscalation, process as processEscalation } from './escalations';
 import { MaximoQuery, process as processQuery } from './queries';
+import { MaximoObject, process as processObject } from './objects';
 
 type Handler = (item: any) => void;
 type HandlerRegistry = Record<string, Handler>;
@@ -87,6 +88,10 @@ function registerHandlers(): void {
 
     registerHandler('queries', function (item: any): void {
         processQuery(new MaximoQuery(item));
+    });
+
+    registerHandler('objects', function (item: any): void {
+        processObject(new MaximoObject(item));
     });
 }
 

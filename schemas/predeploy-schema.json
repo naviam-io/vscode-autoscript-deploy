@@ -16,7 +16,7 @@
             "description": "A Maximo Object",
             "type": "object",
             "properties": {
-                "delete": {
+                "_delete": {
                     "description": "Flag to indicate that the object should be deleted if it exists from the target system.",
                     "type": "boolean",
                     "default": false
@@ -163,7 +163,7 @@
                     "items": {
                         "type": "object",
                         "properties": {
-                            "delete": {
+                            "_delete": {
                                 "description": "Flag to indicate that the attirbute should be deleted if it exists from the target system.",
                                 "type": "boolean",
                                 "default": false
@@ -300,7 +300,7 @@
                     "items": {
                         "type": "object",
                         "properties": {
-                            "delete": {
+                            "_delete": {
                                 "description": "Flag to indicate that the index should be deleted if it exists from the target system.",
                                 "type": "boolean",
                                 "default": false
@@ -310,12 +310,17 @@
                                 "type": "string"
                             },
                             "enforceUniqueness": {
-                                "description": "When checked, indicates that the index is unique (MAXSYSINDEXES.UNIQUE)",
+                                "description": "When checked, indicates that the index is unique (MAXSYSINDEXES.UNIQUERULE)",
                                 "type": "boolean",
                                 "default": false
                             },
                             "clusteredIndex": {
                                 "description": "SQL Server only - Clustered Index Flag (1=Clustered, 0=Non-Clustered) (MAXSYSINDEXES.CLUSTERRULE)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "required": {
+                                "description": "When checked, indicates that the index is required by the system (MAXSYSINDEXES.REQUIRED)",
                                 "type": "boolean",
                                 "default": false
                             },
@@ -335,20 +340,20 @@
                                     "type": "object",
                                     "properties": {
                                         "column": {
-                                            "description": "The name of the column (MAXSYSINDEXCOLS.COLNAME)",
+                                            "description": "The name of the column (MAXSYSKEYS.COLNAME)",
                                             "type": "string"
                                         },
                                         "ascending": {
-                                            "description": "When checked, indicates that this is an ascending key (MAXSYSINDEXCOLS.ASCENDING)",
+                                            "description": "When checked, indicates that this is an ascending key (MAXSYSKEYS.ORDERING)",
                                             "type": "boolean",
-                                            "default": true
+                                            "default": false
                                         },
                                         "sequence": {
-                                            "description": "Column Sequence Within This Index (MAXSYSINDEXCOLS.COLSEQ)",
+                                            "description": "Column Sequence Within This Index (MAXSYSKEYS.COLSEQ)",
                                             "type": "integer"
                                         }
                                     },
-                                    "required": ["column"]
+                                    "required": ["column", "sequence"]
                                 }
                             }
                         },
@@ -361,7 +366,7 @@
                     "items": {
                         "type": "object",
                         "properties": {
-                            "delete": {
+                            "_delete": {
                                 "description": "Flag to indicate that the relationship should be deleted if it exists from the target system.",
                                 "type": "boolean",
                                 "default": false
@@ -381,13 +386,26 @@
                             "whereClause": {
                                 "description": "The clause used to set the condition for the join. If this condition is not met, the tables will not be joined (MAXRELATIONSHIP.WHERECLAUSE)",
                                 "type": "string"
+                            },
+                            "cardinality": {
+                                "description": "Is the database relationship single or multiple?",
+                                "type": "string"
+                            },
+                            "dbJoinRequired": {
+                                "description": "Identifies whether the relationship join is required (MAXRELATIONSHIP.DBJOINREQUIRED)",
+                                "type": "integer"
+                            },
+                            "isDefault": {
+                                "description": "Flag used for default relationship between two objects",
+                                "type": "boolean",
+                                "default": false
                             }
                         },
                         "required": ["relationship", "child"]
                     }
                 }
             },
-            "required": ["object", "description"]
+            "required": ["object"]
         }
     }
 }

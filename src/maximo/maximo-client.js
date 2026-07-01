@@ -41,8 +41,8 @@ export default class MaximoClient {
         this.config = config;
         this.retry = true;
 
-        this.requiredScriptVersion = '1.61.0';
-        this.currentScriptVersion = '1.61.0';
+        this.requiredScriptVersion = '1.62.0';
+        this.currentScriptVersion = '1.62.0';
 
         this.adminModeRetryCount = 0;
 
@@ -123,6 +123,7 @@ export default class MaximoClient {
                     }
                 }
 
+                Logger.debug(`Request for cookie for domain ${request.baseURL}`, LOG_SOURCE);
                 // @ts-ignore
                 this.jar.getCookiesSync(
                     request.baseURL,
@@ -188,8 +189,25 @@ export default class MaximoClient {
                             // @ts-ignore
                             cookie.secure = false;
                         }
+
+                        // Some Maximo/MAS deployments emit a malformed cookie Domain attribute
+                        // (e.g. an extra dot: "manage..mas.apps..."). tough-cookie rejects any
+                        // cookie whose Domain does not domain-match the request host, silently
+                        // dropping the session. Force the cookie's domain to the current request
+                        // host (without any port) so it is scoped correctly.
                         // @ts-ignore
-                        this.jar.setCookieSync(cookie, response.request.protocol + '//' + response.request.host);
+                        const requestHost = response.request.host.replace(/:\d+$/, '');
+                        // @ts-ignore
+                        if (cookie.domain && cookie.domain.replace(/^\./, '') !== requestHost) {
+                            // @ts-ignore
+                            Logger.debug(`Rewriting cookie domain '${cookie.domain}' to request host '${requestHost}'.`, LOG_SOURCE);
+                            // @ts-ignore
+                            cookie.domain = requestHost;
+                        }
+
+                        Logger.debug(`Storing response cookie ${cookie} for ${this._getResponseSummary(response)}`, LOG_SOURCE);
+                        // @ts-ignore
+                        this.jar.setCookieSync(cookie, response.request.protocol + '//' + requestHost);
                     });
 
                     Logger.debug(`Stored ${parsedCookies.length} response cookie(s) for ${this._getResponseSummary(response)}`, LOG_SOURCE);
@@ -847,7 +865,7 @@ export default class MaximoClient {
                     result.message = result.message.substring(result.message.indexOf(':') + 1).trim();
                 }
                 Logger.error(`Configuration deploy finished with an error: ${result.message}`, null, LOG_SOURCE);
-                window.showErrorMessage('Error applying configuration:\n' + result.message, { modal: true });
+                throw new MaximoError('Error applying configuration:\n' + result.message);
             } else {
                 Logger.info('Configuration deploy completed successfully.', LOG_SOURCE);
             }

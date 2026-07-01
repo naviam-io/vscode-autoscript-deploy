@@ -5,11 +5,15 @@ export default async function deployConfig(client, config) {
         {
             title: 'Deploying Configurations',
             location: ProgressLocation.Notification,
-            cancellable: true,
+            cancellable: true
         },
         async (progress, cancelToken) => {
             progress.report({ message: '$(gear) Configuring settings...' });
-            await client.postConfig(config, cancelToken, progress);
+            try {
+                await client.postConfig(config, cancelToken, progress);
+            } catch (error) {
+                window.showErrorMessage(`${error.message}`, { modal: true });
+            }
         }
     );
 
