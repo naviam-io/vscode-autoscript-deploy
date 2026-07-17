@@ -1,4 +1,7 @@
 # Release Notes
+## 1.4.3
+- Fixed error when installing in non-English primary language systems
+  
 ## 1.4.2
 - Fixed error where ENTITYNAME and CLASSNAME were removed if not specified.
   

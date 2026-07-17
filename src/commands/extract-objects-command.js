@@ -303,28 +303,37 @@ function sortObjectKeys(obj) {
     return sorted;
 }
 
-function copyToClipboard(text, message) {
-    if (isJsonObjectOrArray(text)) {
-        if (Array.isArray(text)) {
-            env.clipboard.writeText(JSON.stringify(text, null, 4).slice(1, -1));
+async function copyToClipboard(text, message) {
+    // `text` may be an actual object/array (as passed from the extract flow) or a
+    // string that may or may not contain JSON. Normalize to the string we want on
+    // the clipboard before writing.
+    let clipboardText;
+    const value = typeof text === 'string' ? tryParseJson(text) : text;
+
+    if (value !== null && typeof value === 'object') {
+        if (Array.isArray(value)) {
+            // Strip the outer array brackets so the entries can be pasted into an
+            // existing JSON array.
+            clipboardText = JSON.stringify(value, null, 4).slice(1, -1);
         } else {
-            env.clipboard.writeText(JSON.stringify(text, null, 4));
+            clipboardText = JSON.stringify(value, null, 4);
         }
     } else {
-        env.clipboard.writeText(text);
+        clipboardText = String(text);
     }
+
+    await env.clipboard.writeText(clipboardText);
 
     if (message) {
         window.showInformationMessage(message, { modal: true });
     }
 }
 
-function isJsonObjectOrArray(text) {
+function tryParseJson(text) {
     try {
-        const parsed = JSON.parse(text);
-        return typeof parsed === 'object' && parsed !== null;
+        return JSON.parse(text);
     } catch (e) {
-        return false;
+        return text;
     }
 }
 

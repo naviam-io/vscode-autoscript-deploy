@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-import { ProgressLocation, window, env, Uri, workspace, commands } from 'vscode';
+import { ProgressLocation, window, Uri, workspace, commands } from 'vscode';
 import { getMaximoConfig } from '../extension';
 import Logger from '../logger';
 
@@ -238,31 +238,6 @@ export default async function extractDBCCommand(client) {
     });
 
     quickPick.show();
-}
-
-function copyToClipboard(text, message) {
-    if (isJsonObjectOrArray(text)) {
-        if (Array.isArray(text)) {
-            env.clipboard.writeText(JSON.stringify(text, null, 4).slice(1, -1));
-        } else {
-            env.clipboard.writeText(JSON.stringify(text, null, 4));
-        }
-    } else {
-        env.clipboard.writeText(text);
-    }
-
-    if (message) {
-        window.showInformationMessage(message, { modal: true });
-    }
-}
-
-function isJsonObjectOrArray(text) {
-    try {
-        const parsed = JSON.parse(text);
-        return typeof parsed === 'object' && parsed !== null;
-    } catch (e) {
-        return false;
-    }
 }
 
 async function getFileName(fileType, totalSteps = 3) {

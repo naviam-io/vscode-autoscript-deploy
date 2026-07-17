@@ -106,10 +106,11 @@ function addOrUpdateProperty(propName, description, value, maxType, secureLevel)
         var property;
 
         if (propertySet.isEmpty()) {
+            var translator = MXServer.getMXServer().getMaximoDD().getTranslator();
             property = propertySet.add();
             property.setValue('PROPNAME', propName);
             property.setValue('MAXTYPE', maxType);
-            property.setValue('SECURELEVEL', secureLevel);
+            property.setValue('SECURELEVEL', translator.toExternalDefaultValue('PROPSECURELEVEL', secureLevel, property));
         } else {
             property = propertySet.moveFirst();
         }

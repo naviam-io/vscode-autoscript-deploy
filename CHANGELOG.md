@@ -1,4 +1,10 @@
 # Release Notes
+## 1.29.5
+- Release to update publish token.
+  
+## 1.29.4
+- Fixed non-English primary language support for creating system properties.
+
 ## 1.29.3
 - Updated the library scripts to fix pre-deploy issues.
   
