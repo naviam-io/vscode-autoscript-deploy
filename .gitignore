@@ -12,6 +12,12 @@ src/.DS_Store
 
 .vscode/mcp.json
 
+# Generated at runtime by the extension (copied from the bundled schemas/ folder).
+# Kept out of git to avoid duplicating the source schemas and drifting from them.
+.vscode/predeploy-schema.json
+.vscode/deploy-schema.json
+.vscode/devtools-config-schema.json
+
 java/src/main/resources/autoscript-debug-version.txt
 
 java/.jython_cache/

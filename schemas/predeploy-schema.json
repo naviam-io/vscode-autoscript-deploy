@@ -74,6 +74,11 @@
                     "type": "boolean",
                     "default": false
                 },
+                "loadDefaultAttributes": {
+                    "description": "When true (default), Maximo auto-creates its default attributes for a new object: the DESCRIPTION attribute and the generated HASLD and DESCRIPTION_LONGDESCRIPTION attributes, along with the primary key/ID column. When false, Maximo skips creating these defaults, giving you full control over which attributes - including the primary key/ID column - are created; only the explicitly declared attributes are created (MaxObjectCfg.setLoadDefaultAttributes)",
+                    "type": "boolean",
+                    "default": true
+                },
                 "persistent": {
                     "description": "Indicates a persistent object that can be a view or a table. An object must be persistent for you to define an index on it (MAXOBJECTCFG.PERSISTENT)",
                     "type": "boolean",
@@ -188,6 +193,11 @@
                                 "description": "The column scale (if numeric). Number of digits to the right of the decimal point if the data type is DECIMAL or DURATION (MAXATTRIBUTECFG.SCALE)",
                                 "type": "integer"
                             },
+                            "searchType": {
+                                "description": "Determines how the attribute is searched (MAXATTRIBUTECFG.SEARCHTYPE)",
+                                "type": "string",
+                                "enum": ["NONE", "EXACT", "WILDCARD", "TEXT"]
+                            },
                             "required": {
                                 "description": "When checked, indicates that a value is required in this field (MAXATTRIBUTECFG.REQUIRED)",
                                 "type": "boolean",
@@ -273,6 +283,11 @@
                             },
                             "auditEnabled": {
                                 "description": "When checked, indicates that Electronic Auditing (EAUDIT) is enabled for this attribute (MAXATTRIBUTECFG.EAUDITENABLED)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "multilanguageSupported": {
+                                "description": "When checked, indicates that this column supports multilanguage values (MAXATTRIBUTECFG.MLSUPPORTED)",
                                 "type": "boolean",
                                 "default": false
                             },

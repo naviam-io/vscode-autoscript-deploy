@@ -16,17 +16,17 @@
                 "*.predeploy.json",
                 "*-predeploy.json"
             ],
-            "url": "./.vscode/predeploy-schema.json"
+            "url": "./schemas/predeploy-schema.json"
         },
         {
             "fileMatch": [],
-            "url": "./.vscode/deploy-schema.json"
+            "url": "./schemas/deploy-schema.json"
         },
         {
             "fileMatch": [
                 ".devtools-config.json"
             ],
-            "url": "./.vscode/devtools-config-schema.json"
+            "url": "./schemas/devtools-config-schema.json"
         }
     ],
     "[javascript]": {

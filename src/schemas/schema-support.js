@@ -101,58 +101,61 @@ async function setupDBCSchemaSupport(workspaceFolder, dtd) {
     }
 }
 
+function copySchema(schemaName, workspaceFolder) {
+    const source = path.resolve(__dirname, '../schemas/' + schemaName);
+    const destination = path.resolve(workspaceFolder.uri.fsPath, './.vscode/' + schemaName);
+
+    try {
+        if (!fs.existsSync(source)) {
+            return;
+        }
+
+        const sourceContent = fs.readFileSync(source);
+
+        // Always refresh the workspace copy when the bundled schema changes so that
+        // schema updates from an extension upgrade are picked up. The copy is otherwise
+        // registered only once and would remain stale after the extension is upgraded.
+        if (fs.existsSync(destination) && sourceContent.equals(fs.readFileSync(destination))) {
+            return;
+        }
+
+        fs.mkdirSync(path.dirname(destination), { recursive: true });
+        fs.writeFileSync(destination, sourceContent);
+    } catch (err) {
+        vscode.window.showErrorMessage(`Failed to copy schema file ${schemaName}: ${err.message}`);
+    }
+}
+
 async function setupSchemaSupport(workspaceFolder, fileName) {
     const config = vscode.workspace.getConfiguration(null, workspaceFolder);
 
     const schemas = config.get('json.schemas') || [];
 
+    copySchema('predeploy-schema.json', workspaceFolder);
     if (!schemas.find((s) => s.url === './.vscode/predeploy-schema.json')) {
         schemas.push({
             fileMatch: ['*.predeploy.json', '*-predeploy.json'],
             url: './.vscode/predeploy-schema.json'
         });
         await config.update('json.schemas', schemas, vscode.ConfigurationTarget.Workspace);
-        fs.copyFile(
-            path.resolve(__dirname, '../schemas/predeploy-schema.json'),
-            path.resolve(workspaceFolder.uri.fsPath, './.vscode/predeploy-schema.json'),
-            (err) => {
-                if (err) {
-                    vscode.window.showErrorMessage(`Failed to copy config file: ${err.message}`);
-                }
-            }
-        );
     }
+
+    copySchema('deploy-schema.json', workspaceFolder);
     if (!schemas.find((s) => s.url === './.vscode/deploy-schema.json')) {
         schemas.push({
             fileMatch: [],
             url: './.vscode/deploy-schema.json'
         });
         await config.update('json.schemas', schemas, vscode.ConfigurationTarget.Workspace);
-        fs.copyFile(
-            path.resolve(__dirname, '../schemas/deploy-schema.json'),
-            path.resolve(workspaceFolder.uri.fsPath, './.vscode/deploy-schema.json'),
-            (err) => {
-                if (err) {
-                    vscode.window.showErrorMessage(`Failed to copy config file: ${err.message}`);
-                }
-            }
-        );
     }
+
+    copySchema('devtools-config-schema.json', workspaceFolder);
     if (!schemas.find((s) => s.url === './.vscode/devtools-config-schema.json')) {
         schemas.push({
             fileMatch: ['.devtools-config.json'],
             url: './.vscode/devtools-config-schema.json'
         });
         await config.update('json.schemas', schemas, vscode.ConfigurationTarget.Workspace);
-        fs.copyFile(
-            path.resolve(__dirname, '../schemas/devtools-config-schema.json'),
-            path.resolve(workspaceFolder.uri.fsPath, './.vscode/devtools-config-schema.json'),
-            (err) => {
-                if (err) {
-                    vscode.window.showErrorMessage(`Failed to copy config file: ${err.message}`);
-                }
-            }
-        );
     }
 
     if (fileName) {

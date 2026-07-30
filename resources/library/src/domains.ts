@@ -101,11 +101,11 @@ function applyDomainHeader(mbo: psdi.mbo.MboRemote, domain: MaximoDomain): void 
         setValue(mbo, 'MAXTYPE', domain.maxType);
     }
 
-    if (domain.domainType === 'ALN' && mbo.isNull('LENGTH')) {
+    if (domain.domainType === 'ALN') {
         setValue(mbo, 'LENGTH', domain.length);
     }
 
-    if (isScaledNumericDomain(domain) && mbo.isNull('LENGTH')) {
+    if (isScaledNumericDomain(domain)) {
         setValue(mbo, 'LENGTH', domain.length);
         setValue(mbo, 'SCALE', domain.scale);
     }

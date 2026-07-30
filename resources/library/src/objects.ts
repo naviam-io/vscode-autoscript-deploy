@@ -2,7 +2,7 @@
 /// <reference path="../manage-facade.d.ts" />
 
 import {
-    applyNonNullWritableValues,
+    applyOptionalWritableValues,
     applyOptionalValues,
     applyValues,
     applyWritableValues,
@@ -52,7 +52,11 @@ function addOrUpdateObject(mboSet: psdi.mbo.MboSetRemote, maxObject: MaximoObjec
         mbo = mboSet.add();
     }
 
-    applyObjectValues(mbo, maxObject);
+    applyValuesBeforeAttributes(mbo, maxObject);
+    applyAttributes(mbo, maxObject);
+    applyValuesAfterAttributes(mbo, maxObject);
+    applyRelationships(mbo, maxObject);
+    applyIndexes(mbo, maxObject);
 
     mboSet.save();
 }
@@ -65,8 +69,9 @@ function findObject(mboSet: psdi.mbo.MboSetRemote, objectName: string): psdi.mbo
     return mboSet.moveFirst();
 }
 
-function applyObjectValues(mbo: psdi.mbo.MboRemote, maxObject: MaximoObject): void {
+function applyValuesBeforeAttributes(mbo: psdi.mbo.MboRemote, maxObject: MaximoObject) {
     if (mbo.toBeAdded()) {
+        (mbo as any).setLoadDefaultAttributes(maxObject.loadDefaultAttributes);
         setValue(mbo, 'OBJECTNAME', maxObject.object);
         applyOptionalValues(mbo, [['EXTENDSOBJECT', maxObject.extendsObject]]);
 
@@ -82,10 +87,12 @@ function applyObjectValues(mbo: psdi.mbo.MboRemote, maxObject: MaximoObject): vo
     } else {
         applyTableValues(mbo, maxObject);
     }
+}
 
-    applyAttributes(mbo, maxObject);
-    applyRelationships(mbo, maxObject);
-    applyIndexes(mbo, maxObject);
+function applyValuesAfterAttributes(mbo: psdi.mbo.MboRemote, maxObject: MaximoObject) {
+    if (!maxObject.view && mbo.toBeAdded()) {
+        applyOptionalValues(mbo, [['UNIQUECOLUMNNAME', maxObject.uniqueColumn]]);
+    }
 }
 
 function applyObjectHeaderValues(mbo: psdi.mbo.MboRemote, maxObject: MaximoObject): void {
@@ -94,7 +101,7 @@ function applyObjectHeaderValues(mbo: psdi.mbo.MboRemote, maxObject: MaximoObjec
         ['SERVICENAME', maxObject.service],
         ['MAINOBJECT', maxObject.mainObject]
     ]);
-    applyNonNullWritableValues(mbo, [
+    applyOptionalWritableValues(mbo, [
         ['SITEORGTYPE', maxObject.level],
         ['ENTITYNAME', maxObject.entity],
         ['CLASSNAME', maxObject.class],
@@ -105,7 +112,6 @@ function applyObjectHeaderValues(mbo: psdi.mbo.MboRemote, maxObject: MaximoObjec
 
 function applyTableValues(mbo: psdi.mbo.MboRemote, maxObject: MaximoObject): void {
     if (mbo.toBeAdded()) {
-        applyOptionalValues(mbo, [['UNIQUECOLUMNNAME', maxObject.uniqueColumn]]);
         applyWritableValues(mbo, [
             ['PERSISTENT', maxObject.persistent],
             ['ADDROWSTAMP', maxObject.addRowstamp]
@@ -187,7 +193,7 @@ function applyAttributeValues(attribute: psdi.mbo.MboRemote, item: MaximoAttribu
         ['DOMAINID', item.domain],
         ['ALIAS', item.alias]
     ]);
-    applyNonNullWritableValues(attribute, [
+    applyOptionalWritableValues(attribute, [
         ['MAXTYPE', item.type],
         ['SEARCHTYPE', item.searchType],
         ['LENGTH', item.length],
@@ -239,12 +245,14 @@ function applyIndexes(mbo: psdi.mbo.MboRemote, maxObject: MaximoObject): void {
                 index = indexSet.add();
                 setValue(index, 'NAME', item.index);
 
+                applyOptionalWritableValues(index, [
+                    ['STORAGEPARTITION', item.storagePartition]
+                ]);
                 applyWritableValues(index, [
                     ['UNIQUE', item.enforceUniqueness],
                     ['CLUSTERRULE', item.clusteredIndex],
                     ['REQUIRED', item.required],
-                    ['TEXTSEARCH', item.textSearchIndex],
-                    ['STORAGEPARTITION', item.storagePartition]
+                    ['TEXTSEARCH', item.textSearchIndex]
                 ]);
 
                 var maxSysKeysSet = index.getMboSet('MAXSYSKEYS');
@@ -542,6 +550,7 @@ export interface MaximoObjectInput {
     level?: MaximoObjectLevel;
     textDirection?: TextDirection | null;
     mainObject?: boolean;
+    loadDefaultAttributes?: boolean;
     persistent?: boolean;
     storagePartition?: string | null;
     uniqueColumn?: string | null;
@@ -577,6 +586,7 @@ export class MaximoObject {
     level?: MaximoObjectLevel;
     textDirection: TextDirection | null = null;
     mainObject: boolean = false;
+    loadDefaultAttributes: boolean = true;
     persistent: boolean = true;
     storagePartition: string | null = null;
     uniqueColumn: string | null = null;
@@ -611,6 +621,7 @@ export class MaximoObject {
         this.level = valueOrDefault(input.level, this.level);
         this.textDirection = valueOrDefault(input.textDirection, this.textDirection);
         this.mainObject = valueOrDefault(input.mainObject, this.mainObject);
+        this.loadDefaultAttributes = valueOrDefault(input.loadDefaultAttributes, this.loadDefaultAttributes);
         this.persistent = valueOrDefault(input.persistent, this.persistent);
         this.storagePartition = valueOrDefault(input.storagePartition, this.storagePartition);
         this.uniqueColumn = valueOrDefault(input.uniqueColumn, this.uniqueColumn);

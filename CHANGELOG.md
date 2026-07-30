@@ -1,4 +1,9 @@
 # Release Notes
+## 1.29.6
+- Added missing schema properties: `loadDefaultAttributes`, `searchType`, `multilanguageSupported`.
+- Fixed incorrect guards that prevented setting the correct cookie domain length.
+- Reference source schema files directly instead of copies checked into the repo.
+
 ## 1.29.5
 - Release to update publish token.
   

@@ -92,7 +92,7 @@ export function applyWritableValues(mbo: psdi.mbo.MboRemote, updates: Array<[str
     });
 }
 
-export function applyNonNullWritableValues(mbo: psdi.mbo.MboRemote, updates: Array<[string, any]>): void {
+export function applyOptionalWritableValues(mbo: psdi.mbo.MboRemote, updates: Array<[string, any]>): void {
     updates.forEach(function (update) {
         if (update[1] !== null && typeof update[1] !== 'undefined' && isWritable(mbo, update[0])) {
             setValue(mbo, update[0], update[1]);
