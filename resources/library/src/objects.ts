@@ -190,7 +190,6 @@ function applyAttributeValues(attribute: psdi.mbo.MboRemote, item: MaximoAttribu
     applyValues(attribute, [
         ['CLASSNAME', item.class],
         ['DEFAULTVALUE', item.defaultValue],
-        ['DOMAINID', item.domain],
         ['ALIAS', item.alias]
     ]);
     applyOptionalWritableValues(attribute, [
@@ -199,6 +198,10 @@ function applyAttributeValues(attribute: psdi.mbo.MboRemote, item: MaximoAttribu
         ['LENGTH', item.length],
         ['SCALE', item.scale]
     ]);
+
+    // Set the domain after MAXTYPE and LENGTH for domain validation to succeed
+    applyValues(attribute, [['DOMAINID', item.domain]]);
+
     applyWritableValues(attribute, [
         ['COLUMNNAME', item.column],
         ['AUTOKEYNAME', item.autonumber],

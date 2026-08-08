@@ -1,4 +1,12 @@
 # Release Notes
+## 1.4.5
+- Fix: set the domain after MAXTYPE and LENGTH for domain validation to succeed on new attributes
+
+## 1.4.4
+- Fix: make MAXSYSINDEXES.STORAGEPARTITION optional
+- Fix: remove incorrect guards preventing setting correct domain length
+- Add support for loadDefaultAttributes object property (defaults to true) - allows disabling creation of default attributes: unique id, description, hasld, longdescription
+
 ## 1.4.3
 - Fixed error when installing in non-English primary language systems
   

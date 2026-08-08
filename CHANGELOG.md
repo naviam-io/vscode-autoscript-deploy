@@ -1,4 +1,7 @@
 # Release Notes
+## 1.29.7
+- Fixed domain validation errors when adding new object attributes
+
 ## 1.29.6
 - Added missing schema properties: `loadDefaultAttributes`, `searchType`, `multilanguageSupported`.
 - Fixed incorrect guards that prevented setting the correct cookie domain length.
