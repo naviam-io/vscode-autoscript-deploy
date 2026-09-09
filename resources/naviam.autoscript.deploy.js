@@ -1336,7 +1336,7 @@ function getRequestAction() {
         if (!resourceReq.toLowerCase().startsWith('/api/script/' + service.scriptName.toLowerCase())) {
             return null;
         } else {
-            osOSLC = false;
+            isOSLC = false;
         }
     }
 
