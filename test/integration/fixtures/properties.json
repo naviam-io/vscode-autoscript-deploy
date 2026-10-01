@@ -1,0 +1,21 @@
+{
+    "properties": [
+        {
+            "propName": "TEST_alertmessages",
+            "description": "Show messages in title bar",
+            "propValue": "false",
+            "liveRefresh": false,
+            "nullsAllowed": false,
+            "maxType": "ALN",
+            "secureLevel": "SECURE",
+            "maximoDefault": "false",
+            "maxPropInstance": [
+                {
+                    "serverName": "TESTSERVER",
+                    "serverHost": "localhost",
+                    "propValue": "false"
+                }
+            ]
+        }
+    ]
+}

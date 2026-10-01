@@ -6,6 +6,7 @@ import * as path from 'path';
 
 import { ProgressLocation, window, env, Uri, workspace, commands } from 'vscode';
 import Logger from '../logger';
+import { isManifestDocument, isInspectionFormDocument } from '../deploy/manifest-planner';
 
 const LOG_SOURCE = 'ExtractObjectsCommand';
 
@@ -195,13 +196,7 @@ export default async function extractObjectCommand(client) {
 
                     let jsonPath;
                     if (ext === '.json') {
-                        const jsFile = path.join(folderPath, baseName + '.js');
-                        const pyFile = path.join(folderPath, baseName + '.py');
-                        const jyFile = path.join(folderPath, baseName + '.jy');
-
-                        if (fs.existsSync(jsFile) || fs.existsSync(pyFile) || fs.existsSync(jyFile)) {
-                            jsonPath = path.join(documentPath);
-                        }
+                        jsonPath = documentPath;
                     } else if (ext === '.js' || ext === '.py' || ext === '.jy') {
                         jsonPath = path.join(folderPath, baseName + '.json');
                     }
@@ -218,7 +213,14 @@ export default async function extractObjectCommand(client) {
                                 } else {
                                     let json = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
 
-                                    if (json[selection.group]) {
+                                    if (isManifestDocument(json) || isInspectionFormDocument(json)) {
+                                        Logger.info(
+                                            `${jsonPath} is not a configuration file, copied extracted ${selection.label} to the clipboard.`,
+                                            LOG_SOURCE
+                                        );
+                                        copyToClipboard(results, `Copied extracted ${selection.label} to the clipboard.`);
+                                        return;
+                                    } else if (json[selection.group]) {
                                         if (Array.isArray(json[selection.group])) {
                                             if (typeof selection.filter == 'function') {
                                                 json[selection.group] = selection.filter(results, json[selection.group]);
@@ -231,6 +233,7 @@ export default async function extractObjectCommand(client) {
                                             }
                                         } else {
                                             copyToClipboard(results, `Copied extracted ${selection.label} to the clipboard.`);
+                                            return;
                                         }
                                     } else {
                                         json[selection.group] = results;
@@ -239,6 +242,7 @@ export default async function extractObjectCommand(client) {
                                 }
                             } catch (e) {
                                 copyToClipboard(results, `Copied extracted ${selection.label} to the clipboard.`);
+                                return;
                             }
                         } else {
                             const config = {

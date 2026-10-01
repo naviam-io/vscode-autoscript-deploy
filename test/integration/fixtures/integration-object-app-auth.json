@@ -1,0 +1,78 @@
+{
+    "first": {
+        "integrationObjects": [
+            {
+                "intObjectName": "TEST_APPAUTH_A",
+                "description": "Object application authorization test A",
+                "maxIntObjDetail": [
+                    {
+                        "objectName": "PERSON",
+                        "objectAppAuth": [
+                            {
+                                "context": "/nvtest/appauth",
+                                "description": "Set by A",
+                                "authApp": "PERSON"
+                            },
+                            {
+                                "context": "/nvtest/appauth2",
+                                "description": "Second context",
+                                "authApp": "PERSONGR"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "second": {
+        "integrationObjects": [
+            {
+                "intObjectName": "TEST_APPAUTH_B",
+                "description": "Object application authorization test B",
+                "maxIntObjDetail": [
+                    {
+                        "objectName": "PERSON",
+                        "objectAppAuth": [
+                            {
+                                "context": "/nvtest/appauth",
+                                "description": "Set by B",
+                                "authApp": "PERSONGR"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "noDescription": {
+        "integrationObjects": [
+            {
+                "intObjectName": "TEST_APPAUTH_A",
+                "description": "Object application authorization test A",
+                "maxIntObjDetail": [
+                    {
+                        "objectName": "PERSON",
+                        "objectAppAuth": [
+                            {
+                                "context": "/nvtest/appauth",
+                                "authApp": "PERSON"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "delete": {
+        "integrationObjects": [
+            {
+                "intObjectName": "TEST_APPAUTH_B",
+                "_delete": true
+            },
+            {
+                "intObjectName": "TEST_APPAUTH_A",
+                "_delete": true
+            }
+        ]
+    }
+}

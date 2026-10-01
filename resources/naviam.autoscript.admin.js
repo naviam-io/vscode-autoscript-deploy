@@ -28,29 +28,35 @@ function main() {
                     action = action.toLowerCase();
                 }
 
-                if (action == 'adminmodeon' && request.getHttpMethod() == 'POST') {
+                if (action === 'adminmodeon' && request.getHttpMethod() === 'POST') {
                     setAdminModeOn();
                     result.adminModeOnStarted = true;
-                } else if (action == 'adminmodeoff' && request.getHttpMethod() == 'POST') {
+                } else if (action === 'adminmodeoff' && request.getHttpMethod() === 'POST') {
                     setAdminModeOff();
                     result.adminModeOffStarted = true;
-                } else if (action == 'adminmodeon' && request.getHttpMethod() == 'GET') {
+                } else if (action === 'adminmodeon' && request.getHttpMethod() === 'GET') {
                     result.adminModeOn = isAdminModeOn();
-                } else if (action == 'adminmodeoff' && request.getHttpMethod() == 'GET') {
+                } else if (action === 'adminmodeoff' && request.getHttpMethod() === 'GET') {
                     result.adminModeOff = isAdminModeOff();
-                } else if (action == 'configuring' && request.getHttpMethod() == 'GET') {
+                } else if (action === 'configuring' && request.getHttpMethod() === 'GET') {
                     result.configuring = dbConfigInProgress();
-                } else if (action == 'configdbrequired' && request.getHttpMethod() == 'GET') {
+                } else if (action === 'configdbrequired' && request.getHttpMethod() === 'GET') {
                     result.configDBRequired = configDBRequired();
-                } else if (action == 'configdblevel' && request.getHttpMethod() == 'GET') {
+                } else if (action === 'configdblevel' && request.getHttpMethod() === 'GET') {
                     result.configDBLevel = configDBLevel();
-                } else if (action == 'configdbrequiresadminmode' && request.getHttpMethod() == 'GET') {
+                } else if (action === 'configdbrequiresadminmode' && request.getHttpMethod() === 'GET') {
                     result.configDBRequiresAdminMode = configDBRequiresAdmin();
-                } else if (action == 'applyconfigdb' && request.getHttpMethod() == 'POST') {
+                } else if (action === 'applyconfigdb' && request.getHttpMethod() === 'POST') {
                     applyConfigDB();
                     result.configDBStarted = true;
-                } else if (action == 'configmessages' && request.getHttpMethod() == 'GET') {
+                } else if (action === 'configmessages' && request.getHttpMethod() === 'GET') {
                     result.messages = getConfigurationMessages();
+                } else if (action === 'sigoptionesig' && request.getHttpMethod() === 'GET') {
+                    result.sigOptionEsig = getAdminSigOptionsEsig();
+                } else if (action === 'sigoptionesig' && request.getHttpMethod() === 'POST') {
+                    var esigValues = typeof requestBody !== 'undefined' && requestBody ? JSON.parse(requestBody) : {};
+                    setAdminSigOptionsEsig(esigValues);
+                    result.sigOptionEsigUpdated = true;
                 }
                 result.status = 'ok';
             } catch (error) {
@@ -141,6 +147,66 @@ function isAdminModeOn() {
     return MXServer.getMXServer().isAdminModeOn(true);
 }
 
+function getAdminSigOptionsEsig() {
+    var esig = {};
+    var sigOptionSet;
+    try {
+        sigOptionSet = getAdminModeSigOptionSet();
+        var sigOption = sigOptionSet.moveFirst();
+        while (sigOption != null) {
+            esig[sigOption.getString('OPTIONNAME')] = sigOption.getBoolean('ESIGENABLED');
+            sigOption = sigOptionSet.moveNext();
+        }
+    } finally {
+        _close(sigOptionSet);
+    }
+    return esig;
+}
+
+function setAdminSigOptionsEsig(values) {
+    if (!values) {
+        return;
+    }
+
+    if (!MXServer.getMXServer().lookup('SECURITY').getProfile(userInfo).hasAppOption('CONFIGUR', 'ADMINMODE')) {
+        throw new Error(
+            'You do not have permission to manage the system Admin Mode. Make sure you have the "Manage Admin Mode" security permission for the "Database Configuration" application.'
+        );
+    }
+
+    var sigOptionSet;
+    try {
+        sigOptionSet = getAdminModeSigOptionSet();
+        var changed = false;
+        var sigOption = sigOptionSet.moveFirst();
+        while (sigOption != null) {
+            var optionName = sigOption.getString('OPTIONNAME');
+            if (typeof values[optionName] !== 'undefined' && values[optionName] !== null) {
+                var enabled = Boolean(values[optionName]);
+                if (sigOption.getBoolean('ESIGENABLED') !== enabled) {
+                    sigOption.setValue('ESIGENABLED', enabled);
+                    changed = true;
+                }
+            }
+            sigOption = sigOptionSet.moveNext();
+        }
+
+        if (changed) {
+            sigOptionSet.save();
+            MXServer.getMXServer().reloadMaximoCache('SIGNATURE', true);
+        }
+    } finally {
+        _close(sigOptionSet);
+    }
+}
+
+function getAdminModeSigOptionSet() {
+    var sigOptionSet;
+    sigOptionSet = MXServer.getMXServer().getMboSet('SIGOPTION', MXServer.getMXServer().getSystemUserInfo());
+    sigOptionSet.setWhere('app = \'CONFIGUR\' and optionname in (\'ADMINMODE\', \'CONFIGURE\')');
+    return sigOptionSet;
+}
+
 function isAdminModeOff() {
     return MXServer.getMXServer().isAdminModeOff(true);
 }
@@ -157,7 +223,7 @@ function configDBLevel() {
 
 function configDBRequiresAdmin() {
     var configureService = MXServer.getMXServer().lookup('CONFIGURE');
-    return configureService.getConfigLevel(userInfo) == ConfigureServiceRemote.CONFIGDB_STRUCT;
+    return configureService.getConfigLevel(userInfo) === ConfigureServiceRemote.CONFIGDB_STRUCT;
 }
 
 function dbConfigInProgress() {

@@ -1,0 +1,13 @@
+{
+    "manifest": [
+        { "kind": "configuration", "path": "property.json" },
+        { "kind": "configuration", "path": "message.json" },
+        { "kind": "configuration", "path": "logger.json" },
+        { "kind": "configuration", "path": "domain.json" },
+        { "kind": "configuration", "path": "object.json" },
+        { "kind": "configuration", "path": "action.json" },
+        { "kind": "configuration", "path": "cron-task.json" },
+        { "kind": "configuration", "path": "escalation.json" },
+        { "kind": "configuration", "path": "query.json" }
+    ]
+}

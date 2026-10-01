@@ -1,0 +1,24 @@
+{
+    "escalations": [
+        {
+            "escalation": "TESTREPORTLONG",
+            "description": "Complete manifest test escalation",
+            "objectName": "REPORTJOB",
+            "condition": "",
+            "active": false,
+            "schedule": "2h,*,0,*,*,*,*,*,*,*",
+            "cronTaskName": "ESCALATION",
+            "instanceName": "TESTREPORTLONG",
+            "escStatusFlag": true,
+            "escRefPoint": [
+                {
+                    "refPointNum": 1,
+                    "eventAttribute": "STARTTIME",
+                    "elapsedInterval": 10,
+                    "intervalUom": "MINUTES",
+                    "repeat": false
+                }
+            ]
+        }
+    ]
+}

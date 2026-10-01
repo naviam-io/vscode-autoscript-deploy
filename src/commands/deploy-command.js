@@ -1,17 +1,32 @@
 // @ts-nocheck
 import * as path from 'path';
 import * as fs from 'fs';
-import { window, workspace } from 'vscode';
-import * as cp from 'child_process';
-import deployScript from './deploy-script-command';
+import { window, workspace, ProgressLocation, Uri } from 'vscode';
+import deployScript, { performDatabaseConfiguration } from './deploy-script-command';
 import deployScreen from './deploy-screen-command';
 import deployForm from './deploy-form-command';
 import deployReport from './deploy-report-command';
 import deployConfig from './deploy-config';
+import webpackProject from '../webpack/webpack-project';
+import { planManifest, isManifestDocument, isInspectionFormDocument } from '../deploy/manifest-planner';
+import { executePlan } from '../deploy/manifest-executor';
 
 import Logger from '../logger';
 
 const LOG_SOURCE = 'DeployCommand';
+const LICENSE_BANNER = '/*! For license information please see bundle.js.LICENSE.txt */';
+
+// How many manifest problems to show in the dialog before deferring to the log.
+const MAX_REPORTED_ERRORS = 10;
+
+const DEPRECATION_SILENCE_ACTION = "Don't Show Again";
+
+// Manifests already reported this session, so that repeatedly deploying one does not repeatedly
+// warn about the same entries.
+const reportedDeprecatedManifests = new Set();
+let deprecationNoticeSilenced = false;
+
+webpackProject.setLogger(Logger);
 
 export default async function deployCommand(client) {
     // Get the active text editor
@@ -24,62 +39,24 @@ export default async function deployCommand(client) {
             let sourceText = document.getText();
             let filePath = document.fileName;
             let fileExt = path.extname(filePath);
+            let companionPath;
             Logger.debug(`Deploy requested for ${filePath} (ext=${fileExt}).`, LOG_SOURCE);
             if (fileExt === '.ts') {
-                const workspaceFolder = workspace.getWorkspaceFolder(document.uri);
+                const build = await _buildTypeScript(filePath);
 
-                if (workspaceFolder) {
-                    const rootPath = workspaceFolder.uri.fsPath;
-                    const webpackProject = _findNearestWebpackProject(path.dirname(filePath), rootPath);
-
-                    if (webpackProject) {
-                        Logger.debug(
-                            `TypeScript file detected. Preparing webpack compile in ${webpackProject.projectRoot} using ${webpackProject.webpackConfigPath}.`,
-                            LOG_SOURCE
-                        );
-
-                        const config = _loadWebpackConfig(webpackProject.webpackConfigPath);
-                        const outputFilePath = _resolveWebpackOutputForSourceFile(config, webpackProject.projectRoot, filePath);
-                        const sourceTopLevelFolder = _getTopLevelFolder(filePath, webpackProject.projectRoot);
-
-                        if (config && outputFilePath) {
-                            const outputFileName = path.basename(outputFilePath);
-                            const folderDisplay = sourceTopLevelFolder || 'unknown folder';
-                            Logger.debug(
-                                `Webpack config found. Active folder: ${folderDisplay}. Output: ${outputFileName}. Running webpack build.`,
-                                LOG_SOURCE
-                            );
-                            await runWebpack(webpackProject.projectRoot);
-
-                            sourceText = fs.readFileSync(outputFilePath, 'utf8');
-                            if (sourceText.startsWith('/*! For license information please see bundle.js.LICENSE.txt */')) {
-                                sourceText = sourceText.replace('/*! For license information please see bundle.js.LICENSE.txt */', '').trim();
-                            }
-                            Logger.debug(`Webpack build complete. Deploying ${folderDisplay} as ${outputFileName}.`, LOG_SOURCE);
-                            fileExt = '.js';
-                            filePath = outputFilePath;
-                        }
-                    }
-
-                    if (fileExt !== '.js') {
-                        Logger.debug('TypeScript file did not compile to JavaScript output. Deployment aborted.', LOG_SOURCE);
-                        window.showErrorMessage(
-                            'The selected TypeScript file is not in a webpack project with a resolvable JavaScript output and cannot be deployed.',
-                            {
-                                modal: true
-                            }
-                        );
-                        return;
-                    }
-                } else {
-                    Logger.debug('No workspace folder was found while deploying a TypeScript file.', LOG_SOURCE);
+                if (!build) {
                     return;
                 }
+
+                sourceText = build.sourceText;
+                fileExt = '.js';
+                companionPath = filePath;
+                filePath = build.outputFilePath;
             }
 
             if (fileExt === '.js' || fileExt === '.py' || fileExt === '.jy') {
                 Logger.info(`Deploying script file ${filePath}.`, LOG_SOURCE);
-                await deployScript(client, filePath, sourceText);
+                await deployScript(client, filePath, sourceText, { companionPath });
                 Logger.info(`Deploy command completed for ${filePath}.`, LOG_SOURCE);
             } else if (fileExt === '.xml') {
                 Logger.info(`Deploying screen definition ${filePath}.`, LOG_SOURCE);
@@ -87,45 +64,20 @@ export default async function deployCommand(client) {
                 Logger.info(`Deploy command completed for ${filePath}.`, LOG_SOURCE);
             } else if (fileExt === '.json') {
                 try {
-                    let json = JSON.parse(sourceText);
-                    if (_isConfigFile(json)) {
-                        Logger.info(`Deploying configuration JSON ${filePath}.`, LOG_SOURCE);
-                        await deployConfig(client, json);
-                    } else if (json && Object.prototype.hasOwnProperty.call(json, 'manifest') && Array.isArray(json.manifest)) {
-                        Logger.info(`Processing manifest deployment from ${filePath} with ${json.manifest.length} item(s).`, LOG_SOURCE);
-                        const directory = path.dirname(filePath);
-                        for (const item of json.manifest) {
-                            let itemValue = item;
-                            if (typeof item === 'object' && Object.prototype.hasOwnProperty.call(item, 'path')) {
-                                itemValue = item.path;
-                            }
-
-                            if (typeof itemValue === 'string') {
-                                let itemPath = fs.existsSync(itemValue) ? itemValue : path.join(directory, itemValue);
-                                if (fs.existsSync(itemPath)) {
-                                    let content = fs.readFileSync(itemPath, 'utf8');
-                                    let itemExt = path.extname(itemPath);
-                                    if (itemExt === '.js' || itemExt === '.py' || itemExt === '.jy') {
-                                        await deployScript(client, itemPath, content);
-                                    } else if (itemExt === '.xml') {
-                                        await deployScreen(client, itemPath, content);
-                                    } else if (itemExt === '.json') {
-                                        await deployForm(client, itemPath, content);
-                                    } else if (itemExt === '.rptdesign') {
-                                        await deployReport(client, itemPath, content);
-                                    }
-                                }
-                            }
-                        }
-                    } else {
+                    let json = sourceText.trim() ? JSON.parse(sourceText) : {};
+                    if (isManifestDocument(json)) {
+                        await _deployManifest(client, filePath);
+                    } else if (isInspectionFormDocument(json)) {
                         Logger.info(`Deploying inspection form JSON ${filePath}.`, LOG_SOURCE);
                         await deployForm(client, filePath, document.getText());
+                    } else {
+                        Logger.info(`Deploying configuration JSON ${filePath}.`, LOG_SOURCE);
+                        await deployConfig(client, json);
                     }
                     Logger.info(`Deploy command completed for ${filePath}.`, LOG_SOURCE);
                 } catch (error) {
                     Logger.error('Unexpected error while parsing/deploying JSON.', error, LOG_SOURCE);
                     window.showErrorMessage('Unexpected Error: ' + error);
-                    return;
                 }
             } else if (fileExt === '.rptdesign') {
                 Logger.info(`Deploying BIRT report ${filePath}.`, LOG_SOURCE);
@@ -149,384 +101,230 @@ export default async function deployCommand(client) {
     }
 }
 
-function _isConfigFile(json) {
-    // List of configuration properties to check for.
-    var properties = [
-        'integrationObjects',
-        'properties',
-        'messages',
-        'loggers',
-        'cronTasks',
-        'domains',
-        'actions',
-        'escalations',
-        'queries',
-        'scripts',
-    ];
+/*
+ * Compiles a TypeScript file through its webpack project and returns the bundle to deploy.
+ *
+ * Returns undefined when the file cannot be built, having already told the user why.
+ */
+async function _buildTypeScript(filePath) {
+    const workspaceFolder = workspace.getWorkspaceFolder(Uri.file(filePath));
 
-    if (json && typeof json.inspformnum !== 'undefined') {
+    if (!workspaceFolder) {
+        Logger.error(`No workspace folder was found for ${filePath}. Deployment aborted.`, null, LOG_SOURCE);
+        window.showErrorMessage('The TypeScript file is not in a workspace folder and cannot be deployed.', { modal: true });
+        return undefined;
+    }
+
+    /** @type {{ outputFilePath: string, projectRoot: string } | undefined} */
+    let build;
+    try {
+        build = await window.withProgress(
+            {
+                cancellable: false,
+                title: 'TypeScript',
+                location: ProgressLocation.Notification
+            },
+            async (progress) => {
+                progress.report({ message: 'Preparing webpack build\u2026' });
+                const webpackMode = workspace.getConfiguration('naviam.maximo').get('webpackMode');
+                return await webpackProject.prepareWebpackBuild(
+                    filePath,
+                    workspaceFolder.uri.fsPath,
+                    (message) => progress.report({ message }),
+                    webpackMode
+                );
+            }
+        );
+    } catch (error) {
+        Logger.error(`Unable to compile ${filePath} with webpack.`, error, LOG_SOURCE);
+        window.showErrorMessage(`The selected TypeScript file could not be compiled: ${error && error.message ? error.message : error}`, {
+            modal: true
+        });
+        return undefined;
+    }
+
+    if (!build) {
+        Logger.error(`No webpack project was found for ${filePath}. Deployment aborted.`, null, LOG_SOURCE);
+        window.showErrorMessage('The selected TypeScript file is not in a webpack project and cannot be deployed.', { modal: true });
+        return undefined;
+    }
+
+    let sourceText = fs.readFileSync(build.outputFilePath, 'utf8');
+    if (sourceText.startsWith(LICENSE_BANNER)) {
+        sourceText = sourceText.replace(LICENSE_BANNER, '').trim();
+    }
+
+    Logger.debug(`Webpack build complete. Deploying ${filePath} as ${path.basename(build.outputFilePath)}.`, LOG_SOURCE);
+    return { outputFilePath: build.outputFilePath, sourceText };
+}
+
+/*
+ * Plans the manifest, refuses to start if any entry is invalid, then runs the plan in order and
+ * stops at the first step that fails.
+ */
+async function _deployManifest(client, manifestPath) {
+    const plan = planManifest(manifestPath);
+
+    if (plan.errors.length > 0) {
+        for (const error of plan.errors) {
+            Logger.error(`${error.manifestPath}${error.index === null ? '' : ` entry ${error.index}`}: ${error.message}`, null, LOG_SOURCE);
+        }
+
+        const summary = plan.errors
+            .slice(0, MAX_REPORTED_ERRORS)
+            .map((error) => `\u2022 ${path.basename(error.manifestPath)}${error.index === null ? '' : ` entry ${error.index + 1}`}: ${error.message}`)
+            .join('\n');
+        const remaining = plan.errors.length - MAX_REPORTED_ERRORS;
+
+        window.showErrorMessage(
+            `The manifest cannot be deployed because ${plan.errors.length} problem(s) were found. Nothing has been deployed.\n\n` +
+                summary +
+                (remaining > 0 ? `\n\u2026 and ${remaining} more; see the log.` : ''),
+            { modal: true }
+        );
+        return;
+    }
+
+    _reportDeprecatedEntries(manifestPath, plan.deprecations);
+    _reportDisabledEntries(plan.disabled);
+
+    Logger.info(`Processing manifest deployment from ${manifestPath} with ${plan.steps.length} step(s).`, LOG_SOURCE);
+
+    const result = await executePlan(plan.steps, _manifestHandlers(client));
+
+    if (result.failure) {
+        const { step, error } = result.failure;
+        Logger.error(`Manifest deployment stopped at ${step.path || step.kind}: ${error.message}`, error, LOG_SOURCE);
+        window.showErrorMessage(
+            `Deployment stopped after ${result.completed} of ${plan.steps.length} step(s).\n\n` +
+                `${step.path ? path.basename(step.path) : step.kind} did not deploy: ${error.message}`,
+            { modal: true }
+        );
+        return;
+    }
+
+    Logger.info(`Manifest deployment completed: ${result.completed} step(s).`, LOG_SOURCE);
+    const skipped = plan.disabled.length > 0 ? `, ${plan.disabled.length} disabled entry(s) skipped` : '';
+    window.showInformationMessage(`The manifest deployed successfully: ${result.completed} step(s)${skipped}.`);
+}
+
+/*
+ * Records the entries that are switched off. This only goes to the log and to the summary shown when
+ * the deployment finishes: disabling an entry is a deliberate act, so it does not warrant a warning,
+ * but it must be visible enough that a developer does not forget an entry is still off.
+ */
+function _reportDisabledEntries(disabled) {
+    for (const entry of disabled) {
+        Logger.info(`${entry.manifestPath} entry ${entry.index + 1} is disabled and was skipped.`, LOG_SOURCE);
+    }
+}
+
+/*
+ * Points out entries that declare no "kind", which is the superseded form of a manifest.
+ *
+ * The notice is deliberately a notification rather than a prompt: it must not interrupt a
+ * deployment, because those entries still deploy exactly as they always have. It is shown once per
+ * manifest per session, and can be silenced for the rest of the session.
+ */
+function _reportDeprecatedEntries(manifestPath, deprecations) {
+    if (deprecations.length === 0 || deprecationNoticeSilenced || reportedDeprecatedManifests.has(manifestPath)) {
+        return;
+    }
+    reportedDeprecatedManifests.add(manifestPath);
+
+    for (const deprecation of deprecations) {
+        Logger.warn(
+            `${deprecation.manifestPath} entry ${deprecation.index + 1} declares no "kind". ` +
+                'Entries without a kind are deprecated: they are routed by file extension and a script still ' +
+                'takes its predeploy, deploy and configuration companion files.',
+            LOG_SOURCE
+        );
+    }
+
+    const notice =
+        `${path.basename(manifestPath)}: ${deprecations.length} entry(s) declare no "kind". ` +
+        'Entries without a kind are deprecated; add a kind to say what each entry is. See the log for which ones.';
+
+    // Not awaited: the deployment must not wait on the user reading this.
+    window.showWarningMessage(notice, DEPRECATION_SILENCE_ACTION).then((choice) => {
+        if (choice === DEPRECATION_SILENCE_ACTION) {
+            deprecationNoticeSilenced = true;
+        }
+    });
+}
+
+/*
+ * The handler for each manifest step kind. A handler returns false to stop the deployment.
+ */
+function _manifestHandlers(client) {
+    return {
+        configuration: async (step) => await deployConfig(client, JSON.parse(fs.readFileSync(step.path, 'utf8'))),
+        databaseConfiguration: async () => await performDatabaseConfiguration(client),
+        automationScript: async (step) => await _deployManifestScript(client, step),
+        deployScript: async (step) => await _runDeployScript(client, step),
+        inspectionForm: async (step) => await deployForm(client, step.path, fs.readFileSync(step.path, 'utf8')),
+        screen: async (step) => await deployScreen(client, step.path, fs.readFileSync(step.path, 'utf8')),
+        report: async (step) => await deployReport(client, step.path, fs.readFileSync(step.path, 'utf8'))
+    };
+}
+
+async function _deployManifestScript(client, step) {
+    if (path.extname(step.path).toLowerCase() === '.ts') {
+        const build = await _buildTypeScript(step.path);
+        if (!build) {
+            return false;
+        }
+
+        return await deployScript(client, build.outputFilePath, build.sourceText, { sidecars: step.sidecars, companionPath: step.path });
+    }
+
+    return await deployScript(client, step.path, fs.readFileSync(step.path, 'utf8'), { sidecars: step.sidecars });
+}
+
+/*
+ * Runs a one-off deploy script: Maximo installs it, runs it once and removes it again.
+ */
+async function _runDeployScript(client, step) {
+    let fileName = step.path;
+    let source;
+
+    if (path.extname(step.path).toLowerCase() === '.ts') {
+        const build = await _buildTypeScript(step.path);
+        if (!build) {
+            return false;
+        }
+
+        fileName = build.outputFilePath;
+        source = build.sourceText;
+    } else {
+        source = fs.readFileSync(step.path, 'utf8');
+    }
+
+    if (!source || source.trim().length === 0) {
+        window.showErrorMessage(`The deploy script ${path.basename(step.path)} is empty.`, { modal: true });
         return false;
     }
 
-    return properties.some(function (prop) {
-        return Object.prototype.hasOwnProperty.call(json, prop);
-    });
+    const result = await window.withProgress(
+        {
+            cancellable: false,
+            title: 'Deploy Script',
+            location: ProgressLocation.Notification
+        },
+        async (progress) => {
+            progress.report({ message: `Running ${path.basename(step.path)}\u2026` });
+            return await client.postDeployScript(source, fileName);
+        }
+    );
+
+    if (!result || result.status === 'error') {
+        const message = (result && (result.message || result.error)) || 'An unknown error occurred.';
+        Logger.error(`Deploy script ${step.path} failed: ${message}`, null, LOG_SOURCE);
+        window.showErrorMessage(`The deploy script ${path.basename(step.path)} failed: ${message}`, { modal: true });
+        return false;
+    }
+
+    Logger.info(`Deploy script ${step.path} ran successfully.`, LOG_SOURCE);
+    return true;
 }
 
-/**
- * @param {string} rootPath
- * @returns {Promise<void>}
- */
-function runWebpack(rootPath) {
-    Logger.debug(`Running local webpack build in ${rootPath}.`, LOG_SOURCE);
-    return ensureWebpackInitialized(rootPath)
-        .catch((error) => {
-            Logger.debug(`Local webpack initialization did not complete: ${error && error.message ? error.message : error}`, LOG_SOURCE);
-        })
-        .then(
-            () =>
-                new Promise((resolve, reject) => {
-                    let errorData = '';
-
-                    const localWebpackBinPath = path.join(rootPath, 'node_modules', '.bin');
-                    const webpackCmdPath = path.join(localWebpackBinPath, 'webpack.cmd');
-                    const webpackUnixPath = path.join(localWebpackBinPath, 'webpack');
-                    const hasLocalWebpack = fs.existsSync(webpackCmdPath) || fs.existsSync(webpackUnixPath);
-                    const webpackBin = fs.existsSync(webpackCmdPath) ? webpackCmdPath : webpackUnixPath;
-                    const webpackCommand = hasLocalWebpack ? `"${webpackBin}" --mode development` : 'webpack --mode development';
-
-                    if (hasLocalWebpack) {
-                        Logger.debug(`Invoking webpack binary at ${webpackBin}.`, LOG_SOURCE);
-                    } else {
-                        Logger.debug(`Local webpack executable was not found in ${localWebpackBinPath}. Falling back to global webpack command.`, LOG_SOURCE);
-                    }
-
-                    const process = cp.exec(webpackCommand, { cwd: rootPath }, (err) => {
-                        if (err) {
-                            Logger.error(`Webpack command failed: ${errorData}`, err, LOG_SOURCE);
-                            return;
-                        }
-                    });
-
-                    if (process.stdout) {
-                        process.stdout.on('data', (data) => (errorData += data));
-                    }
-                    if (process.stderr) {
-                        process.stderr.on('data', (data) => (errorData += data));
-                    }
-
-                    process.on('close', (code) => {
-                        if (code === 0) {
-                            Logger.debug('Webpack process completed successfully.', LOG_SOURCE);
-                            resolve();
-                        } else {
-                            Logger.debug(`Webpack process failed with exit code ${code}.`, LOG_SOURCE);
-                            if (!hasLocalWebpack) {
-                                reject(
-                                    new Error(
-                                        `Local webpack executable was not found in ${localWebpackBinPath}, and global webpack could not be executed. ${errorData}`
-                                    )
-                                );
-                            } else {
-                                reject(
-                                    new Error(
-                                        `Webpack failed: ${errorData.indexOf('[tsl] ERROR') > 0 ? errorData.substring(errorData.indexOf('[tsl] ERROR') + 6) : errorData}`
-                                    )
-                                );
-                            }
-                        }
-                    });
-
-                    process.on('error', (err) => reject(err));
-                })
-        );
-}
-
-/**
- * Ensures local webpack is available before compile.
- * @param {string} rootPath
- * @returns {Promise<void>}
- */
-function ensureWebpackInitialized(rootPath) {
-    const localWebpackBinPath = path.join(rootPath, 'node_modules', '.bin');
-    const hasLocalWebpack = fs.existsSync(path.join(localWebpackBinPath, 'webpack')) || fs.existsSync(path.join(localWebpackBinPath, 'webpack.cmd'));
-    if (hasLocalWebpack) {
-        Logger.debug('Local webpack binary is already available.', LOG_SOURCE);
-        return Promise.resolve();
-    }
-
-    Logger.debug('Local webpack binary not found. Checking package.json and installing dependencies.', LOG_SOURCE);
-
-    const packageJsonPath = path.join(rootPath, 'package.json');
-    if (!fs.existsSync(packageJsonPath)) {
-        return Promise.reject(new Error('package.json not found. Unable to initialize local webpack dependencies.'));
-    }
-
-    /** @type {any} */
-    let packageJson;
-    try {
-        packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    } catch {
-        return Promise.reject(new Error('Unable to parse package.json.'));
-    }
-
-    const hasWebpackDependency = Boolean(packageJson?.dependencies?.webpack || packageJson?.devDependencies?.webpack || packageJson?.scripts?.webpack);
-
-    if (!hasWebpackDependency) {
-        return Promise.reject(new Error('Webpack is not defined in package.json dependencies, devDependencies, or scripts.'));
-    }
-
-    const installCommand = fs.existsSync(path.join(rootPath, 'package-lock.json')) ? 'npm ci' : 'npm install';
-    Logger.debug(`Installing npm dependencies using "${installCommand}" to initialize webpack.`, LOG_SOURCE);
-
-    return new Promise((resolve, reject) => {
-        let installOutput = '';
-        const installProcess = cp.exec(installCommand, { cwd: rootPath });
-
-        if (installProcess.stdout) {
-            installProcess.stdout.on('data', (data) => (installOutput += data));
-        }
-        if (installProcess.stderr) {
-            installProcess.stderr.on('data', (data) => (installOutput += data));
-        }
-
-        installProcess.on('close', (code) => {
-            const webpackInstalled = fs.existsSync(path.join(localWebpackBinPath, 'webpack')) || fs.existsSync(path.join(localWebpackBinPath, 'webpack.cmd'));
-
-            if (code === 0 && webpackInstalled) {
-                Logger.debug('Dependency installation completed and local webpack was found.', LOG_SOURCE);
-                resolve();
-            } else if (code === 0) {
-                reject(new Error('Dependencies installed but local webpack binary was not found.'));
-            } else {
-                Logger.debug(`Dependency installation failed with exit code ${code}.`, LOG_SOURCE);
-                reject(new Error(`Failed to install npm dependencies: ${installOutput}`));
-            }
-        });
-
-        installProcess.on('error', (err) => reject(err));
-    });
-}
-
-/**
- * @param {string} startDir
- * @param {string} workspaceRoot
- * @returns {{ projectRoot: string, webpackConfigPath: string } | undefined}
- */
-function _findNearestWebpackProject(startDir, workspaceRoot) {
-    let currentDir = path.resolve(startDir);
-    const boundaryDir = path.resolve(workspaceRoot);
-
-    while (currentDir.startsWith(boundaryDir)) {
-        const webpackConfigPath = path.join(currentDir, 'webpack.config.js');
-        if (fs.existsSync(webpackConfigPath)) {
-            return {
-                projectRoot: currentDir,
-                webpackConfigPath
-            };
-        }
-
-        if (currentDir === boundaryDir) {
-            break;
-        }
-
-        const parentDir = path.dirname(currentDir);
-        if (parentDir === currentDir) {
-            break;
-        }
-        currentDir = parentDir;
-    }
-}
-
-/**
- * @param {string} webpackConfigPath
- * @returns {Record<string, any> | undefined}
- */
-function _loadWebpackConfig(webpackConfigPath) {
-    try {
-        // @ts-ignore
-        // eslint-disable-next-line no-undef
-        return _resolveWebpackConfig(__non_webpack_require__(webpackConfigPath));
-    } catch (error) {
-        Logger.debug(`Failed to load webpack config at ${webpackConfigPath}: ${error && error.message ? error.message : error}`, LOG_SOURCE);
-        return undefined;
-    }
-}
-
-/**
- * @param {Record<string, any> | undefined} config
- * @param {string} projectRoot
- * @returns {string | undefined}
- */
-function _resolveWebpackOutputFile(config, projectRoot) {
-    const outputPath = config?.output?.path;
-    const outputFileName = config?.output?.filename;
-
-    if (!outputPath || !outputFileName || typeof outputFileName !== 'string') {
-        return undefined;
-    }
-
-    if (/\[[^\]]+\]/.test(outputFileName)) {
-        return undefined;
-    }
-
-    const absoluteOutputPath = path.isAbsolute(outputPath) ? outputPath : path.resolve(projectRoot, outputPath);
-    return path.join(absoluteOutputPath, outputFileName);
-}
-
-/**
- * @param {Record<string, any> | Array<Record<string, any>> | undefined} config
- * @param {string} projectRoot
- * @param {string} sourceFilePath
- * @returns {string | undefined}
- */
-function _resolveWebpackOutputForSourceFile(config, projectRoot, sourceFilePath) {
-    if (!config) {
-        return undefined;
-    }
-
-    const configs = Array.isArray(config) ? config : [config];
-    if (configs.length === 1) {
-        return _resolveWebpackOutputFile(configs[0], projectRoot);
-    }
-
-    const sourceTopLevelFolder = _getTopLevelFolder(sourceFilePath, projectRoot);
-    if (!sourceTopLevelFolder) {
-        return undefined;
-    }
-
-    for (const cfg of configs) {
-        const entryFolders = _extractTopLevelFoldersFromEntry(cfg?.entry, projectRoot);
-        if (entryFolders.has(sourceTopLevelFolder)) {
-            return _resolveWebpackOutputFile(cfg, projectRoot);
-        }
-    }
-
-    return undefined;
-}
-
-/**
- * @param {string} filePath
- * @param {string} projectRoot
- * @returns {string | undefined}
- */
-function _getTopLevelFolder(filePath, projectRoot) {
-    const relativePath = path.relative(projectRoot, filePath);
-    if (!relativePath || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-        return undefined;
-    }
-
-    const [topLevelFolder] = relativePath.split(path.sep);
-    if (!topLevelFolder || topLevelFolder === '.') {
-        return undefined;
-    }
-
-    return topLevelFolder;
-}
-
-/**
- * @param {unknown} entry
- * @param {string} projectRoot
- * @returns {Set<string>}
- */
-function _extractTopLevelFoldersFromEntry(entry, projectRoot) {
-    const folders = new Set();
-
-    /** @type {string[]} */
-    const entryFiles = [];
-
-    if (typeof entry === 'string') {
-        entryFiles.push(entry);
-    } else if (Array.isArray(entry)) {
-        for (const item of entry) {
-            if (typeof item === 'string') {
-                entryFiles.push(item);
-            }
-        }
-    } else if (entry && typeof entry === 'object') {
-        for (const value of Object.values(entry)) {
-            if (typeof value === 'string') {
-                entryFiles.push(value);
-            } else if (Array.isArray(value)) {
-                for (const item of value) {
-                    if (typeof item === 'string') {
-                        entryFiles.push(item);
-                    }
-                }
-            }
-        }
-    }
-
-    for (const entryFile of entryFiles) {
-        const absoluteEntryPath = path.isAbsolute(entryFile) ? entryFile : path.resolve(projectRoot, entryFile);
-        const topLevelFolder = _getTopLevelFolder(absoluteEntryPath, projectRoot);
-        if (topLevelFolder) {
-            folders.add(topLevelFolder);
-        }
-    }
-
-    return folders;
-}
-
-/**
- * @param {unknown} entry
- * @param {string} projectRoot
- * @returns {string | undefined}
- */
-function _resolveWebpackEntryPoint(entry, projectRoot) {
-    if (!entry) {
-        return undefined;
-    }
-
-    // Handle string entry
-    if (typeof entry === 'string') {
-        return path.isAbsolute(entry) ? entry : path.resolve(projectRoot, entry);
-    }
-
-    // Handle array entry (take first)
-    if (Array.isArray(entry) && entry.length > 0) {
-        const firstEntry = entry[0];
-        if (typeof firstEntry === 'string') {
-            return path.isAbsolute(firstEntry) ? firstEntry : path.resolve(projectRoot, firstEntry);
-        }
-    }
-
-    // Handle object entry (take first value)
-    if (typeof entry === 'object' && !Array.isArray(entry)) {
-        const values = Object.values(entry);
-        if (values.length > 0) {
-            const firstValue = values[0];
-            if (typeof firstValue === 'string') {
-                return path.isAbsolute(firstValue) ? firstValue : path.resolve(projectRoot, firstValue);
-            } else if (Array.isArray(firstValue) && firstValue.length > 0 && typeof firstValue[0] === 'string') {
-                return path.isAbsolute(firstValue[0]) ? firstValue[0] : path.resolve(projectRoot, firstValue[0]);
-            }
-        }
-    }
-
-    return undefined;
-}
-
-/**
- * @param {unknown} loadedConfig
- * @returns {Record<string, any> | undefined}
- */
-function _resolveWebpackConfig(loadedConfig) {
-    const loadedConfigAny = /** @type {any} */ (loadedConfig);
-    let config = loadedConfigAny && loadedConfigAny.default ? loadedConfigAny.default : loadedConfigAny;
-
-    if (typeof config === 'function') {
-        // Support common webpack config factories: (env, argv) => ({ ... })
-        try {
-            config = config({}, { mode: 'production' });
-        } catch {
-            try {
-                config = config();
-            } catch {
-                return undefined;
-            }
-        }
-    }
-
-    return config;
-}

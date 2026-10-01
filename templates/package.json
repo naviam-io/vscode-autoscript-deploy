@@ -7,32 +7,33 @@
         "package": "webpack --mode production --devtool hidden-source-map"
     },
     "devDependencies": {
-        "@babel/core": "^7.28.5",
-        "@babel/parser": "^7.28.5",
-        "@babel/plugin-transform-runtime": "^7.28.5",
-        "@babel/preset-env": "^7.28.5",
-        "@babel/preset-typescript": "^7.28.5",
-        "@babel/runtime": "^7.28.4",
-        "@babel/traverse": "^7.28.5",
-        "babel-loader": "^10.0.0",
+        "@babel/core": "^7.29.7",
+        "@babel/parser": "^7.29.9",
+        "@babel/plugin-transform-runtime": "^7.29.7",
+        "@babel/preset-env": "^7.29.7",
+        "@babel/preset-typescript": "^7.29.7",
+        "@babel/runtime": "^7.29.7",
+        "@babel/traverse": "^7.29.8",
+        "babel-loader": "^10.1.1",
         "buffer": "^6.0.3",
         "crypto-browserify": "^3.12.1",
         "grpc-tools": "^1.13.1",
         "node-polyfill-webpack-plugin": "^4.1.0",
         "path-browserify": "^1.0.1",
-        "prettier": "^3.8.3",
+        "prettier": "^3.9.9",
         "process": "^0.11.10",
         "stream-browserify": "^3.0.0",
-        "ts-loader": "^9.5.4",
+        "terser-webpack-plugin": "^5.6.1",
+        "ts-loader": "^9.6.2",
         "typescript": "^6.0.3",
-        "webpack": "^5.103.0",
+        "webpack": "^5.111.1",
         "webpack-cli": "^6.0.1"
     },
     "dependencies": {
-        "core-js": "^3.47.0",
+        "core-js": "^3.50.0",
         "es6-promise": "^4.2.8",
         "regenerator-runtime": "^0.14.1",
-        "semver": "^7.7.3",
-        "ws": "^8.19.0"
+        "semver": "^7.8.5",
+        "ws": "^8.22.0"
     }
 }

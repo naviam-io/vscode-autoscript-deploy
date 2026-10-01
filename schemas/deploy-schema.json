@@ -372,6 +372,10 @@
                     "description": "The name of the module. The name must match the name of the module that is used for the associated Maximo application.",
                     "type": "string"
                 },
+                "autoPagingThreshold": {
+                    "description": "The number of records above which API responses are paged automatically (MAXINTOBJECT.AUTOPAGINGTHRESHOLD). Skipped when the Maximo version does not have the attribute.",
+                    "type": "integer"
+                },
                 "maxIntObjDetail": {
                     "type": "array",
                     "description": "The Maximo objects included in the integration object.",
@@ -395,6 +399,11 @@
                                 "description": "When selected, when new primary key values are received, the values are not updated in the Maximo database and the original primary key values are retained.",
                                 "type": "boolean",
                                 "default": false
+                            },
+                            "excludeParentKey": {
+                                "description": "Exclude the parent key attributes from the child object",
+                                "type": "boolean",
+                                "default": true
                             },
                             "deleteOnCreate": {
                                 "description": "Delete auto-generated data for selected child object",
@@ -426,70 +435,68 @@
                             "objectOrder": {
                                 "description": "Sequence in which the MEA processes child MBOs with the same parent MBO. This number is assigned when a user adds a child MBO. You can change this value in user-defined, but not in predefined (MEA-supplied), integration objects. Applies only to standard (non-merged) integration objects.",
                                 "type": "integer"
+                            },
+                            "maxIntObjCols": {
+                                "type": "array",
+                                "description": "Integration object column non-persistent and exclude rules.",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "description": "Identifies a user defined data field. The name cannot be the same as that of any persistent or non-persistent field in the integration object, and it cannot be TRANSID. Within interface tables, user fields have a data type of ALN and a length of 50, and you cannot change those attributes. The field name must conform to XML field naming conventions.",
+                                            "type": "string"
+                                        },
+                                        "intObjFldType": {
+                                            "description": "The type of integration object field, either EXCLUDE or NONPERSISTENT",
+                                            "type": "string",
+                                            "enum": ["EXCLUDE", "NONPERSISTENT"]
+                                        }
+                                    },
+                                    "required": ["name", "intObjFldType"]
+                                }
+                            },
+                            "maxIntObjAlias": {
+                                "type": "array",
+                                "description": "Integration object column aliases",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "description": "Name of the attribute to alias",
+                                            "type": "string"
+                                        },
+                                        "aliasName": {
+                                            "description": "The alias for the attribute being aliased",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": ["name"]
+                                }
+                            },
+                            "objectAppAuth": {
+                                "type": "array",
+                                "description": "Object Application Authorization for this object. The records are shared by every object structure, keyed by context and the object of this detail: deploying adds or updates them and deleting the object structure leaves them in place.",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "context": {
+                                            "description": "Specify the REST API context for the object resource (for example if the object resource URI is /rest/mbo/po, the REST API context for object po is /rest/mbo). The context is case-sensitive.",
+                                            "type": "string"
+                                        },
+                                        "description": {
+                                            "description": "Description of the context",
+                                            "type": "string"
+                                        },
+                                        "authApp": {
+                                            "description": "Specify an application that can authorize the request. The combination of the application and the security group of the user determines if the request is authorized.",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": ["context"]
+                                }
                             }
                         },
                         "required": ["objectName"]
-                    },
-                    "maxIntObjCols": {
-                        "type": "array",
-                        "description": "Integration object column non-persistent and exclude rules.",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "name": {
-                                    "description": "Identifies a user defined data field. The name cannot be the same as that of any persistent or non-persistent field in the integration object, and it cannot be TRANSID. Within interface tables, user fields have a data type of ALN and a length of 50, and you cannot change those attributes. The field name must conform to XML field naming conventions.",
-                                    "type": "string"
-                                },
-                                "intObjFldType": {
-                                    "description": "The type of integration object field, either EXCLUDE or NONPERSISTENT",
-                                    "type": "string",
-                                    "enum": ["EXCLUDE", "NONPERSISTENT"]
-                                }
-                            },
-                            "required": ["name"]
-                        }
-                    },
-                    "maxIntObjAlias": {
-                        "type": "array",
-                        "description": "Integration object column aliases",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "name": {
-                                    "description": "Name of the attribute to alias",
-                                    "type": "string"
-                                },
-                                "aliasName": {
-                                    "description": "The alias for the attribute being aliased",
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "objectAppAuth": {
-                        "type": "array",
-                        "description": "Object Application Authorization",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "context": {
-                                    "description": "Specify the REST API context for the object resource (for example if the object resource URI is /rest/mbo/po, the REST API context for object po is /rest/mbo). The context is case-sensitive.",
-                                    "type": "string"
-                                },
-                                "description": {
-                                    "description": "Description of the context",
-                                    "type": "string"
-                                },
-                                "objectName": {
-                                    "description": "Specify the object that the REST API can query or update using this application security context.",
-                                    "type": "string"
-                                },
-                                "authApp": {
-                                    "description": "Specify an application that can authorize the request. The combination of the application and the security group of the user determines if the request is authorized.",
-                                    "type": "string"
-                                }
-                            }
-                        }
                     }
                 },
                 "sigOption": {
@@ -684,8 +691,9 @@
                                             "type": "string"
                                         },
                                         "sortByOn": {
-                                            "description": "The attributes to order by",
-                                            "type": "string"
+                                            "description": "Indicates if the results are ordered by the attribute",
+                                            "type": "boolean",
+                                            "default": false
                                         },
                                         "ascending": {
                                             "description": "Indicates if the results should be order ascending on the attribute",
@@ -696,14 +704,16 @@
                                             "description": "Order of the order by",
                                             "type": "integer"
                                         }
-                                    }
+                                    },
+                                    "required": ["selectAttrName"]
                                 }
                             }
                         },
                         "required": ["templateName"]
                     }
                 }
-            }
+            },
+            "required": ["intObjectName"]
         },
         "domain": {
             "title": "Maximo Domain",
@@ -715,6 +725,26 @@
                     "type": "boolean",
                     "default": false
                 },
+                "_retain": {
+                    "description": "Names of domain properties whose existing values in the target system must be preserved when the domain already exists. Ignored when the domain is created, so the values in this file are installed as the product defaults. Naming a value collection, for example alnDomain, preserves the values the customer added that this file does not declare.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "description",
+                            "maxType",
+                            "length",
+                            "scale",
+                            "alnDomain",
+                            "numericDomain",
+                            "numRangeDomain",
+                            "synonymDomain",
+                            "tableDomain",
+                            "crossoverDomain"
+                        ]
+                    }
+                },
                 "domainId": {
                     "description": "The domain ID for the Maximo domain (MAXDOMAIN.DOMAINID)",
                     "type": "string"
@@ -722,7 +752,7 @@
                 "domainType": {
                     "description": "The domain type for the Maximo domain (MAXDOMAIN.DOMAINTYPE)",
                     "type": "string",
-                    "enum": ["ALN", "NUMERIC", "NUMRANGE", "SYNONYM", "TABLE", "CROSSOVER"]
+                    "enum": ["ALN", "NUMERIC", "NUMRANGE", "SYNONYM", "MAXTABLE", "CROSSOVER"]
                 },
                 "scale": {
                     "description": "The scale for the Maximo domain (MAXDOMAIN.SCALE)",
@@ -749,6 +779,15 @@
                             "value": {
                                 "description": "Value for ALN domain row (ALNDOMAIN.VALUE)",
                                 "type": "string"
+                            },
+                            "_retain": {
+                                "description": "Names of ALN domain value properties whose existing values in the target system must be preserved when a value with this value, orgId and siteId already exists. Ignored when the value is created. Naming maxDomValCond preserves the conditions the customer added that this file does not declare.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["description", "maxDomValCond"]
+                                }
                             },
                             "description": {
                                 "description": "Description of ALN domain row (ALNDOMAIN.DESCRIPTION)",
@@ -794,6 +833,15 @@
                                 "description": "Value for NUMERIC domain row (NUMERICDOMAIN.VALUE)",
                                 "type": "string"
                             },
+                            "_retain": {
+                                "description": "Names of NUMERIC domain value properties whose existing values in the target system must be preserved when a value with this value, orgId and siteId already exists. Ignored when the value is created. Naming maxDomValCond preserves the conditions the customer added that this file does not declare.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["description", "maxDomValCond"]
+                                }
+                            },
                             "description": {
                                 "description": "Description of NUMERIC domain row (NUMERICDOMAIN.DESCRIPTION)",
                                 "type": "string"
@@ -838,17 +886,26 @@
                                 "description": "Range segment for NUMRANGE domain row (NUMRANGEDOMAIN.RANGESEGMENT)",
                                 "type": "string"
                             },
+                            "_retain": {
+                                "description": "Names of NUMRANGE domain segment properties whose existing values in the target system must be preserved when a segment with this rangeSegment, orgId and siteId already exists. Ignored when the segment is created.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["rangeMinimum", "rangeMaximum", "rangeInterval"]
+                                }
+                            },
                             "rangeMinimum": {
-                                "description": "Range minimum of NUMRANGE domain row (NUMRANGEDOMAIN.RANGEMINIMUM)",
-                                "type": "string"
+                                "description": "Range minimum of NUMRANGE domain row (NUMRANGEDOMAIN.RANGEMINIMUM). Prefer a number, a string is parsed in the locale of the target server.",
+                                "type": ["number", "string"]
                             },
                             "rangeMaximum": {
-                                "description": "Range maximum of NUMRANGE domain row (NUMRANGEDOMAIN.RANGEMAXIMUM)",
-                                "type": "string"
+                                "description": "Range maximum of NUMRANGE domain row (NUMRANGEDOMAIN.RANGEMAXIMUM). Prefer a number, a string is parsed in the locale of the target server.",
+                                "type": ["number", "string"]
                             },
                             "rangeInterval": {
-                                "description": "Range interval of NUMRANGE domain row (NUMRANGEDOMAIN.RANGEINTERVAL)",
-                                "type": "string"
+                                "description": "Range interval of NUMRANGE domain row (NUMRANGEDOMAIN.RANGEINTERVAL). Prefer a number, a string is parsed in the locale of the target server.",
+                                "type": ["number", "string"]
                             },
                             "orgId": {
                                 "description": "Organization ID of NUMRANGE domain row (NUMRANGEDOMAIN.ORGID)",
@@ -875,6 +932,15 @@
                             "maxValue": {
                                 "description": "Maximo value for SYNONYM domain row (SYNONYMDOMAIN.MAXVALUE)",
                                 "type": "string"
+                            },
+                            "_retain": {
+                                "description": "Names of SYNONYM domain value properties whose existing values in the target system must be preserved when a value with this value, maxValue, orgId and siteId already exists. Ignored when the value is created. Naming maxDomValCond preserves the conditions the customer added that this file does not declare.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["description", "defaults", "maxDomValCond"]
+                                }
                             },
                             "description": {
                                 "description": "Description of SYNONYM domain row (SYNONYMDOMAIN.DESCRIPTION)",
@@ -924,6 +990,15 @@
                                 "description": "Object name for TABLE domain row (TABLEDOMAIN.OBJECTNAME)",
                                 "type": "string"
                             },
+                            "_retain": {
+                                "description": "Names of TABLE domain row properties whose existing values in the target system must be preserved when a row with this orgId and siteId already exists. Ignored when the row is created.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["objectName", "validtnWhereClause", "listWhereClause", "errorResourceBundle", "errorAccessKey"]
+                                }
+                            },
                             "validtnWhereClause": {
                                 "description": "Validation where clause of TABLE domain row (TABLEDOMAIN.VALIDTNWHERECLAUSE)",
                                 "type": "string"
@@ -962,6 +1037,15 @@
                                 "description": "Object name for TABLE domain row (TABLEDOMAIN.OBJECTNAME)",
                                 "type": "string"
                             },
+                            "_retain": {
+                                "description": "Names of CROSSOVER domain row properties whose existing values in the target system must be preserved when a row with this orgId and siteId already exists. Ignored when the row is created. Naming crossoverFields preserves the fields the customer added that this file does not declare.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["objectName", "validtnWhereClause", "listWhereClause", "errorResourceBundle", "errorAccessKey", "crossoverFields"]
+                                }
+                            },
                             "validtnWhereClause": {
                                 "description": "Validation where clause of TABLE domain row (TABLEDOMAIN.VALIDTNWHERECLAUSE)",
                                 "type": "string"
@@ -970,7 +1054,7 @@
                                 "description": "List where clause of TABLE domain row (TABLEDOMAIN.LISTWHERECLAUSE)",
                                 "type": "string"
                             },
-                            "errorResourcBundle": {
+                            "errorResourceBundle": {
                                 "description": "Error resource bundle of TABLE domain row (TABLEDOMAIN.ERRORRESOURCBUNDLE)",
                                 "type": "string"
                             },
@@ -999,6 +1083,15 @@
                                         "destField": {
                                             "description": "Destination field name for the crossover domain row (CROSSOVERDOMAIN.DESTFIELD)",
                                             "type": "string"
+                                        },
+                                        "_retain": {
+                                            "description": "Names of crossover field properties whose existing values in the target system must be preserved when a field with this sourceField and destField already exists. Ignored when the field is created.",
+                                            "type": "array",
+                                            "uniqueItems": true,
+                                            "items": {
+                                                "type": "string",
+                                                "enum": ["copyEvenIfSrcNull", "copyOnlyIfDestNull", "sourceCondition", "destCondition", "sequence"]
+                                            }
                                         },
                                         "copyEvenIfSrcNull": {
                                             "description": "Copy even if source is null flag for the crossover domain row (CROSSOVERDOMAIN.COPYEVENIFSRCNULL)",
@@ -1041,6 +1134,15 @@
                     "type": "boolean",
                     "default": false
                 },
+                "_retain": {
+                    "description": "Names of cron task properties whose existing values in the target system must be preserved when the cron task already exists. Ignored when the cron task is created, so the values in this file are installed as the product defaults. Naming cronTaskInstance preserves instances the customer added that this file does not declare.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": ["description", "className", "accessLevel", "cronTaskInstance"]
+                    }
+                },
                 "cronTaskName": {
                     "description": "The name of the Cron Task (CRONTASKDEF.CRONTASKNAME)",
                     "type": "string"
@@ -1068,6 +1170,15 @@
                             "instanceName": {
                                 "description": "The name of the Cron Task instance (CRONTASKINSTANCE.INSTANCENAME)",
                                 "type": "string"
+                            },
+                            "_retain": {
+                                "description": "Names of instance properties whose existing values in the target system must be preserved when an instance with this instanceName already exists. Ignored when the instance is created. Naming cronTaskParam preserves parameters the customer added that this file does not declare.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["description", "schedule", "active", "keepHistory", "runAsUserId", "maxHistory", "cronTaskParam"]
+                                }
                             },
                             "description": {
                                 "description": "The description of the Cron Task instance (CRONTASKINSTANCE.DESCRIPTION)",
@@ -1107,6 +1218,15 @@
                                         "parameter": {
                                             "description": "The name of the Cron Task parameter.  The parameters are automatically added by the class and the name is matched after the parameters are added (CRONTASKPARAM.PARAMETER)",
                                             "type": "string"
+                                        },
+                                        "_retain": {
+                                            "description": "Names of parameter properties whose existing values in the target system must be preserved when a parameter with this name already exists on the instance. Ignored when the parameter is created.",
+                                            "type": "array",
+                                            "uniqueItems": true,
+                                            "items": {
+                                                "type": "string",
+                                                "enum": ["value"]
+                                            }
                                         },
                                         "value": {
                                             "description": "The value of the Cron Task parameter (CRONTASKPARAM.VALUE)",

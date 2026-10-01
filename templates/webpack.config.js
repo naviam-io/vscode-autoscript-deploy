@@ -4,6 +4,20 @@ const os = require('os');
 const webpack = require('webpack');
 const TerserPlugin = require('terser-webpack-plugin');
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
+const { discoverScriptEntries } = require('./webpack-entries');
+
+// Where a production build writes its bundles, relative to this file.
+const OUTPUT_DIR = './dist';
+
+// Where a development build writes instead, so that iterating on a script does not overwrite what
+// was last built for deployment. Set it to OUTPUT_DIR to use a single directory for both.
+const DEV_OUTPUT_DIR = './dist-dev';
+
+// A script's output path mirrors the folder it sits in, so scripts/install/rematch.ts becomes
+// install/<autoscript name>.js. When each script sits in a folder that merely repeats its own
+// name, or in a single src folder as this project does, set this to true to drop that folder:
+// src/index.ts then becomes <autoscript name>.js rather than src/<autoscript name>.js.
+const DROP_PARENT_DIR = true;
 
 const embeddedAnnotationLoaderSource = `
 const annotationTagPattern = /@maximoGlobal\\b/;
@@ -105,27 +119,68 @@ class ReplaceGlobalSelfPlugin {
     }
 }
 
+// Copies the files the Maximo Development Tools extension expects beside a deployed bundle, such
+// as <name>.predeploy.json, renaming them from the name they carry next to the source to the name
+// the bundle is deployed under.
+class CopyScriptSidecarsPlugin {
+    constructor(entries) {
+        this.entries = entries;
+    }
+
+    apply(compiler) {
+        compiler.hooks.afterEmit.tap('CopyScriptSidecarsPlugin', () => {
+            const outputDir = compiler.options.output.path;
+
+            this.entries.forEach((entry) => {
+                entry.sidecars.forEach((sidecar) => {
+                    const destination = path.join(outputDir, sidecar.to);
+                    fs.mkdirSync(path.dirname(destination), { recursive: true });
+                    fs.copyFileSync(sidecar.from, destination);
+                });
+            });
+        });
+    }
+}
+
 module.exports = (env, argv) => {
     const mode = argv.mode || 'production';
     const isProduction = mode === 'production';
+
+    // Every TypeScript file declaring a scriptConfig block is compiled into its own bundle, named
+    // after its autoscript name. Keeping them in one compilation matters: returning one
+    // configuration per script makes webpack instantiate ts-loader, Babel and the polyfills once
+    // per script, and run all of those compilations concurrently.
+    const entries = discoverScriptEntries(__dirname, { dropParentDir: DROP_PARENT_DIR });
+
+    const webpackEntries = {};
+    entries.forEach((entry) => {
+        webpackEntries[entry.entryName] = {
+            import: entry.import,
+            filename: entry.filename,
+            library: {
+                name: entry.libraryName,
+                type: 'assign',
+                export: 'default'
+            }
+        };
+    });
+
     return {
         mode,
         // Disable eval-based source maps. Webpack's default dev devtool wraps modules in eval()
         // with "use strict", which causes Nashorn to reject function declarations inside eval.
         devtool: false,
-        entry: ['./runtime-globals.ts', './src/index.ts'],
+        entry: webpackEntries,
         target: ['web', 'es5'],
         performance: {
             hints: false
         },
         output: {
-            path: path.resolve(__dirname, './dist'),
-            filename: '${script_name}.js',
-            library: {
-                name: '${library_name}',
-                type: 'assign',
-                export: 'default'
-            },
+            // Each mode writes to its own directory, so that iterating on a script in development
+            // does not overwrite what was last built for deployment.
+            path: path.resolve(__dirname, isProduction ? OUTPUT_DIR : DEV_OUTPUT_DIR),
+            // The per-entry filename above decides the name; this is only the fallback.
+            filename: '[name].js',
             clean: true,
             globalObject: 'this',
             // Force Webpack to not use arrow functions or async functions in its glue code
@@ -203,6 +258,7 @@ module.exports = (env, argv) => {
         plugins: [
             new NodePolyfillPlugin(),
             new ReplaceGlobalSelfPlugin(),
+            new CopyScriptSidecarsPlugin(entries),
             new webpack.ProvidePlugin({
                 // Old: process: 'process/browser',
                 // New: Explicitly add the .js extension
@@ -242,6 +298,10 @@ const terserMinimizer = new TerserPlugin({
             toplevel: false,
             // Keep unused declarations like scriptConfig in the emitted bundle
             unused: false,
+            // The scriptConfig block is read back out of the bundle as JSON, and !0 and !1 are not
+            // valid JSON, so rewriting true and false would silently drop its launch point flags.
+            booleans_as_integers: false,
+            booleans: false,
             // Avoid dropping declarations whose initializers look side-effect free
             dead_code: false,
             side_effects: false

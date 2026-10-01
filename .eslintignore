@@ -1,0 +1,6 @@
+node_modules/
+dist/
+out/
+
+# Generated — never hand-edited, never linted
+resources/naviam.autoscript.library.js

@@ -1,0 +1,31 @@
+{
+    "cronTasks": [
+        {
+            "cronTaskName": "TEST_NOTFDELETE",
+            "description": "Expired notifications cleanup",
+            "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
+            "accessLevel": "FULL",
+            "cronTaskInstance": [
+                {
+                    "instanceName": "TESTINST",
+                    "description": "Expired notifications cleanup",
+                    "schedule": "1d,0,0,0,*,*,*,*,*,*",
+                    "active": false,
+                    "keepHistory": true,
+                    "runAsUserId": "MAXADMIN",
+                    "maxHistory": 20,
+                    "cronTaskParam": [
+                        {
+                            "parameter": "NOTFOSNAME",
+                            "value": "MXNOTIFICATION"
+                        },
+                        {
+                            "parameter": "PURGETIME",
+                            "value": "1D"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

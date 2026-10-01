@@ -1,0 +1,27 @@
+{
+    "cronTasks": [
+        {
+            "cronTaskName": "TESTNOTFCLEANUP",
+            "description": "Complete manifest test cron task",
+            "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
+            "accessLevel": "FULL",
+            "cronTaskInstance": [
+                {
+                    "instanceName": "TESTINST",
+                    "description": "Complete manifest test cron task instance",
+                    "schedule": "1d,0,0,0,*,*,*,*,*,*",
+                    "active": false,
+                    "keepHistory": true,
+                    "runAsUserId": "MAXADMIN",
+                    "maxHistory": 20,
+                    "cronTaskParam": [
+                        {
+                            "parameter": "PURGETIME",
+                            "value": "1D"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -16,17 +16,27 @@
                 "*.predeploy.json",
                 "*-predeploy.json"
             ],
-            "url": "./schemas/predeploy-schema.json"
+            "url": "./.vscode/predeploy-schema.json"
         },
         {
-            "fileMatch": [],
-            "url": "./schemas/deploy-schema.json"
+            "fileMatch": [
+                "test/complete/configuration/*.json",
+                "test/integration/fixtures/*.json",
+            ],
+            "url": "./.vscode/deploy-schema.json"
         },
         {
             "fileMatch": [
                 ".devtools-config.json"
             ],
-            "url": "./schemas/devtools-config-schema.json"
+            "url": "./.vscode/devtools-config-schema.json"
+        },
+        {
+            "fileMatch": [
+                "*.manifest.json",
+                "*-manifest.json"
+            ],
+            "url": "./.vscode/manifest-schema.json"
         }
     ],
     "[javascript]": {

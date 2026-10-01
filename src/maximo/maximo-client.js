@@ -40,8 +40,8 @@ export default class MaximoClient {
         this.config = config;
         this.retry = true;
 
-        this.requiredScriptVersion = '1.66.0';
-        this.currentScriptVersion = '1.66.0';
+        this.requiredScriptVersion = '1.68.0';
+        this.currentScriptVersion = '1.68.0';
 
         this.adminModeRetryCount = 0;
 
@@ -640,6 +640,49 @@ export default class MaximoClient {
         }
     }
 
+    async getAdminModeEsigEnabled() {
+        const headers = new Map();
+        headers['Content-Type'] = 'application/json';
+        const options = {
+            url: 'script/naviam.autoscript.admin/sigoptionesig',
+            method: MaximoClient.Method.GET,
+            headers: { common: headers }
+        };
+
+        // @ts-ignore
+        const response = await this.client.request(options);
+
+        if (typeof response.data.status !== 'undefined' && response.data.status === 'ok') {
+            if (typeof response.data.sigOptionEsig !== 'undefined') {
+                return response.data.sigOptionEsig;
+            } else {
+                return {};
+            }
+        } else {
+            throw new MaximoError('Error checking Admin Mode e-signature options: ' + response.data.error);
+        }
+    }
+
+    async setAdminModeEsigEnabled(values) {
+        const headers = new Map();
+        headers['Content-Type'] = 'application/json';
+        const options = {
+            url: 'script/naviam.autoscript.admin/sigoptionesig',
+            method: MaximoClient.Method.POST,
+            headers: { common: headers },
+            data: JSON.stringify(values)
+        };
+
+        // @ts-ignore
+        const response = await this.client.request(options);
+
+        if (typeof response.data.status !== 'undefined' && response.data.status === 'ok') {
+            return true;
+        } else {
+            throw new MaximoError('Error updating Admin Mode e-signature options: ' + response.data.error);
+        }
+    }
+
     async dbConfigInProgress() {
         const headers = new Map();
         headers['Content-Type'] = 'application/json';
@@ -703,6 +746,58 @@ export default class MaximoClient {
         } else {
             throw new MaximoError('Error applying database configuration: ' + response.data.error);
         }
+    }
+
+    /**
+     * The retained values snapshots an earlier, incomplete deployment left behind for the records
+     * this payload is about to replace. Read only.
+     *
+     * @param {string|Buffer} json the deployment payload that is about to be sent
+     * @returns {Promise<Array<{key: string, type: string, object: string, identity: string, capturedOn: number|null}>>} the leftover snapshots
+     */
+    async listRetainedSnapshots(json) {
+        const response = await this._requestRetainedSnapshots('list', json);
+        return Array.isArray(response.snapshots) ? response.snapshots : [];
+    }
+
+    /**
+     * Deletes the named retained values snapshots, so that the deployment captures the live records
+     * instead of preferring the leftovers.
+     *
+     * @param {string[]} keys the snapshot keys to discard
+     * @returns {Promise<number>} the number of snapshots discarded
+     */
+    async discardRetainedSnapshots(keys) {
+        if (!Array.isArray(keys) || keys.length === 0) {
+            return 0;
+        }
+
+        const response = await this._requestRetainedSnapshots('discard', JSON.stringify({ keys: keys }));
+        return typeof response.discarded === 'number' ? response.discarded : 0;
+    }
+
+    async _requestRetainedSnapshots(action, json) {
+        const headers = new Map();
+        headers['Content-Type'] = 'application/json';
+        headers['Accept'] = 'application/json';
+
+        const options = {
+            url: 'script/naviam.autoscript.deploy/snapshots/' + action,
+            method: MaximoClient.Method.POST,
+            headers: { common: headers },
+            data: json
+        };
+
+        // @ts-ignore
+        const response = await this.client.request(options);
+        const data = response.data;
+
+        if (!data || typeof data !== 'object' || data.status !== 'ok') {
+            const reason = (data && (data.message || data.error)) || 'the server did not answer';
+            throw new MaximoError(`Error reading retained values snapshots: ${reason}`);
+        }
+
+        return data;
     }
 
     async postConfig(json, cancelToken, progress) {
@@ -828,6 +923,11 @@ export default class MaximoClient {
                                                                     }
                                                                 }
                                                                 break;
+                                                            case 'info':
+                                                                if (typeof event.data === 'string') {
+                                                                    Logger.info(event.data, LOG_SOURCE);
+                                                                }
+                                                                break;
                                                             case 'error':
                                                                 if (typeof event.data === 'string') {
                                                                     Logger.error(event.data, null, LOG_SOURCE);
@@ -876,6 +976,38 @@ export default class MaximoClient {
             }
             Logger.info('Configuration deploy completed successfully.', LOG_SOURCE);
         }
+    }
+
+    /**
+     * Deploys a script, runs it once and removes it again.
+     *
+     * This backs the "deployScript" kind of a deployment manifest: a one-off script that does work
+     * against Maximo and is not meant to remain installed.
+     *
+     * @param {string} script the script source
+     * @param {string} fileName the file the script came from, which determines its language
+     * @returns {Promise<object>} the server's result
+     */
+    async postDeployScript(script, fileName) {
+        const isPython = fileName.endsWith('.py') || fileName.endsWith('.jy');
+        Logger.info(`Running deploy script ${fileName}.`, LOG_SOURCE);
+
+        const options = {
+            url: 'script/naviam.autoscript.deploy/deployscript' + (isPython ? '/python' : ''),
+            method: MaximoClient.Method.POST,
+            headers: {
+                'Content-Type': 'text/plain',
+                Accept: 'application/json'
+            },
+            data: script
+        };
+
+        // @ts-ignore
+        const result = await this.client.request(options);
+
+        // Maximo answers 200 with a status of "error" when the script itself fails, so the body has
+        // to be inspected rather than the HTTP status.
+        return result && result.data ? result.data : { status: 'error', message: 'Did not receive a response from Maximo.' };
     }
 
     async postScript(script, progress, fileName, deployScript, cancelToken) {
@@ -1142,6 +1274,42 @@ export default class MaximoClient {
                 this.scriptEndpoint = 'mxapiautoscript';
                 return await this.installed();
             }
+        }
+    }
+
+    /**
+     * Looks up an automation script by name through the script object structure, without calling it.
+     *
+     * @param {string} scriptName the AUTOSCRIPT name, as Maximo stores it.
+     * @returns {Promise<{installed: boolean, active: boolean}>}
+     */
+    async scriptStatus(scriptName) {
+        const headers = new Map();
+        headers['Content-Type'] = 'application/json';
+        const options = {
+            url: `os/${this.scriptEndpoint}?oslc.select=autoscript,active&oslc.where=autoscript="${scriptName}"`,
+            method: MaximoClient.Method.GET,
+            headers: { common: headers }
+        };
+
+        try {
+            // @ts-ignore
+            const response = await this.client.request(options);
+            const member = response?.data?.member;
+            if (!Array.isArray(member)) {
+                throw new MaximoError('Received an unexpected response from the server when looking up an automation script.');
+            }
+            if (member.length === 0) {
+                return { installed: false, active: false };
+            }
+            return { installed: true, active: member[0].active !== false };
+        } catch (e) {
+            // See installed(): fall back to MXAPIAUTOSCRIPT when MXSCRIPT is unavailable or unsecured.
+            if (this.scriptEndpoint !== 'mxapiautoscript' && e.reasonCode && (e.reasonCode === 'BMXAA9301E' || e.reasonCode === 'BMXAA0024E')) {
+                this.scriptEndpoint = 'mxapiautoscript';
+                return await this.scriptStatus(scriptName);
+            }
+            throw e;
         }
     }
 

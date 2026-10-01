@@ -1,0 +1,132 @@
+{
+    "productV1": {
+        "cronTasks": [
+            {
+                "cronTaskName": "TEST_RETAIN",
+                "description": "Retained values test, release 1",
+                "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
+                "accessLevel": "FULL",
+                "cronTaskInstance": [
+                    {
+                        "instanceName": "RETAININST1",
+                        "description": "Instance one",
+                        "schedule": "1d,0,0,0,*,*,*,*,*,*",
+                        "active": false,
+                        "keepHistory": true,
+                        "runAsUserId": "MAXADMIN",
+                        "maxHistory": 20,
+                        "cronTaskParam": [
+                            { "parameter": "NOTFOSNAME", "value": "MXNOTIFICATION" },
+                            { "parameter": "PURGETIME", "value": "1D" }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "customerEdit": {
+        "cronTasks": [
+            {
+                "cronTaskName": "TEST_RETAIN",
+                "description": "Retained values test, release 1",
+                "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
+                "accessLevel": "FULL",
+                "cronTaskInstance": [
+                    {
+                        "instanceName": "RETAININST1",
+                        "description": "Instance one",
+                        "schedule": "7d,0,0,0,*,*,*,*,*,*",
+                        "active": false,
+                        "keepHistory": false,
+                        "runAsUserId": "MAXADMIN",
+                        "maxHistory": 99,
+                        "cronTaskParam": [
+                            { "parameter": "NOTFOSNAME", "value": "MXNOTIFICATION" },
+                            { "parameter": "PURGETIME", "value": "7D" }
+                        ]
+                    },
+                    {
+                        "instanceName": "CUSTOMERINST",
+                        "description": "Instance the customer added, unknown to the product",
+                        "schedule": "30d,0,0,0,*,*,*,*,*,*",
+                        "active": false,
+                        "keepHistory": false,
+                        "runAsUserId": "MAXADMIN",
+                        "maxHistory": 42,
+                        "cronTaskParam": [
+                            { "parameter": "NOTFOSNAME", "value": "MXNOTIFICATION" },
+                            { "parameter": "PURGETIME", "value": "30D" }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "productV2": {
+        "cronTasks": [
+            {
+                "cronTaskName": "TEST_RETAIN",
+                "description": "Retained values test, release 2",
+                "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
+                "accessLevel": "FULL",
+                "_retain": ["cronTaskInstance"],
+                "cronTaskInstance": [
+                    {
+                        "instanceName": "RETAININST1",
+                        "description": "Instance one",
+                        "schedule": "1d,0,0,0,*,*,*,*,*,*",
+                        "active": false,
+                        "keepHistory": true,
+                        "runAsUserId": "MAXADMIN",
+                        "maxHistory": 20,
+                        "_retain": ["schedule", "keepHistory", "maxHistory"],
+                        "cronTaskParam": [
+                            { "parameter": "NOTFOSNAME", "value": "MXNOTIFICATION" },
+                            { "parameter": "PURGETIME", "value": "1D", "_retain": ["value"] }
+                        ]
+                    },
+                    {
+                        "instanceName": "RETAININST2",
+                        "description": "Instance two, new in release 2",
+                        "schedule": "1d,0,0,0,*,*,*,*,*,*",
+                        "active": false,
+                        "keepHistory": true,
+                        "runAsUserId": "MAXADMIN",
+                        "maxHistory": 20,
+                        "_retain": ["schedule", "keepHistory", "maxHistory"],
+                        "cronTaskParam": [
+                            { "parameter": "NOTFOSNAME", "value": "MXNOTIFICATION" },
+                            { "parameter": "PURGETIME", "value": "1D", "_retain": ["value"] }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "productV2NoCollectionRetain": {
+        "cronTasks": [
+            {
+                "cronTaskName": "TEST_RETAIN",
+                "description": "Retained values test, release 2",
+                "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
+                "accessLevel": "FULL",
+                "cronTaskInstance": [
+                    {
+                        "instanceName": "RETAININST1",
+                        "description": "Instance one",
+                        "schedule": "1d,0,0,0,*,*,*,*,*,*",
+                        "active": false,
+                        "keepHistory": true,
+                        "runAsUserId": "MAXADMIN",
+                        "maxHistory": 20,
+                        "_retain": ["schedule", "keepHistory", "maxHistory"],
+                        "cronTaskParam": [
+                            { "parameter": "NOTFOSNAME", "value": "MXNOTIFICATION" },
+                            { "parameter": "PURGETIME", "value": "1D", "_retain": ["value"] }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

@@ -1,6 +1,6 @@
 # VS Code Maximo Development Tools
 
-Deploy [Maximo Automation Scripts](https://www.ibm.com/docs/en/masv-and-l/maximo-manage/cd?topic=developing-automation-scripts), inspection forms, reports and screen definitions directly from Visual Studio Code.
+Deploy [Maximo Automation Scripts](https://www.ibm.com/docs/en/masv-and-l/maximo-manage/cd?topic=developing-automation-scripts), inspection forms, reports, screen definitions and Maximo configuration directly from Visual Studio Code. Scripts may be written in JavaScript, Python or TypeScript, and several resources can be deployed together in order with a deployment manifest.
 
 The extension allows developers to describe the automation script through the use of a `scriptConfig` variable and then deploy the script directly to Maximo from Visual Studio Code. The provided `NAVIAM.AUTOSCRIPT.DEPLOY` automation script provides support for build pipelines and automated deployment of automation scripts from a Git repository.
 
@@ -21,6 +21,7 @@ The extension allows developers to describe the automation script through the us
     - [JSON Deploy File](#json-deploy-file)
       - [JSON Pre-deploy File](#json-pre-deploy-file)
       - [Example Deploy JSON](#example-deploy-json)
+      - [Retaining Customer Values](#retaining-customer-values)
       - [Deploying Maximo Objects](#deploying-maximo-objects)
     - [Prettier Compatibility](#prettier-compatibility)
     - [JavaScript / Nashorn Example](#javascript--nashorn-example)
@@ -28,10 +29,14 @@ The extension allows developers to describe the automation script through the us
 - [Features](#features)
   - [Deploy to Maximo](#deploy-to-maximo)
     - [Deploy Script](#deploy-script)
+    - [Deploy TypeScript Script](#deploy-typescript-script)
+      - [Initialize a TypeScript Project](#initialize-a-typescript-project)
     - [Deploy Screen](#deploy-screen)
     - [Deploy Inspection Form](#deploy-inspection-form)
     - [Deploy Report](#deploy-report)
     - [Deployment Manifest](#deployment-manifest)
+      - [Entry Kinds](#entry-kinds)
+      - [Disabling an Entry](#disabling-an-entry)
       - [Example Manifest](#example-manifest)
   - [Extract Automation Scripts](#extract-automation-scripts)
   - [Extract Screen Definitions](#extract-screen-definitions)
@@ -76,21 +81,23 @@ The following are settings available under the `Naviam > Maximo` group.
 | Configuration Timeout             | 5                   | The number of minutes to wait for the configuration to complete.                                                                                                            |
 | Context                           | maximo              | The part of the URL that follows the hostname, by default it is `maximo`.                                                                                                   |
 | Custom CA                         |                     | The full chain for the server CA in PEM format.                                                                                                                             |
+| Debug Port                        | 4711                | The debug port for connecting a remote debugger for automation scripts.                                                                                                     |
+| Extract DBC Location              | Current open folder | Directory where extracted screen DBC files will be stored.                                                                                                                  |
 | Extract Inspection Forms Location | Current open folder | Directory where extracted inspection files will be stored.                                                                                                                  |
 | Extract Location                  | Current open folder | Directory where extracted script files will be stored.                                                                                                                      |
+| Extract Reports Location          | Current open folder | Directory where extracted BIRT reports will be stored.                                                                                                                      |
 | Extract Screen Location           | Current open folder | Directory where extracted screen XML files will be stored.                                                                                                                  |
-| Extract DBC Location              | Current open folder | Directory where extracted screen DBC files will be stored.                                                                                                                  |
 | Host                              |                     | The Maximo host name _without_ the http/s protocol prefix.                                                                                                                  |
 | Maxauth Only                      | false               | Both Maxauth and Basic headers are usually sent for login, however on WebLogic if Basic fails the Maxauth header is ignored. When checked, only the Maxauth header is sent. |
-| Port                              | 443                 | The Maximo port number, 80 for http, 443 for https or a custom port such as 9080.                                                                                        |
+| Port                              | 443                 | The Maximo port number, 80 for http, 443 for https or a custom port such as 9080.                                                                                           |
 | Proxy Host                        |                     | The proxy host name.                                                                                                                                                        |
+| Proxy Password                    |                     | The proxy password for proxy authentication.                                                                                                                                |
 | Proxy Port                        | 3128                | The proxy port number.                                                                                                                                                      |
 | Proxy User                        |                     | The proxy username for proxy authentication.                                                                                                                                |
-| Proxy Password                    |                     | The proxy password for proxy authentication.                                                                                                                                |
 | Timeout                           | 30                  | The time in seconds to wait for Maximo to respond.                                                                                                                          |
-| User                              |                     | The user that will be used to connect to Maximo.                                                                                                                            |
 | Use SSL                           | true                | When checked, SSL will be used, the provided port must be configured for SSL.                                                                                               |
-| Debug Port                        | 4711                | The debug port for connecting a remote debugger for automation scripts.                                                                                                     |
+| User                              |                     | The user that will be used to connect to Maximo.                                                                                                                            |
+| Webpack Mode                      | development         | The webpack mode, `development` or `production`, used to build a TypeScript script before it is deployed.                                                                   |
 
 > The Authentication Type setting has been removed and replaced with automatic detection of authentication type.
 
@@ -223,7 +230,9 @@ When using a script for deploy actions, that script file may be named the same a
 
 As of version `1.13.0` a JSON document can be used to define select objects to deploy along with the script. Providing a JSON file with the same name as the primary script, with a `.json` file extension will cause the tooling to deploy the objects defined in the JSON document along with the script.
 
-Currently Actions, Cron Tasks, Domains, Escalations, Integration Objects, Loggers, Messages, Properties and Queries are available. The JSON schemas for these objects are provided in the project under the `.vscode` directory and your `.vscode/settings.json` will be updated to provide intellisense support in configuration json files.
+Currently Actions, Cron Tasks, Domains, Escalations, Integration Objects, Loggers, Maximo Objects, Messages, Properties and Queries are available. The JSON schemas for these objects are provided in the project under the `.vscode` directory and your `.vscode/settings.json` will be updated to provide intellisense support in configuration json files.
+
+A JSON deploy file can also be deployed on its own by opening it and selecting `Deploy to Maximo`. The same file deploys and extracts consistently on any Maximo, including one whose base language is not English. Attributes that the target Maximo version does not have are skipped and noted in the log.
 
 #### JSON Pre-deploy File
 
@@ -266,11 +275,44 @@ Below is an example deploy JSON that will create or update two messages and a pr
 }
 ```
 
+#### Retaining Customer Values
+
+A product usually ships the same deploy file for the first installation and for every upgrade. Without further markers, an upgrade overwrites every value the customer changed after installation. The `_retain` property lists the values that the customer owns once the record exists in Maximo. It is currently supported for cron tasks and domains.
+
+```json
+{
+    "cronTasks": [
+        {
+            "cronTaskName": "EXAMPLESYNC",
+            "className": "com.example.SyncCronTask",
+            "_retain": ["cronTaskInstance"],
+            "cronTaskInstance": [
+                {
+                    "instanceName": "EXAMPLESYNC01",
+                    "schedule": "1h,*,0,*,*,*,*,*,*,*",
+                    "active": false,
+                    "_retain": ["schedule", "active"]
+                }
+            ]
+        }
+    ]
+}
+```
+
+On the first installation the values from the file are applied as defaults. On later deployments:
+
+- A property named in `_retain`, such as `schedule`, keeps the value currently set in Maximo.
+- A collection named in `_retain`, such as `cronTaskInstance` or a domain's values, also keeps the rows the customer added that the file does not declare.
+
+The JSON schema offers only the properties that can be retained. If a deployment that uses `_retain` fails, the customer values saved during it are kept in the `DOCINFO` database table. The next deployment asks whether to restore them or discard them, and cancelling the prompt cancels the deployment before anything is changed.
+
 #### Deploying Maximo Objects
 
 When deploying a Maximo Object, by default Maximo will be placed in Admin Mode if required and a database configuration performed. The top level boolean properties `noAdminMode` and `noDBConfig` can be set to not perform a configuration if it requires Admin Mode or skip the database configuration completely.
 
 > Note: When deploying a Maximo Object with Admin Mode and Database Configuration, the user must have Maximo permissions to place Maximo in Admin Mode and run Database Configuration.
+
+If e-signature is enabled for the `Manage Admin Mode` or `Apply Configuration Changes` options, the extension offers to disable it temporarily while the configuration is applied and restores the original settings afterwards.
 
 If a configuration requires Maximo to be in Admin Mode a confirmation dialog will be displayed, requiring confirmation before the configurations are applied. If the configurations are not applied, the script will also not be deployed, however the configurations will be staged and can be manually applied at a later time.
 
@@ -375,15 +417,32 @@ scriptConfig = """{
 
 ## Deploy to Maximo
 
-To deploy a script, screen definition or inspection form, open script, screen definition or inspection form extract in Visual Studio Code, then bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Deploy to Maximo`. If this is the first time deploying a script or screen definition after starting Visual Studio Code you will be prompted for your Maximo password as this extension does not store passwords. The script or screen definition is then deployed as seen below.
+To deploy a script, screen definition, inspection form, report, JSON deploy file or deployment manifest, open the file in Visual Studio Code, then bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Deploy to Maximo`. If this is the first time deploying after starting Visual Studio Code you will be prompted for your Maximo password as this extension does not store passwords. The file is then deployed as seen below.
 
 ### Deploy Script
 
 ![Deploy Automation Script](./images/palette_script_deploy_example.gif)
 
-When deploying an automation script, after the script has been deployed you can view the script in Maximo. Each deployment replaces the script launch point configuration with the configuration defined in the `scriptConfig` JSON.
+When deploying an automation script, after the script has been deployed you can view the script in Maximo. Each deployment replaces the script launch point configuration with the configuration defined in the `scriptConfig` JSON. A script written in TypeScript is built before it is deployed, see [Deploy TypeScript Script](#deploy-typescript-script).
 
 ![Maximo Automation Script](images/example_script_maximo.png)
+
+### Deploy TypeScript Script
+
+Automation scripts may be written in TypeScript in a webpack project, which compiles them to JavaScript for Maximo. Every TypeScript file that declares a `scriptConfig` variable is built as its own script, named after its `autoscript` value. Files without a `scriptConfig` are helpers, which are included in the scripts that import them.
+
+To deploy a script, open its TypeScript file and select `Deploy to Maximo`. The extension builds the project and deploys the result. Deploying a helper file shows an error that names the script to deploy instead. The predeploy and deploy JSON files are placed beside the TypeScript file, following the same naming as for JavaScript and Python scripts. The `Webpack Mode` setting selects whether scripts are built in `development` or `production` mode.
+
+#### Initialize a TypeScript Project
+
+To start a new TypeScript project, open an empty workspace folder, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Initialize Maximo TypeScript Project`. You are prompted for the script name, such as `naviam.script.name`, and a description. The extension then creates a webpack project in the root of the first workspace folder containing:
+
+- `src/index.ts`, a starter script with a `scriptConfig` block for the name and description entered, which is opened in the editor.
+- `webpack.config.js` and `webpack-entries.js`, which build every TypeScript file declaring a `scriptConfig` into its own Nashorn compatible script. Production builds are written to `dist` and development builds to `dist-dev`.
+- `deploy.manifest.json`, a [deployment manifest](#deployment-manifest) with an entry for `src/index.ts`, ready for further scripts and configuration to be added.
+- `package.json`, `tsconfig.json`, `.babelrc` and TypeScript declarations for Nashorn and the Maximo Manage Java API, so the Maximo classes are available with code completion.
+
+Initialization stops without changing anything if any of these files already exist in the folder. Once the files are written, the extension offers to run `npm install` to fetch the project dependencies. If npm is not found, it offers to install Node.js with Homebrew on macOS or winget on Windows. Scripts can then be deployed with `Deploy to Maximo` as described above, or built by hand with `npm run webpack`.
 
 ### Deploy Screen
 
@@ -407,19 +466,52 @@ When deploying a report, the report must be registered in the `reports.xml` file
 
 ### Deployment Manifest
 
-As of version `1.20.0` a JSON document may be used to define multiple files to deploy in order. The file must have a `.json` file extension and contain a JSON object with a property named `manifest` that is an array of `string` type file paths or a JSON object with a `path` property. The file paths may be relative or fully qualified. Using the `Deploy to Maximo` command will deploy each file in the manifest in order. You can mix `string` and `object` path elements in the array.
+A deployment manifest lists several resources to deploy in order, for example the configuration, scripts, screens and reports that make up one feature. It is a JSON file with a `manifest` property that is an array of entries. Selecting `Deploy to Maximo` on the manifest deploys each entry in the order it is listed.
+
+Name the file `something.manifest.json` to get completions and validation as you type.
+
+The whole manifest is checked before anything is sent to Maximo. If any entry is wrong, for example a missing file, an unknown kind or the wrong file extension for the kind, nothing is deployed and every problem is reported at once. Once deployment starts it stops at the first entry that fails, so nothing is applied on top of a resource that did not deploy.
+
+Paths may be relative or fully qualified. A relative path is resolved against the folder of the manifest that declares it. DBC scripts cannot be listed in a manifest.
+
+#### Entry Kinds
+
+Each entry declares what it is with a `kind`, and is deployed as exactly that. A script entry deploys only the script itself, so its predeploy and deploy JSON files are listed as their own `configuration` entries.
+
+| `kind`                  | Accepts                 | What it does                                                                                       |
+| :---------------------- | :---------------------- | :------------------------------------------------------------------------------------------------- |
+| `configuration`         | `.json`                 | Applies a JSON deploy file.                                                                        |
+| `databaseConfiguration` | *no path*               | Applies any pending database configuration, taking Admin Mode if Maximo requires it and you agree. |
+| `automationScript`      | `.ts` `.js` `.py` `.jy` | Deploys the script. A TypeScript script is built first.                                            |
+| `deployScript`          | `.ts` `.js` `.py` `.jy` | Installs the script in Maximo, runs it once, then removes it.                                      |
+| `inspectionForm`        | `.json`                 | Deploys an inspection form.                                                                        |
+| `screen`                | `.xml`                  | Deploys a screen definition.                                                                       |
+| `report`                | `.rptdesign`            | Deploys a BIRT report.                                                                             |
+| `manifest`              | `.json`                 | Deploys another manifest at that point, as if its entries were listed here.                        |
+
+> Entries without a `kind` are deprecated. They still deploy as before, with a script also deploying its predeploy and deploy JSON files, so existing manifests keep working and can be migrated one entry at a time. Deploying such a manifest shows a notification, and the log names each entry to update.
+
+#### Disabling an Entry
+
+Any entry may set `"disabled": true` to skip it without removing it from the manifest, which is useful while a resource is being reworked or when only part of a manifest is wanted. A disabled entry is not validated, so the file it names may be missing or incomplete. Disabling a `manifest` entry skips the nested manifest and everything in it. The notification shown when the deployment finishes says how many entries were skipped.
+
+```json
+{ "kind": "automationScript", "path": "scripts/matcher.js", "disabled": true }
+```
 
 #### Example Manifest
 
 ```json
 {
     "manifest": [
-        "file_1.js",
-        { "path": "subfolder/file_1.js" },
-        "subfolder/file_2.js",
-        "c:/fully/qualified/path/file_1.js",
-        { "path": "inspection_form.json" },
-        "REPORT_FOLDER/birt_report_name.rptdesign"
+        { "kind": "configuration", "path": "config/objects.json" },
+        { "kind": "databaseConfiguration" },
+        { "kind": "automationScript", "path": "scripts/matcher.js" },
+        { "kind": "deployScript", "path": "scripts/backfill-matcher-data.js" },
+        { "kind": "inspectionForm", "path": "inspection_form.json" },
+        { "kind": "screen", "path": "screens/wotrack.xml" },
+        { "kind": "report", "path": "REPORT_FOLDER/birt_report_name.rptdesign" },
+        { "kind": "manifest", "path": "features/matching.manifest.json" }
     ]
 }
 ```
@@ -474,7 +566,7 @@ To extract JSON deploy files from Maximo, bring up the Visual Studio Code Comman
 | Properties          | Maximo system properties                             |
 | Queries             | Maximo queries                                       |
 
-Once the type has been selected a list of available objects will be displayed and the list desired objects can be selected. Once the list of objects is selected click the `OK` button to extract the configurations. If a script file is currently selected the corresponding `.json` file will appended to if it exists or a new deploy file will be created. If the deploy `.json` file is selected the results will be appended to the existing file. If neither the script or deploy file are selected the results will be copied to the local clipboard and can be pasted to a deployment json file later.
+Once the type has been selected a list of available objects will be displayed and the list desired objects can be selected. Once the list of objects is selected click the `OK` button to extract the configurations. If a script file is open, the results are added to the script's `.json` deploy file, which is created if it does not exist. If a JSON deploy file is open, the results are added to that file. Otherwise, including when the open file is a deployment manifest or an inspection form, the results are copied to the clipboard and can be pasted into a JSON deploy file later.
 
 ## Extract DBC Files
 
@@ -731,6 +823,7 @@ Caught and uncaught exception stopping is controlled by VS Code exception breakp
 # Requirements
 
 - Maximo 7.6.0.8 or higher, Maximo Application Suite 8 is supported.
-- Files must have a `.js`, `.py`, or `.jy` extension for scripts, `.xml` for screens, `.rptdesign` for BIRT reports and `.json` for inspection forms.
+- Files must have a `.js`, `.py`, `.jy` or `.ts` extension for scripts, `.xml` for screens, `.rptdesign` for BIRT reports and `.json` for inspection forms, JSON deploy files and deployment manifests.
+- TypeScript scripts require Node.js and npm to build.
 - This extension requires Maximo to support Nashorn scripts, which requires Java 8.
 - Initial configuration must be done by a user in the administrative group defined by `ADMINGROUP` `MAXVARS` entry. Typically this is `MAXADMIN`.

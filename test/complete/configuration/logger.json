@@ -1,0 +1,11 @@
+{
+    "loggers": [
+        {
+            "logger": "testcomplete",
+            "logKey": "log4j.logger.maximo.testcomplete",
+            "logLevel": "INFO",
+            "active": true,
+            "appenders": "Console"
+        }
+    ]
+}

@@ -8,17 +8,6 @@ import Logger from '../logger';
 
 const LOG_SOURCE = 'InitTsTemplateCommand';
 
-// @ts-ignore
-function toPascalCase(scriptName) {
-    return (
-        scriptName
-            .split('.')
-            // @ts-ignore
-            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-            .join('')
-    );
-}
-
 export default async function initTsTemplateCommand() {
     Logger.info('Initialize TypeScript template command requested.', LOG_SOURCE);
     if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
@@ -45,9 +34,10 @@ export default async function initTsTemplateCommand() {
         'nashorn.d.ts',
         'globals.d.ts',
         'runtime-globals.ts',
-        'manage-declarations.d.ts'
+        'manage-declarations.d.ts',
+        'deploy.manifest.json'
     ];
-    const allTemplateFiles = [...copyFiles, 'webpack.config.js', path.join('src', 'index.ts')];
+    const allTemplateFiles = [...copyFiles, 'webpack.config.js', 'webpack-entries.js', path.join('src', 'index.ts')];
 
     const existing = allTemplateFiles.filter((file) => fs.existsSync(path.join(destRoot, file)));
     if (existing.length > 0) {
@@ -84,8 +74,6 @@ export default async function initTsTemplateCommand() {
         Logger.info('TypeScript template initialization cancelled before description was entered.', LOG_SOURCE);
         return;
     }
-
-    const libraryName = toPascalCase(scriptName);
 
     let indexDest;
     try {
@@ -149,19 +137,12 @@ export default async function initTsTemplateCommand() {
             });
         });
 
-        const manageFacadeZip = path.join(destRoot, 'manage-facade.d.ts.zip');
-        fs.copyFileSync(path.join(templateDir, 'manage-facade.d.ts.zip'), manageFacadeZip);
-        execSync(`unzip -o "${manageFacadeZip}" -d "${destRoot}"`);
-        fs.unlinkSync(manageFacadeZip);
+        // webpack.config.js and its entry discovery are copied as they are: the script name is read
+        // from the scriptConfig block of each script at build time, so neither needs substituting.
+        fs.copyFileSync(path.join(templateDir, 'webpack.config.js'), path.join(destRoot, 'webpack.config.js'));
+        fs.copyFileSync(path.join(templateDir, 'webpack-entries.js'), path.join(destRoot, 'webpack-entries.js'));
 
-        // webpack.config.js — replace placeholders
-        let webpackContent = fs.readFileSync(path.join(templateDir, 'webpack.config.js'), 'utf8');
-        webpackContent = webpackContent.replace(/\$\{script_name\}/g, scriptName);
-        webpackContent = webpackContent.replace(/\$\{library_name\}/g, libraryName);
-        const webpackDest = path.join(destRoot, 'webpack.config.js');
-        fs.writeFileSync(webpackDest, webpackContent, 'utf8');
-
-        // index.ts → src/index.ts — replace placeholders
+        // index.ts becomes src/index.ts, with placeholders replaced
         const srcDir = path.join(destRoot, 'src');
         if (!fs.existsSync(srcDir)) {
             fs.mkdirSync(srcDir, { recursive: true });

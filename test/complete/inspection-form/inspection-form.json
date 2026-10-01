@@ -1,0 +1,112 @@
+{
+    "sourceVersion": "9.1.318",
+    "activateOnDeploy": false,
+    "inspformnum": "1",
+    "revision": 1,
+    "name": "TEST Complete Inspection",
+    "instructions": "Complete manifest test inspection form",
+    "reason": "",
+    "type": "",
+    "readconfirmation": false,
+    "audioguided": false,
+    "questions": [
+        {
+            "inspquestionnum": "1",
+            "description": "TEST Fire System Alarms",
+            "information": "",
+            "groupid": 1,
+            "sequence": 0,
+            "groupseq": 1,
+            "required": false,
+            "fields": []
+        },
+        {
+            "inspquestionnum": "2",
+            "description": "Alarm tested",
+            "information": "Complete manifest test question",
+            "groupid": 1,
+            "sequence": 1,
+            "groupseq": 1.1,
+            "required": false,
+            "fields": [
+                {
+                    "inspfieldnum": "1",
+                    "inspquestionnum": "2",
+                    "fieldtype": "SO",
+                    "description": "Result",
+                    "sequence": 1,
+                    "required": true,
+                    "initiallabel": "",
+                    "endlabel": "",
+                    "metername": "",
+                    "metertype": "",
+                    "showdate": false,
+                    "showtime": false,
+                    "doctype": "",
+                    "visible": true,
+                    "domainid": "",
+                    "domaintype": "",
+                    "options": [
+                        {
+                            "description": "Fail",
+                            "sequence": 1,
+                            "inspectorfeedback": "Describe the failure",
+                            "requireaction": true,
+                            "color": "",
+                            "icon": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "inspquestionnum": "3",
+            "description": "Failure notes",
+            "information": "",
+            "groupid": 1,
+            "sequence": 2,
+            "groupseq": 1.2,
+            "required": false,
+            "fields": [
+                {
+                    "inspfieldnum": "2",
+                    "inspquestionnum": "3",
+                    "fieldtype": "TR",
+                    "description": "",
+                    "sequence": 1,
+                    "required": false,
+                    "initiallabel": "",
+                    "endlabel": "",
+                    "metername": "",
+                    "metertype": "",
+                    "showdate": false,
+                    "showtime": false,
+                    "doctype": "",
+                    "visible": false,
+                    "domainid": "",
+                    "domaintype": "",
+                    "options": []
+                }
+            ]
+        }
+    ],
+    "cascadeoptions": [
+        {
+            "srcquestion": "2",
+            "srcfield": "1",
+            "srctxtresponse": "Fail",
+            "tgtquestion": "3",
+            "tgtfield": "2",
+            "visible": true,
+            "required": true,
+            "inspectorfeedback": "",
+            "showmessage": false,
+            "operator1": "",
+            "operator2": "",
+            "number1": 0,
+            "number2": 0,
+            "requireaction": false
+        }
+    ],
+    "scripts": []
+}

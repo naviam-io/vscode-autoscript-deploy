@@ -47,21 +47,35 @@ export default class LocalConfiguration {
     }
 
     async encrypt(config) {
-        if (Array.isArray(config)) {
-            config = await Promise.all(
-                config.map(async (item) => {
-                    return await this._encrypt(item);
-                })
-            );
-        } else {
-            await this._encrypt(config);
-        }
+        const result = await this._encryptAll(config);
 
-        fs.writeFileSync(this.path, JSON.stringify(config, null, 4));
+        // Only rewrite the file when something was actually encrypted, otherwise the file watcher
+        // that calls encryptIfRequired() on change would retrigger itself in an infinite loop.
+        if (result.changed) {
+            fs.writeFileSync(this.path, JSON.stringify(result.config, null, 4));
+        }
+    }
+
+    /**
+     * Encrypts any plain text secrets and writes the configuration, whether or not anything was
+     * encrypted, for changes such as the selected environment that carry no secret.
+     */
+    async save(config) {
+        const result = await this._encryptAll(config);
+        fs.writeFileSync(this.path, JSON.stringify(result.config, null, 4));
+    }
+
+    async _encryptAll(config) {
+        if (Array.isArray(config)) {
+            const results = await Promise.all(config.map((item) => this._encrypt(item)));
+            return { config: results.map((result) => result.config), changed: results.some((result) => result.changed) };
+        }
+        return this._encrypt(config);
     }
 
     async _encrypt(config) {
         let encryptKey = await this.secretStorage.get('encryptKey');
+        let changed = false;
 
         if (!encryptKey) {
             encryptKey = new Buffer.from(crypto.randomBytes(16)).toString('hex') + new Buffer.from(crypto.randomBytes(32)).toString('hex');
@@ -77,6 +91,7 @@ export default class LocalConfiguration {
             encPassword += cipher.final('hex');
 
             config.password = '{encrypted}' + encPassword;
+            changed = true;
         }
         if (config.apiKey && !config.apiKey.startsWith('{encrypted}')) {
             const cipher = crypto.createCipheriv(this.algorithm, key, iv);
@@ -84,6 +99,7 @@ export default class LocalConfiguration {
             encApiKey += cipher.final('hex');
 
             config.apiKey = '{encrypted}' + encApiKey;
+            changed = true;
         }
 
         if (config.proxyPassword && !config.proxyPassword.startsWith('{encrypted}')) {
@@ -92,8 +108,9 @@ export default class LocalConfiguration {
             encProxyPassword += cipher.final('hex');
 
             config.proxyPassword = '{encrypted}' + encProxyPassword;
+            changed = true;
         }
-        return config;
+        return { config, changed };
     }
 
     async decrypt(config) {

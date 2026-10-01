@@ -1,0 +1,18 @@
+{
+    "messages": [
+        {
+            "msgGroup": "TESTCOMPLETE",
+            "msgKey": "TESTMESSAGE",
+            "value": "Complete manifest test message {0}",
+            "msgId": "BMXZZ0101E",
+            "displayMethod": "MSGBOX",
+            "options": ["ok"],
+            "prefix": "BMXZZ",
+            "suffix": "E",
+            "explanation": "Complete manifest test explanation",
+            "operatorResponse": "Complete manifest test operator response",
+            "adminResponse": "Complete manifest test admin response",
+            "systemAction": "Complete manifest test system action"
+        }
+    ]
+}

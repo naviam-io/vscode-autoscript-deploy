@@ -1,0 +1,115 @@
+{
+    "integrationObjects": [
+        {
+            "intObjectName": "TEST_PERSONAPI",
+            "description": "Integration test person API",
+            "useWith": "INTEGRATION",
+            "useOSSecurity": true,
+            "authApp": "TEST_PERSONAPI",
+            "flatSupported": true,
+            "defClass": "psdi.iface.mic.MicSetOut",
+            "procClass": "psdi.iface.mic.MicSetIn",
+            "searchAttrs": "PERSONID,DISPLAYNAME",
+            "module": "WO",
+            "autoPagingThreshold": 100,
+            "maxIntObjDetail": [
+                {
+                    "objectName": "PERSON",
+                    "skipKeyUpdate": true,
+                    "excludeParentKey": false,
+                    "deleteOnCreate": false,
+                    "objectOrder": 1,
+                    "maxIntObjCols": [
+                        {
+                            "name": "PASSWORDINPUT",
+                            "intObjFldType": "NONPERSISTENT"
+                        }
+                    ],
+                    "maxIntObjAlias": [
+                        {
+                            "name": "DISPLAYNAME",
+                            "aliasName": "NAME"
+                        }
+                    ]
+                },
+                {
+                    "objectName": "PHONE",
+                    "parentObjName": "PERSON",
+                    "relation": "PHONE",
+                    "propagateEvent": true,
+                    "objectOrder": 1,
+                    "maxIntObjCols": [
+                        {
+                            "name": "ROWSTAMP",
+                            "intObjFldType": "EXCLUDE"
+                        }
+                    ]
+                }
+            ],
+            "sigOption": [
+                {
+                    "optionName": "TESTOPT",
+                    "description": "Integration test option",
+                    "alsoGrants": "READ",
+                    "prerequisite": "READ"
+                }
+            ],
+            "oslcQuery": [
+                {
+                    "queryType": "osclause",
+                    "clauseName": "TESTACTIVE",
+                    "description": "Active people",
+                    "clause": "status = 'ACTIVE'",
+                    "isPublic": true
+                }
+            ],
+            "queryTemplate": [
+                {
+                    "templateName": "TESTTEMPLATE",
+                    "description": "Integration test template",
+                    "pageSize": 20,
+                    "searchAttributes": "PERSONID",
+                    "timelineAttributes": "STATUSDATE",
+                    "queryTemplateAttr": [
+                        {
+                            "selectAttrName": "personid",
+                            "title": "Person",
+                            "selectOrder": 1,
+                            "sortByOn": true,
+                            "ascending": true,
+                            "sortByOrder": 1
+                        },
+                        {
+                            "selectAttrName": "displayname",
+                            "alias": "name",
+                            "selectOrder": 2
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "intObjectName": "TEST_MIGRATIONROLE",
+            "description": "Integration test migration object",
+            "useWith": "MIGRATIONMGR",
+            "maxIntObjDetail": [
+                {
+                    "objectName": "MAXROLE",
+                    "objectOrder": 1,
+                    "maxIntObjCols": [
+                        {
+                            "name": "DESCRIPTION_LONGDESCRIPTION",
+                            "intObjFldType": "NONPERSISTENT"
+                        }
+                    ]
+                },
+                {
+                    "objectName": "LONGDESCRIPTION",
+                    "parentObjName": "MAXROLE",
+                    "relation": "LONGDESC",
+                    "objectOrder": 1
+                }
+            ]
+        }
+    ]
+}

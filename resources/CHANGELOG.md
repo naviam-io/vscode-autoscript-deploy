@@ -1,4 +1,25 @@
 # Release Notes
+## 1.5.0
+- Added a generic retained values engine, and cron tasks now support `_retain`, so redeploying a cron task keeps the values the customer tuned and, when a collection is named, the instances the customer added. The existing record is captured as a snapshot before it is replaced, and the snapshot is discarded only once the deployment has succeeded, so a retry recovers from a failed run.
+- Domains now support `_retain`, so redeploying a domain keeps the values the customer tuned and, when a value collection is named, the values the customer added.
+- Added the `snapshots/list` and `snapshots/discard` deploy actions, which report and remove retained values snapshots left behind by a failed deployment.
+- Added a `deployscript` action that installs a script, runs it once synchronously and removes it again whether it succeeded or failed. It backs the `deployScript` kind of a deployment manifest entry.
+- Added support for reading and updating the e-signature setting of sigoptions, so admin mode can be applied when e-signature is enabled.
+- Synonym domain values are now translated between their internal and localized values on deployment and extraction, so configuration deploys and round trips on a Maximo whose base language is not English.
+- Attributes that the Maximo version does not have are now skipped with an info log entry instead of failing the deployment.
+- Number range domain values are now extracted as numbers instead of locale formatted strings.
+- Fixed a property declared in a `scriptConfig` being created with an empty value, and `initialPropValue` never being applied.
+- Fixed unquoted `autoScriptVars` and `scriptLaunchPoints` keys in a `scriptConfig` being ignored, and a script failing to deploy when it used a variable named `scriptConfig` for its own purposes.
+- Fixed deleting an automation script that does not exist creating it instead.
+- Fixed table domains, which could be neither deployed nor extracted because the domain type is `MAXTABLE`. Extraction now includes every field deployment accepts, including the logger `parentLogKey` and the message `operatorResponse`.
+- Fixed extracting a synonym domain value with conditions, and setting the query template sort order on MAS 8.11.
+- Fixed adding OSLC actions, queries and query templates to a new object structure on MAS 9, which failed with "mosInfo is null".
+- Fixed the error with `FLATSUPPORTED` being read only for `MIGRATIONMGR` object structures.
+- Fixed integration object application authorizations, which are now added or updated correctly and never removed, because they can be shared.
+- Fixed redeploying an object that was previously deleted, deleting a message without its value, and setting a query owner.
+- Fixed deploying actions of type `APPACTION`, deleting integration objects, and escalation fields being cleared when omitted.
+- Fixed the retained values snapshot and the legacy script property security level failing validation on a Maximo whose base language is not English.
+
 ## 1.4.5
 - Fix: set the domain after MAXTYPE and LENGTH for domain validation to succeed on new attributes
 

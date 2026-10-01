@@ -69,11 +69,11 @@ function main() {
                         var presentation = presentationSet.getMbo(0);
 
                         while (presentation) {
-                            var app = presentation.getMboSet('$app', 'MAXAPPS', 'app = :app').moveFirst();
+                            var appMbo = presentation.getMboSet('$app', 'MAXAPPS', 'app = :app').moveFirst();
 
                             var result = {
                                 label: presentation.getString('APP'),
-                                description: app != null ? app.getString('DESCRIPTION') : ''
+                                description: appMbo != null ? appMbo.getString('DESCRIPTION') : ''
                             };
 
                             presentations.push(result);

@@ -60,7 +60,7 @@ export default async function selectEnvironment(
                     secretStorage
                 );
                 if (localConfig.configAvailable) {
-                    await localConfig.encrypt(config);
+                    await localConfig.save(config);
                     Logger.info('Updated selected environment in workspace configuration.', LOG_SOURCE);
                 }
             }

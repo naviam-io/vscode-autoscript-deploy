@@ -1,0 +1,85 @@
+{
+    "domains": [
+        {
+            "domainId": "TESTABCTYPE",
+            "domainType": "ALN",
+            "description": "Complete manifest test ALN domain",
+            "maxType": "UPPER",
+            "length": 1,
+            "scale": 0,
+            "alnDomain": [
+                {
+                    "value": "A",
+                    "description": "Type A"
+                }
+            ]
+        },
+        {
+            "domainId": "TESTNUMDOM",
+            "domainType": "NUMERIC",
+            "description": "Complete manifest test numeric domain",
+            "maxType": "INTEGER",
+            "length": 12,
+            "scale": 0,
+            "numericDomain": [
+                {
+                    "value": "1",
+                    "description": "One"
+                }
+            ]
+        },
+        {
+            "domainId": "TESTRANGEDOM",
+            "domainType": "NUMRANGE",
+            "description": "Complete manifest test numeric range domain",
+            "maxType": "INTEGER",
+            "length": 12,
+            "scale": 0,
+            "numRangeDomain": [
+                {
+                    "rangeSegment": "1",
+                    "rangeMinimum": 1000,
+                    "rangeMaximum": 50000,
+                    "rangeInterval": 1000
+                }
+            ]
+        },
+        {
+            "domainId": "TESTTABLEDOM",
+            "domainType": "MAXTABLE",
+            "description": "Complete manifest test table domain",
+            "tableDomain": [
+                {
+                    "objectName": "MAXUSER",
+                    "validtnWhereClause": "userid = :userid",
+                    "listWhereClause": "status = 'ACTIVE'",
+                    "errorResourceBundle": "system",
+                    "errorAccessKey": "notvalid"
+                }
+            ]
+        },
+        {
+            "domainId": "TESTXOVERDOM",
+            "domainType": "CROSSOVER",
+            "description": "Complete manifest test crossover domain",
+            "crossoverDomain": [
+                {
+                    "objectName": "MAXUSER",
+                    "validtnWhereClause": "userid = :userid",
+                    "listWhereClause": "status = 'ACTIVE'",
+                    "errorResourceBundle": "system",
+                    "errorAccessKey": "notvalid",
+                    "crossoverFields": [
+                        {
+                            "sourceField": "DEFSITE",
+                            "destField": "SITEID",
+                            "copyEvenIfSrcNull": true,
+                            "copyOnlyIfDestNull": true,
+                            "sequence": 1
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

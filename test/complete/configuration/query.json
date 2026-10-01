@@ -1,0 +1,15 @@
+{
+    "queries": [
+        {
+            "app": "AUTOSCRIPT",
+            "clauseName": "TESTCOMPLETE",
+            "owner": "MAXADMIN",
+            "clause": "autoscript like 'TEST.%'",
+            "description": "Complete manifest test query",
+            "isPublic": true,
+            "isUserList": false,
+            "notes": "Complete manifest test query notes",
+            "priority": 1
+        }
+    ]
+}

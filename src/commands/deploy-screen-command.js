@@ -39,7 +39,7 @@ export default async function deployScreen(client, filePath, screen) {
             'The selected screen definition cannot be empty.',
             { modal: true }
         );
-        return;
+        return false;
     }
 
     let fileName = path.basename(filePath);
@@ -71,7 +71,7 @@ export default async function deployScreen(client, filePath, screen) {
             `Error parsing ${fileName}: ${parseError.message}`,
             { modal: true }
         );
-        return;
+        return false;
     }
 
     if (!screenName) {
@@ -82,10 +82,10 @@ export default async function deployScreen(client, filePath, screen) {
                 modal: true,
             }
         );
-        return;
+        return false;
     }
 
-    await window.withProgress(
+    return await window.withProgress(
         {
             cancellable: false,
             title: 'Screen',
@@ -119,6 +119,7 @@ export default async function deployScreen(client, filePath, screen) {
                             { modal: true }
                         );
                     }
+                    return false;
                 } else {
                     progress.report({
                         increment: 100,
@@ -126,6 +127,7 @@ export default async function deployScreen(client, filePath, screen) {
                     });
                     await new Promise((resolve) => setTimeout(resolve, 2000));
                     Logger.info(`Screen ${fileName} deployed successfully.`, LOG_SOURCE);
+                    return true;
                 }
             } else {
                 Logger.error(`Screen deploy did not receive a response from Maximo for ${fileName}.`, null, LOG_SOURCE);
@@ -134,7 +136,7 @@ export default async function deployScreen(client, filePath, screen) {
                     { modal: true }
                 );
             }
-            return result;
+            return false;
         }
     );
 }

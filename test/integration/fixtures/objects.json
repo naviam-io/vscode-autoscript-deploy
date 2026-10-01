@@ -1,0 +1,97 @@
+{
+    "objects": [
+        {
+            "object": "NVTEST_OBJ",
+            "description": "Integration test object",
+            "service": "ASSET",
+            "entity": "NVTEST_OBJ",
+            "level": "SYSTEM",
+            "mainObject": true,
+            "persistent": true,
+            "uniqueColumn": "NVTEST_OBJID",
+            "triggerRoot": "NVTEST_OBJ",
+            "addRowstamp": true,
+            "textSearchEnabled": false,
+            "attributes": [
+                {
+                    "attribute": "NVTEST_OBJID",
+                    "description": "Unique identifier",
+                    "title": "Identifier",
+                    "type": "BIGINT",
+                    "required": true,
+                    "persistent": true,
+                    "primaryColumn": 1,
+                    "searchType": "EXACT"
+                },
+                {
+                    "attribute": "DESCRIPTION",
+                    "description": "Object description",
+                    "title": "Description",
+                    "type": "ALN",
+                    "length": 100,
+                    "required": false,
+                    "persistent": true,
+                    "searchType": "WILDCARD"
+                },
+                {
+                    "attribute": "NVTEST_TYPE",
+                    "description": "Action type",
+                    "title": "Type",
+                    "type": "UPPER",
+                    "length": 26,
+                    "required": false,
+                    "persistent": true,
+                    "searchType": "WILDCARD",
+                    "domain": "ACTIONTYPE",
+                    "mustBe": false,
+                    "localizable": false,
+                    "auditEnabled": true,
+                    "eSignatureEnabled": true
+                },
+                {
+                    "attribute": "NVTEST_QTY",
+                    "description": "Quantity",
+                    "title": "Quantity",
+                    "type": "INTEGER",
+                    "required": false,
+                    "persistent": true,
+                    "searchType": "EXACT",
+                    "defaultValue": "0",
+                    "positive": true
+                }
+            ],
+            "relationships": [
+                {
+                    "relationship": "NVTEST_REL_ASSET",
+                    "child": "ASSET",
+                    "remarks": "Test relationship to ASSET",
+                    "whereClause": "1=1",
+                    "cardinality": "SINGLE",
+                    "dbJoinRequired": 0,
+                    "isDefault": true
+                }
+            ],
+            "indexes": [
+                {
+                    "index": "NVTEST_OBJ_NDX1",
+                    "enforceUniqueness": true,
+                    "clusteredIndex": false,
+                    "required": false,
+                    "textSearchIndex": false,
+                    "columns": [
+                        {
+                            "column": "NVTEST_OBJID",
+                            "ascending": true,
+                            "sequence": 1
+                        }
+                    ]
+                }
+            ],
+            "class": "psdi.mbo.custapp.CustomMboSet",
+            "auditEnabled": true,
+            "eAuditFilter": "1=1",
+            "eSignatureFilter": "1=1",
+            "auditTable": "A_NVTEST_OBJ"
+        }
+    ]
+}

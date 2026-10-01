@@ -1,0 +1,121 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Maximo Deployment Manifest",
+    "description": "An ordered list of the resources to deploy to Maximo.",
+    "type": "object",
+    "required": ["manifest"],
+    "additionalProperties": false,
+    "properties": {
+        "manifest": {
+            "type": "array",
+            "description": "The resources to deploy, in the order they are to be deployed.",
+            "items": {
+                "oneOf": [
+                    {
+                        "type": "string",
+                        "deprecated": true,
+                        "description": "Deprecated: use an object with a \"kind\" instead. A bare path is routed by its file extension, and an automation script keeps its conventional predeploy, deploy and configuration companion files."
+                    },
+                    { "$ref": "#/definitions/databaseConfigurationEntry" },
+                    { "$ref": "#/definitions/fileEntry" },
+                    { "$ref": "#/definitions/legacyFileEntry" }
+                ]
+            }
+        }
+    },
+    "definitions": {
+        "databaseConfigurationEntry": {
+            "type": "object",
+            "description": "Applies any pending database configuration, taking Admin Mode if Maximo requires it and you agree.",
+            "required": ["kind"],
+            "additionalProperties": false,
+            "properties": {
+                "kind": {
+                    "const": "databaseConfiguration"
+                },
+                "disabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Set to true to skip this entry. A disabled entry is not validated and nothing is deployed for it, which is how part of a deployment is turned off temporarily without deleting it."
+                }
+            }
+        },
+        "legacyFileEntry": {
+            "type": "object",
+            "deprecated": true,
+            "description": "Deprecated: add a \"kind\" instead. Without one the file is routed by its extension, and an automation script keeps its conventional predeploy, deploy and configuration companion files.",
+            "required": ["path"],
+            "additionalProperties": false,
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "The file to deploy. A relative path is resolved against this manifest."
+                },
+                "disabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Set to true to skip this entry. A disabled entry is not validated and nothing is deployed for it, which is how part of a deployment is turned off temporarily without deleting it."
+                }
+            }
+        },
+        "fileEntry": {
+            "type": "object",
+            "required": ["path", "kind"],
+            "additionalProperties": false,
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "The file to deploy. A relative path is resolved against this manifest."
+                },
+                "kind": {
+                    "type": "string",
+                    "description": "What the file is.",
+                    "enum": ["configuration", "automationScript", "deployScript", "inspectionForm", "screen", "report", "manifest"]
+                },
+                "disabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Set to true to skip this entry. A disabled entry is not validated and nothing is deployed for it, which is how part of a deployment is turned off temporarily without deleting it."
+                }
+            },
+            "allOf": [
+                {
+                    "if": {
+                        "properties": { "kind": { "enum": ["configuration", "inspectionForm", "manifest"] } },
+                        "required": ["kind"]
+                    },
+                    "then": {
+                        "properties": { "path": { "pattern": "\\.json$" } }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": { "kind": { "enum": ["automationScript", "deployScript"] } },
+                        "required": ["kind"]
+                    },
+                    "then": {
+                        "properties": { "path": { "pattern": "\\.(ts|js|py|jy)$" } }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": { "kind": { "const": "screen" } },
+                        "required": ["kind"]
+                    },
+                    "then": {
+                        "properties": { "path": { "pattern": "\\.xml$" } }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": { "kind": { "const": "report" } },
+                        "required": ["kind"]
+                    },
+                    "then": {
+                        "properties": { "path": { "pattern": "\\.rptdesign$" } }
+                    }
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<presentation id="testaction" debug="0" mboname="ACTION" resultstableid="results_showlist" beanclass="psdi.webclient.beans.action.ActionAppBean" version="6.0.0" apphelp="com.ibm.mbs.doc,action/c_actions_application.html">
+    <metadata>
+        <ctrlgroup groupname="MAXADMIN" optionname="TESTMEMO" app="TESTACTION" groupseq="10">
+            <sigoption optionname="TESTMEMO" app="TESTACTION" description="Complete manifest test conditional memo" esigenabled="N" visible="N" alsogrants="" alsorevokes="" prerequisite="" />
+            <ctrlcondition conditionnum="TESTCOND" conditionseq="10" reevaluate="Y">
+                <condition conditionnum="TESTCOND" type="EXPRESSION" expression="type = 'SETVALUE'" classname="" description="Complete manifest test condition" nocaching="1" />
+                <ctrlcondprop property="inputmode" propertyvalue="readonly" conditionresult="Y" />
+            </ctrlcondition>
+        </ctrlgroup>
+    </metadata>
+    <page id="mainrec">
+        <include id="pageHeader"/>
+        <clientarea id="clientarea">
+            <tabgroup id="maintabs" style="form">
+                <tab id="results" default="true" label="List" type="list">
+                    <menubar id="actiontoolbar" event="search" sourcemethod="getAppSearchOptions"/>
+                    <table id="results_showlist" label="Actions" datasrc="results_showlist" mboname="ACTION" inputmode="readonly" selectmode="multiple">
+                        <tablebody id="results_showlist_tablebody" filterable="true" displayrowsperpage="20" filterexpanded="true">
+                            <tablecol id="results_showlist_tablebody_1" type="event" mxevent="toggleselectrow" mxevent_desc="Select Row {0}" dataattribute="action" sortable="false" filterable="false" hidden="false"/>
+                            <tablecol id="results_showlist_tablebody_2" dataattribute="action" type="link" mxevent="selectrecord" mxevent_desc="Go To %1"/>
+                            <tablecol id="results_showlist_tablebody_3" dataattribute="description"/>
+                            <tablecol id="results_showlist_tablebody_4" dataattribute="objectname" linkedcontrolid="qbe_grid2_1_1_grid3_3"/>
+                            <tablecol id="results_showlist_tablebody_5" dataattribute="type" linkedcontrolid="qbe_grid2_1_1_grid3_4"/>
+                            <tablecol id="results_showlist_tablebody_6" dataattribute="dispvalue" linkedcontrolid="qbe_grid2_1_1_grid3_5"/>
+                            <tablecol id="results_bookmark" type="event" mxevent="BOOKMARK" mxevent_desc="Add to Bookmarks" mxevent_icon="btn_addtobookmarks.gif" sortable="false" filterable="false" hidden="false"/>
+                        </tablebody>
+                    </table>
+                </tab>
+                <tab id="main" label="TEST Action" type="insert">
+                    <section id="main_grid11" border="true">
+                        <sectionrow id="main_grid11_r1">
+                            <sectioncol id="main_grid11_c1">
+                                <section id="main_grid11_c1_1">
+                                    <multiparttextbox id="main_grid11_1" dataattribute="action" descdataattribute="description" longdescription="true"/>
+                                    <textbox id="main_grid11_3" dataattribute="objectname" lookup="objectname"/>
+                                    <combobox id="main_grid11_10" dataattribute="type"/>
+                                </section>
+                            </sectioncol>
+                            <sectioncol id="main_grid11_c2">
+                                <section id="main_grid11_c2_1">
+                                    <textbox id="main_grid11_11" dataattribute="dispvalue" menutype="ACTION"/>
+                                    <textbox id="main_grid11_parameter" dataattribute="parameter" menutype="actionparam"/>
+                                    <textbox id="main_grid11_4" dataattribute="memo" sigoption="TESTMEMO"/>
+                                    <textbox id="main_grid11_12" dataattribute="usewith" menutype="normal" lookup="valuelist"/>
+                                </section>
+                            </sectioncol>
+                        </sectionrow>
+                        <buttongroup id="member_table_buttongroup">
+                            <pushbutton id="member_table_buttongroup_1" label="Select Members" mxevent="selectmembers"/>
+                        </buttongroup>
+                    </section>
+                    <table id="main_grid1_members_table" label="Members" relationship="ACTION_MEMBERS">
+                        <tablebody id="main_grid1_members_table_tablebody" displayrowsperpage="20" filterable="true">
+                            <tablecol id="main_grid1_members_table_tablebody_1" dataattribute="member" inputmode="readonly"/>
+                            <tablecol id="main_grid1_members_table_tablebody_2" dataattribute="ACTIONGROUP_MEMBERACTION.description" inputmode="readonly" sortable="false"/>
+                            <tablecol id="main_grid1_members_table_tablebody_3" dataattribute="ACTIONGROUP_MEMBERACTION.objectname" inputmode="readonly" sortable="false"/>
+                            <tablecol id="main_grid1_members_table_tablebody_4" dataattribute="ACTIONGROUP_MEMBERACTION.Type" inputmode="readonly" sortable="false"/>
+                            <tablecol id="main_grid1_members_table_tablebody_5" dataattribute="ACTIONGROUP_MEMBERACTION.dispvalue" inputmode="readonly" sortable="false"/>
+                            <tablecol id="main_grid1_members_table_tablebody_6" dataattribute="sequence"/>
+                            <tablecol id="main_grid1_members_table_tablebody_10" type="event" mxevent="toggledeleterow" mxevent_icon="btn_garbage.gif" mxevent_desc="Mark Row for Delete" sortable="false" filterable="false" hidden="false"/>
+                        </tablebody>
+                    </table>
+                </tab>
+            </tabgroup>
+        </clientarea>
+        <include id="pageFooter"/>
+    </page>
+    <dialog id="selectmembers" label="Select Members" beanclass="psdi.webclient.beans.action.ActionGroupBean" relationship="ACTION_POTENTIALMEMBERS" parentdatasrc="MAINRECORD">
+        <table id="selectactions_action_table" width="700" selectmode="multiple" label="Members">
+            <tablebody id="selectactions_action_table_tablebody" displayrowsperpage="15" filterable="true">
+                <tablecol id="selectactions_action_table_tablebody_1" type="event" mxevent="toggleselectrow" sortable="false" filterable="false" hidden="false"/>
+                <tablecol id="selectactions_action_table_tablebody_2" dataattribute="action"/>
+                <tablecol id="selectactions_action_table_tablebody_3" dataattribute="description"/>
+                <tablecol id="selectactions_action_table_tablebody_4" dataattribute="type"/>
+                <tablecol id="selectactions_action_table_tablebody_5" dataattribute="dispvalue"/>
+            </tablebody>
+        </table>
+        <buttongroup id="selectactions_2">
+            <pushbutton id="selectactions_2_1" label="OK" default="true" mxevent="dialogok" value="addMembers"/>
+            <pushbutton id="selectactions_2_2" label="Cancel" mxevent="dialogcancel"/>
+        </buttongroup>
+    </dialog>
+    <dialog id="searchmore" label="More Search Fields" inputmode="query" beanclass="psdi.webclient.system.beans.QbeBean">
+        <section id="qbe_grid2_1_1_grid3">
+            <sectionrow id="qbe_grid2_1_1_grid3_r1">
+                <sectioncol id="qbe_grid2_1_1_grid3_r1_c1">
+                    <section id="qbe_grid2_1_1_grid3_r1_c1_s1">
+                        <multiparttextbox id="qbe_grid2_1_1_grid3_1" dataattribute="action" descdataattribute="description" inputmode="query" descinputmode="query"/>
+                        <textbox id="qbe_grid2_1_1_grid3_4" dataattribute="type" inputmode="query" lookup="valuelist"/>
+                        <textbox id="qbe_grid2_1_1_grid3_3" dataattribute="objectname" lookup="objectname" inputmode="query"/>
+                        <textbox id="qbe_grid2_1_1_grid3_5" dataattribute="dispvalue" inputmode="query"/>
+                        <textbox id="qbe_grid2_1_1_grid3_6" dataattribute="parameter" inputmode="query"/>
+                    </section>
+                </sectioncol>
+            </sectionrow>
+        </section>
+        <buttongroup id="qbe_grid2_1_1_grid6">
+            <pushbutton id="qbe_grid2_1_1_grid6_1" label="Find" default="true" mxevent="dialogok"/>
+            <pushbutton id="qbe_grid2_1_1_grid6_2" label="Clear" mxevent="qbeclear"/>
+            <pushbutton id="qbe_grid2_1_1_grid6_3" label="Cancel" mxevent="qbecancel"/>
+        </buttongroup>
+    </dialog>
+    <dialog id="searchbook" label="My Bookmarks" mboname="ACTION" beanclass="psdi.webclient.system.beans.ViewBookmarksBean">
+        <table id="bookmarks_table" selectmode="single" label="Actions" inputmode="readonly">
+            <tablebody id="bookmarks_table_tablebody" displayrowsperpage="20" filterable="true">
+                <tablecol id="bookmarks_tablebody_1" dataattribute="action" mxevent="selectrecord" type="link"/>
+                <tablecol id="bookmarks_table_tablebody_2" dataattribute="description"/>
+                <tablecol id="bookmarks_table_tablebody_delete" type="event" mxevent="instantdelete" mxevent_icon="btn_delete.gif" mxevent_desc="Delete" sortable="false" filterable="false" hidden="false"/>
+            </tablebody>
+        </table>
+        <buttongroup id="bookmarks_2">
+            <pushbutton id="bookmarks_2_1" label="OK" mxevent="dialogok" default="true"/>
+        </buttongroup>
+    </dialog>
+</presentation>

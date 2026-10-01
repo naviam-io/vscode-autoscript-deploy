@@ -1,0 +1,15 @@
+{
+    "queries": [
+        {
+            "app": "AUTOSCRIPT",
+            "clauseName": "NVTEST_ACTIVE_SCRIPTS",
+            "owner": "MAXADMIN",
+            "clause": "status = 'ACTIVE'",
+            "description": "Test active scripts",
+            "isPublic": true,
+            "isUserList": false,
+            "notes": "Test query notes",
+            "priority": 1
+        }
+    ]
+}

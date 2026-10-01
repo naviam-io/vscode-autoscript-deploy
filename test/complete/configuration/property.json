@@ -1,0 +1,21 @@
+{
+    "properties": [
+        {
+            "propName": "TESTcomplete.property",
+            "description": "Complete manifest test property",
+            "propValue": "deployed",
+            "liveRefresh": true,
+            "nullsAllowed": true,
+            "maxType": "ALN",
+            "secureLevel": "PUBLIC",
+            "maximoDefault": "deployed",
+            "maxPropInstance": [
+                {
+                    "serverName": "TESTSERVER",
+                    "serverHost": "localhost",
+                    "propValue": "instance"
+                }
+            ]
+        }
+    ]
+}

@@ -77,6 +77,7 @@ export default async function extractReportsCommand(client) {
 
                         let overwriteAll = false;
                         let overwrite = false;
+                        const failures = [];
 
                         await asyncForEach(reports, async (report) => {
                             if (!cancelToken.isCancellationRequested) {
@@ -85,63 +86,86 @@ export default async function extractReportsCommand(client) {
                                     message: `Extracting ${report.description}`,
                                 });
 
-                                let reportInfo = await client.getReport(report.reportId);
+                                try {
+                                    let reportInfo = await client.getReport(report.reportId);
 
-                                let outputFile = extractLoc + '/' + reportInfo.reportFolder + '/' + report.reportName;
+                                    if (!reportInfo) {
+                                        throw new Error(`The report ${report.description} was not found.`);
+                                    }
 
-                                if (reportInfo.design) {
-                                    let xml = reportInfo.design;
-                                    // if the file doesn't exist then just write it out.
-                                    if (!fs.existsSync(outputFile)) {
-                                        // make sure the folder exists
-                                        fs.mkdirSync(extractLoc + '/' + reportInfo.reportFolder, { recursive: true });
-                                        fs.writeFileSync(outputFile, xml);
-                                        await writeResources(reportInfo, extractLoc);
-                                        await writeMetaData(reportInfo, extractLoc);
-                                    } else {
-                                        let incomingHash = crypto.createHash('sha256').update(xml).digest('hex');
-                                        // @ts-ignore
-                                        let fileHash = crypto.createHash('sha256').update(fs.readFileSync(outputFile)).digest('hex');
+                                    let outputFile = extractLoc + '/' + reportInfo.reportFolder + '/' + report.reportName;
 
-                                        if (fileHash !== incomingHash) {
-                                            if (!overwriteAll) {
-                                                await window
-                                                    .showInformationMessage(
-                                                        `The report ${outputFile} exists. \nReplace?`,
-                                                        { modal: true },
-                                                        ...['Replace', 'Replace All', 'Skip']
-                                                    )
-                                                    .then(async (response) => {
-                                                        if (response === 'Replace') {
-                                                            overwrite = true;
-                                                        } else if (response === 'Replace All') {
-                                                            overwriteAll = true;
-                                                        } else if (response === 'Skip') {
-                                                            // do nothing
-                                                            overwrite = false;
-                                                        } else {
-                                                            // @ts-ignore
-                                                            cancelToken.cancel();
-                                                        }
-                                                    });
-                                            }
-                                            if (overwriteAll || overwrite) {
-                                                fs.writeFileSync(outputFile, xml);
-                                                await writeResources(reportInfo, extractLoc);
-                                                await writeMetaData(reportInfo, extractLoc);
-                                                overwrite = false;
+                                    if (reportInfo.design) {
+                                        let xml = reportInfo.design;
+                                        // if the file doesn't exist then just write it out.
+                                        if (!fs.existsSync(outputFile)) {
+                                            // make sure the folder exists
+                                            fs.mkdirSync(extractLoc + '/' + reportInfo.reportFolder, { recursive: true });
+                                            fs.writeFileSync(outputFile, xml);
+                                            await writeResources(reportInfo, extractLoc);
+                                            await writeMetaData(reportInfo, extractLoc);
+                                        } else {
+                                            let incomingHash = crypto.createHash('sha256').update(xml).digest('hex');
+                                            // @ts-ignore
+                                            let fileHash = crypto.createHash('sha256').update(fs.readFileSync(outputFile)).digest('hex');
+
+                                            if (fileHash !== incomingHash) {
+                                                if (!overwriteAll) {
+                                                    await window
+                                                        .showInformationMessage(
+                                                            `The report ${outputFile} exists. \nReplace?`,
+                                                            { modal: true },
+                                                            ...['Replace', 'Replace All', 'Skip']
+                                                        )
+                                                        .then(async (response) => {
+                                                            if (response === 'Replace') {
+                                                                overwrite = true;
+                                                            } else if (response === 'Replace All') {
+                                                                overwriteAll = true;
+                                                            } else if (response === 'Skip') {
+                                                                // do nothing
+                                                                overwrite = false;
+                                                            } else {
+                                                                // @ts-ignore
+                                                                cancelToken.cancel();
+                                                            }
+                                                        });
+                                                }
+                                                if (overwriteAll || overwrite) {
+                                                    fs.writeFileSync(outputFile, xml);
+                                                    await writeResources(reportInfo, extractLoc);
+                                                    await writeMetaData(reportInfo, extractLoc);
+                                                    overwrite = false;
+                                                }
                                             }
                                         }
-                                    }
 
-                                    if (cancelToken.isCancellationRequested) {
-                                        return;
+                                        if (cancelToken.isCancellationRequested) {
+                                            return;
+                                        }
                                     }
+                                } catch (error) {
+                                    const message = error instanceof Error ? error.message : String(error);
+                                    failures.push({ report: report.description, message });
+                                    Logger.error(`Failed to extract report ${report.description}: ${message}`, null, LOG_SOURCE);
                                 }
                             }
                         });
 
-                        if (!cancelToken.isCancellationRequested) {
+                        if (failures.length > 0) {
+                            const extracted = reports.length - failures.length;
+                            const summary = `${failures.length} of ${reports.length} ${reports.length > 1 ? 'reports' : 'report'} could not be extracted.`;
+                            const maxShown = 3;
+                            let details = failures
+                                .slice(0, maxShown)
+                                .map((failure) => `${failure.report}:\n${failure.message}`)
+                                .join('\n\n');
+                            if (failures.length > maxShown) {
+                                details += `\n\n...and ${failures.length - maxShown} more. See the MaximoDevTools output log for details.`;
+                            }
+                            Logger.error(`${summary} ${extracted} report(s) extracted.`, null, LOG_SOURCE);
+                            window.showErrorMessage(summary, { modal: true, detail: details });
+                        } else if (!cancelToken.isCancellationRequested) {
                             window.showInformationMessage(reports.length + (reports.length > 1 ? ' reports' : ' report') + ' extracted.', { modal: true });
                             Logger.info(`${reports.length} report(s) extracted.`, LOG_SOURCE);
                         }

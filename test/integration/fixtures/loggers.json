@@ -1,0 +1,17 @@
+{
+    "loggers": [
+        {
+            "logger": "testcustomlogger",
+            "logKey": "log4j.logger.maximo.testcustomlogger",
+            "logLevel": "INFO",
+            "active": true,
+            "appenders": "Console"
+        },
+        {
+            "logger": "testchildlogger",
+            "parentLogKey": "log4j.logger.maximo.testcustomlogger",
+            "logLevel": "DEBUG",
+            "active": false
+        }
+    ]
+}

@@ -1,0 +1,18 @@
+{
+    "messages": [
+        {
+            "msgGroup": "TESTMSG",
+            "msgKey": "TESTKEY",
+            "value": "This is a test message",
+            "msgId": "BMXZZ0001E",
+            "displayMethod": "MSGBOX",
+            "options": ["ok", "cancel"],
+            "prefix": "BMXZZ",
+            "suffix": "E",
+            "explanation": "Explanation of test message",
+            "operatorResponse": "Operator response for test message",
+            "adminResponse": "Admin response for test message",
+            "systemAction": "System action for test message"
+        }
+    ]
+}

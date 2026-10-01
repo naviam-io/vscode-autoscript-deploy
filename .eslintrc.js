@@ -1,6 +1,7 @@
 module.exports = {
     env: {
         browser: true,
+        node: true,
         es2022: true,
     },
     extends: 'eslint:recommended',
@@ -11,7 +12,7 @@ module.exports = {
     rules: {
         indent: ['error', 4],
         'linebreak-style': ['error', 'unix'],
-        quotes: ['error', 'single'],
+        quotes: ['error', 'single', { avoidEscape: true }],
         semi: ['error', 'always'],
     },
 };

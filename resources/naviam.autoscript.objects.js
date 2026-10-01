@@ -6,6 +6,24 @@ var MXServer = Java.type('psdi.server.MXServer');
 var MboConstants = Java.type('psdi.mbo.MboConstants');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
 
+/**
+ * Translates a stored synonym domain value back into its internal (language independent) value so that
+ * extracted configuration remains portable between environments with different base languages.
+ */
+function toInternalSynonymValue(domainId, value, mbo) {
+    if (value === null || typeof value === 'undefined' || value === '') {
+        return value;
+    }
+
+    try {
+        var translator = MXServer.getMXServer().getMaximoDD().getTranslator();
+        var internal = mbo ? translator.toInternalString(domainId, value, mbo) : translator.toInternalString(domainId, value);
+        return internal === null || typeof internal === 'undefined' ? value : String(internal);
+    } catch (ignored) {
+        return value;
+    }
+}
+
 // @ts-nocheck
 main();
 
@@ -45,25 +63,7 @@ function main() {
             } else if (action == 'detail') {
                 var id = request.getQueryParam('id');
                 if (id != null) {
-                    if (objectType === 'messages') {
-                        response.data = getMessage(id);
-                    } else if (objectType === 'actions') {
-                        response.data = getAction(id);
-                    } else if (objectType === 'properties') {
-                        response.data = getProperty(id);
-                    } else if (objectType === 'domains') {
-                        response.data = getDomain(id);
-                    } else if (objectType === 'crontasks') {
-                        response.data = getCronTask(id);
-                    } else if (objectType === 'escalations') {
-                        response.data = getEscalation(id);
-                    } else if (objectType === 'loggers') {
-                        response.data = getLogger(id);
-                    } else if (objectType === 'integrationobjects') {
-                        response.data = getIntObject(id);
-                    } else if (objectType === 'queries') {
-                        response.data = getQuery(id);
-                    }
+                    response.data = getObjectDetail(objectType, id);
                 } else {
                     response.status = 'error';
                     response.message = 'Required id parameter is missing for action "detail"';
@@ -77,7 +77,56 @@ function main() {
             response.message = 'Required type parameter is missing';
         }
         responseBody = JSON.stringify(response);
+    } else if (typeof extractType !== 'undefined' && extractType !== null && typeof extractId !== 'undefined' && extractId !== null) {
+        // Invoked by another server side script rather than over REST. The deployment capture phase
+        // uses this so that a snapshot of an existing record is byte for byte what extract produces.
+        //
+        // No permission check here on purpose: this path is unreachable over REST, because request is
+        // non-null there and extractType is never set, and the only caller is the deploy script, which
+        // has already checked the caller's permissions.
+        //
+        // The result is handed back as a JSON string rather than an object, so that nothing depends on
+        // how a Nashorn object is marshalled across a script boundary. The caller persists it as text.
+        var extracted = getObjectDetail(String(extractType).toLowerCase(), extractId);
+        extractResult = typeof extracted === 'undefined' || extracted === null ? null : JSON.stringify(extracted);
     }
+}
+
+/**
+ * Returns the full configuration of a single object, in the same shape a deployment payload carries.
+ *
+ * Shared by the REST entry point and by the server side entry point that a deployment's capture
+ * phase uses, so that a captured snapshot and an extracted configuration can never drift apart.
+ *
+ * The caller is responsible for lower casing objectType before calling; this function does not
+ * normalise it.
+ *
+ * @param {string} objectType the object type, lower cased
+ * @param {string} id the unique id of the record
+ * @returns {object|undefined} the configuration, or undefined when the type or the record is unknown
+ */
+function getObjectDetail(objectType, id) {
+    if (objectType === 'messages') {
+        return getMessage(id);
+    } else if (objectType === 'actions') {
+        return getAction(id);
+    } else if (objectType === 'properties') {
+        return getProperty(id);
+    } else if (objectType === 'domains') {
+        return getDomain(id);
+    } else if (objectType === 'crontasks') {
+        return getCronTask(id);
+    } else if (objectType === 'escalations') {
+        return getEscalation(id);
+    } else if (objectType === 'loggers') {
+        return getLogger(id);
+    } else if (objectType === 'integrationobjects') {
+        return getIntObject(id);
+    } else if (objectType === 'queries') {
+        return getQuery(id);
+    }
+
+    return undefined;
 }
 
 function getActions() {
@@ -112,8 +161,8 @@ function getAction(id) {
             var action = {
                 action: actionMbo.getString('ACTION'),
                 description: actionMbo.getString('DESCRIPTION'),
-                type: actionMbo.getString('TYPE'),
-                useWith: actionMbo.getString('USEWITH'),
+                type: toInternalSynonymValue('ACTIONTYPE', actionMbo.getString('TYPE'), actionMbo),
+                useWith: toInternalSynonymValue('ACTIONUSEWITH', actionMbo.getString('USEWITH'), actionMbo),
             };
 
             if (!actionMbo.isNull('SENDERSYSID')) {
@@ -256,7 +305,7 @@ function getIntObject(id) {
             var intObject = {
                 intObjectName: maxIntObject.getString('INTOBJECTNAME'),
                 description: maxIntObject.getString('DESCRIPTION'),
-                useWith: maxIntObject.getString('USEWITH'),
+                useWith: toInternalSynonymValue('INTUSEWITH', maxIntObject.getString('USEWITH'), maxIntObject),
             };
 
             if (maxIntObject.getBoolean('QUERYONLY')) {
@@ -396,7 +445,7 @@ function getIntObject(id) {
                     maxIntObjAlias = maxIntObjAliasSet.moveNext();
                 }
 
-                var objectAppAuthSet = maxIntObjDetail.getMboSet('$objectappauth', 'OBJECTAPPAUTH', '1=1');
+                var objectAppAuthSet = maxIntObjDetail.getMboSet('$objectappauth', 'OBJECTAPPAUTH', 'objectname = :objectname');
                 var objectAppAuth = objectAppAuthSet.moveFirst();
 
                 if (objectAppAuth != null) {
@@ -406,7 +455,6 @@ function getIntObject(id) {
                     var objAppAuth = {
                         context: objectAppAuth.getString('CONTEXT'),
                         description: objectAppAuth.getString('DESCRIPTION'),
-                        objectName: objectAppAuth.getString('OBJECTNAME'),
                         authApp: objectAppAuth.getString('AUTHAPP'),
                     };
                     intObjDetail.objectAppAuth.push(objAppAuth);
@@ -649,7 +697,7 @@ function getLogger(id) {
             var parentLogger = maxLogger.getMboSet('$parentlogger', 'MAXLOGGER', 'maxloggerid=:parentloggerid').moveFirst();
 
             if (parentLogger != null) {
-                logger.parentLogger = parentLogger.getString('LOGGER');
+                logger.parentLogKey = parentLogger.getString('LOGKEY');
             }
 
             if (!maxLogger.isNull('APPENDERS')) {
@@ -696,7 +744,7 @@ function getCronTask(id) {
                 cronTaskName: cronTaskDef.getString('CRONTASKNAME'),
                 description: cronTaskDef.getString('DESCRIPTION'),
                 className: cronTaskDef.getString('CLASSNAME'),
-                accessLevel: cronTaskDef.getString('ACCESSLEVEL'),
+                accessLevel: toInternalSynonymValue('CRONACCESS', cronTaskDef.getString('ACCESSLEVEL'), cronTaskDef),
             };
 
             var cronTaskInstanceSet = cronTaskDef.getMboSet('CRONTASKINSTANCE');
@@ -822,7 +870,7 @@ function getEscalation(id) {
                     refPointNum: escRefPointMbo.getInt('REFPOINTNUM'),
                     eventAttribute: escRefPointMbo.getString('EVENTATTRIBUTE'),
                     elapsedInterval: escRefPointMbo.getDouble('ELAPSEDINTERVAL'),
-                    intervalUom: escRefPointMbo.getString('INTERVALUOM'),
+                    intervalUom: toInternalSynonymValue('ESCTIMEINTERVAL', escRefPointMbo.getString('INTERVALUOM'), escRefPointMbo),
                     repeat: escRefPointMbo.getBoolean('REPEAT'),
                 };
 
@@ -883,7 +931,7 @@ function getDomain(id) {
         if (maxDomain != null) {
             var domain = {
                 domainId: maxDomain.getString('DOMAINID'),
-                domainType: maxDomain.getString('DOMAINTYPE'),
+                domainType: toInternalSynonymValue('DOMTYPE', maxDomain.getString('DOMAINTYPE'), maxDomain),
                 description: maxDomain.getString('DESCRIPTION'),
             };
 
@@ -997,10 +1045,15 @@ function getDomain(id) {
                     while (numRangeDomain != null) {
                         var numRangeValue = {
                             rangeSegment: numRangeDomain.getString('RANGESEGMENT'),
-                            rangeMinimum: numRangeDomain.getString('RANGEMINIMUM'),
-                            rangeMaximum: numRangeDomain.getString('RANGEMAXIMUM'),
-                            rangeInterval: numRangeDomain.getString('RANGEINTERVAL'),
                         };
+
+                        // Numbers rather than getString, which formats them for the server locale.
+                        var rangeFields = { rangeMinimum: 'RANGEMINIMUM', rangeMaximum: 'RANGEMAXIMUM', rangeInterval: 'RANGEINTERVAL' };
+                        Object.keys(rangeFields).forEach(function (field) {
+                            if (!numRangeDomain.isNull(rangeFields[field])) {
+                                numRangeValue[field] = numRangeDomain.getDouble(rangeFields[field]);
+                            }
+                        });
 
                         if (!numRangeDomain.isNull('ORGID')) {
                             numRangeValue.orgId = numRangeDomain.getString('ORGID');
@@ -1047,7 +1100,7 @@ function getDomain(id) {
                                 conditionNum: synonymDomainValCond.getString('CONDITIONNUM'),
                             };
 
-                            if (!synonymDomainValConnd.isNull('OBJECTNAME')) {
+                            if (!synonymDomainValCond.isNull('OBJECTNAME')) {
                                 synonymCondValue.objectName = synonymDomainValCond.getString('OBJECTNAME');
                             }
 
@@ -1061,7 +1114,7 @@ function getDomain(id) {
                     }
 
                     break;
-                case 'TABLE':
+                case 'MAXTABLE':
                     domain.tableDomain = [];
                     var maxTableDomainSet = maxDomain.getMboSet('MAXTABLEDOMAIN');
                     var maxTableDomain = maxTableDomainSet.moveFirst();
@@ -1257,12 +1310,12 @@ function getProperty(id) {
                     property.onlineChanges = maxProp.getBoolean('ONLINECHANGES');
                 }
 
-                if (!maxProp.getString('MAXTYPE') !== 'ALN') {
+                if (!maxProp.isNull('MAXTYPE')) {
                     property.maxType = maxProp.getString('MAXTYPE');
                 }
 
-                if (!maxProp.getString('SECURELEVEL') !== 'PUBLIC') {
-                    property.secureLevel = maxProp.getString('SECURELEVEL');
+                if (!maxProp.isNull('SECURELEVEL')) {
+                    property.secureLevel = toInternalSynonymValue('PROPSECURELEVEL', maxProp.getString('SECURELEVEL'), maxProp);
                 }
 
                 if (!maxProp.isNull('MAXIMODEFAULT')) {
@@ -1320,6 +1373,10 @@ function getMessage(id) {
 
                 if (!maxMessage.isNull('ADMINRESPONSE')) {
                     message.adminResponse = maxMessage.getString('ADMINRESPONSE');
+                }
+
+                if (!maxMessage.isNull('OPERATORRESPONSE')) {
+                    message.operatorResponse = maxMessage.getString('OPERATORRESPONSE');
                 }
 
                 if (!maxMessage.isNull('SYSTEMACTION')) {

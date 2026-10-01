@@ -1,0 +1,42 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build:dev",
+            "type": "npm",
+            "script": "build:dev",
+            "group": "build",
+            "problemMatcher": {
+                "owner": "webpack",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^ERROR in (.*)$",
+                    "file": 1
+                }
+            }
+        },
+        {
+            "label": "watch:dev",
+            "type": "npm",
+            "script": "webpack-dev:root",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "webpack",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^ERROR in (.*)$",
+                    "file": 1
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^assets? ",
+                    "endsPattern": "^webpack .* compiled"
+                }
+            }
+        }
+    ]
+}

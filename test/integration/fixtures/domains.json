@@ -1,0 +1,96 @@
+{
+    "domains": [
+        {
+            "domainId": "TEST_ABCTYPE",
+            "domainType": "ALN",
+            "description": "Integration test ALN domain",
+            "maxType": "UPPER",
+            "length": 12,
+            "alnDomain": [
+                {
+                    "value": "TEST_A",
+                    "description": "Type A"
+                },
+                {
+                    "value": "TEST_B",
+                    "description": "Type B"
+                },
+                {
+                    "value": "TEST_C",
+                    "description": "Type C"
+                }
+            ]
+        },
+        {
+            "domainId": "TEST_NUMDOM",
+            "domainType": "NUMERIC",
+            "description": "Integration test numeric domain",
+            "maxType": "INTEGER",
+            "length": 12,
+            "scale": 0,
+            "numericDomain": [
+                {
+                    "value": "1",
+                    "description": "One"
+                },
+                {
+                    "value": "2",
+                    "description": "Two"
+                }
+            ]
+        },
+        {
+            "domainId": "TEST_RANGEDOM",
+            "domainType": "NUMRANGE",
+            "description": "Integration test numeric range domain",
+            "maxType": "INTEGER",
+            "length": 12,
+            "scale": 0,
+            "numRangeDomain": [
+                {
+                    "rangeSegment": "1",
+                    "rangeMinimum": 1000,
+                    "rangeMaximum": 50000,
+                    "rangeInterval": 1000
+                }
+            ]
+        },
+        {
+            "domainId": "TEST_TABLEDOM",
+            "domainType": "MAXTABLE",
+            "description": "Integration test table domain",
+            "tableDomain": [
+                {
+                    "objectName": "MAXUSER",
+                    "validtnWhereClause": "userid = :userid",
+                    "listWhereClause": "status = 'ACTIVE'",
+                    "errorResourceBundle": "system",
+                    "errorAccessKey": "notvalid"
+                }
+            ]
+        },
+        {
+            "domainId": "TEST_XOVERDOM",
+            "domainType": "CROSSOVER",
+            "description": "Integration test crossover domain",
+            "crossoverDomain": [
+                {
+                    "objectName": "MAXUSER",
+                    "validtnWhereClause": "userid = :userid",
+                    "listWhereClause": "status = 'ACTIVE'",
+                    "errorResourceBundle": "system",
+                    "errorAccessKey": "notvalid",
+                    "crossoverFields": [
+                        {
+                            "sourceField": "DEFSITE",
+                            "destField": "SITEID",
+                            "copyEvenIfSrcNull": true,
+                            "copyOnlyIfDestNull": true,
+                            "sequence": 1
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

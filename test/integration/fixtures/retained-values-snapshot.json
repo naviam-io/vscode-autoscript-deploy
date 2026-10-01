@@ -1,0 +1,63 @@
+{
+    "productV1": {
+        "cronTasks": [
+            {
+                "cronTaskName": "TEST_SNAPSHOT",
+                "description": "Snapshot prompt test, release 1",
+                "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
+                "accessLevel": "FULL",
+                "cronTaskInstance": [
+                    {
+                        "instanceName": "SNAPINST1",
+                        "description": "Instance one",
+                        "schedule": "1d,0,0,0,*,*,*,*,*,*",
+                        "active": false,
+                        "keepHistory": true,
+                        "runAsUserId": "MAXADMIN",
+                        "maxHistory": 20,
+                        "cronTaskParam": [
+                            { "parameter": "NOTFOSNAME", "value": "MXNOTIFICATION" },
+                            { "parameter": "PURGETIME", "value": "1D" }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "failingUpgrade": {
+        "cronTasks": [
+            {
+                "cronTaskName": "TEST_SNAPSHOT",
+                "description": "Snapshot prompt test, release 2",
+                "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
+                "accessLevel": "FULL",
+                "_retain": ["cronTaskInstance"],
+                "cronTaskInstance": [
+                    {
+                        "instanceName": "SNAPINST1",
+                        "description": "Instance one",
+                        "schedule": "this is not a cron schedule",
+                        "active": false,
+                        "keepHistory": true,
+                        "runAsUserId": "MAXADMIN",
+                        "maxHistory": 20,
+                        "_retain": ["maxHistory"],
+                        "cronTaskParam": [
+                            { "parameter": "NOTFOSNAME", "value": "MXNOTIFICATION" },
+                            { "parameter": "PURGETIME", "value": "1D" }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "cleanup": {
+        "cronTasks": [
+            {
+                "cronTaskName": "TEST_SNAPSHOT",
+                "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
+                "_delete": true
+            }
+        ]
+    }
+}

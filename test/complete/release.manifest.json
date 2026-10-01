@@ -1,0 +1,12 @@
+{
+    "manifest": [
+        { "kind": "manifest", "path": "configuration/configuration.manifest.json" },
+        { "kind": "databaseConfiguration" },
+        { "kind": "automationScript", "path": "scripts/test.complete.js" },
+        { "kind": "automationScript", "path": "scripts/osaction.testpersonapi.testcomplete.js" },
+        { "kind": "configuration", "path": "object-structure/object-structure.json" },
+        { "kind": "inspectionForm", "path": "inspection-form/inspection-form.json" },
+        { "kind": "deployScript", "path": "screen/create-testaction-app.js" },
+        { "kind": "screen", "path": "screen/testaction.xml" }
+    ]
+}

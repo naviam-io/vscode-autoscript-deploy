@@ -1,0 +1,9 @@
+{
+    "domains": [
+        { "domainId": "TESTXOVERDOM", "_delete": true },
+        { "domainId": "TESTTABLEDOM", "_delete": true },
+        { "domainId": "TESTRANGEDOM", "_delete": true },
+        { "domainId": "TESTNUMDOM", "_delete": true },
+        { "domainId": "TESTABCTYPE", "_delete": true }
+    ]
+}

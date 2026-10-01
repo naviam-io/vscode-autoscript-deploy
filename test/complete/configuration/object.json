@@ -1,0 +1,76 @@
+{
+    "objects": [
+        {
+            "object": "TESTOBJ",
+            "description": "Complete manifest test object",
+            "service": "ASSET",
+            "entity": "TESTOBJ",
+            "level": "SYSTEM",
+            "mainObject": true,
+            "persistent": true,
+            "uniqueColumn": "TESTOBJID",
+            "triggerRoot": "TESTOBJ",
+            "addRowstamp": true,
+            "textSearchEnabled": false,
+            "class": "psdi.mbo.custapp.CustomMboSet",
+            "auditEnabled": true,
+            "eAuditFilter": "1=1",
+            "eSignatureFilter": "1=1",
+            "auditTable": "A_TESTOBJ",
+            "attributes": [
+                {
+                    "attribute": "TESTOBJID",
+                    "description": "Unique identifier",
+                    "title": "Identifier",
+                    "type": "BIGINT",
+                    "required": true,
+                    "persistent": true,
+                    "primaryColumn": 1,
+                    "searchType": "EXACT"
+                },
+                {
+                    "attribute": "TESTTYPE",
+                    "description": "Type, validated by the TESTABCTYPE domain",
+                    "title": "Type",
+                    "type": "UPPER",
+                    "length": 1,
+                    "required": false,
+                    "persistent": true,
+                    "searchType": "WILDCARD",
+                    "domain": "TESTABCTYPE",
+                    "mustBe": false,
+                    "localizable": false,
+                    "auditEnabled": true,
+                    "eSignatureEnabled": true
+                }
+            ],
+            "relationships": [
+                {
+                    "relationship": "TESTASSET",
+                    "child": "ASSET",
+                    "remarks": "Complete manifest test relationship to ASSET",
+                    "whereClause": "1=1",
+                    "cardinality": "SINGLE",
+                    "dbJoinRequired": 0,
+                    "isDefault": true
+                }
+            ],
+            "indexes": [
+                {
+                    "index": "TESTOBJ_NDX1",
+                    "enforceUniqueness": true,
+                    "clusteredIndex": false,
+                    "required": false,
+                    "textSearchIndex": false,
+                    "columns": [
+                        {
+                            "column": "TESTOBJID",
+                            "ascending": true,
+                            "sequence": 1
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -149,6 +149,15 @@ async function setupSchemaSupport(workspaceFolder, fileName) {
         await config.update('json.schemas', schemas, vscode.ConfigurationTarget.Workspace);
     }
 
+    copySchema('manifest-schema.json', workspaceFolder);
+    if (!schemas.find((s) => s.url === './.vscode/manifest-schema.json')) {
+        schemas.push({
+            fileMatch: ['*.manifest.json', '*-manifest.json'],
+            url: './.vscode/manifest-schema.json'
+        });
+        await config.update('json.schemas', schemas, vscode.ConfigurationTarget.Workspace);
+    }
+
     copySchema('devtools-config-schema.json', workspaceFolder);
     if (!schemas.find((s) => s.url === './.vscode/devtools-config-schema.json')) {
         schemas.push({

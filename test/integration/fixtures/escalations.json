@@ -1,0 +1,31 @@
+{
+    "escalations": [
+        {
+            "escalation": "TEST_REPORTLONG",
+            "description": "Integration test escalation for a long running report",
+            "objectName": "REPORTJOB",
+            "condition": "",
+            "active": true,
+            "schedule": "2h,*,0,*,*,*,*,*,*,*",
+            "cronTaskName": "ESCALATION",
+            "instanceName": "TEST_REPORTLONGESC",
+            "escStatusFlag": true,
+            "escRefPoint": [
+                {
+                    "refPointNum": 1,
+                    "eventAttribute": "STARTTIME",
+                    "elapsedInterval": 10,
+                    "intervalUom": "MINUTES",
+                    "repeat": false
+                },
+                {
+                    "refPointNum": 2,
+                    "eventAttribute": "LASTACTIVETIME",
+                    "elapsedInterval": 20,
+                    "intervalUom": "HOURS",
+                    "repeat": true
+                }
+            ]
+        }
+    ]
+}

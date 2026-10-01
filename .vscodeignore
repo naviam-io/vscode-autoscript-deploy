@@ -1,5 +1,4 @@
 .vscode/**
-.vscode-test/**
 test/**
 .gitignore
 .yarnrc
@@ -19,5 +18,5 @@ resources/.git/**
 resources/.gitignore
 resources/library/node_modules/**
 .gitmodules
-azure-pipelines.yml
-mcp
+azure-pipelines-release.yml
+azure-pipelines-ci.yml

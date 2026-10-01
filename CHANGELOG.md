@@ -1,4 +1,61 @@
 # Release Notes
+## 1.30.0
+### Retaining customer values
+- Cron tasks now support `_retain`, so redeploying a product's cron task no longer overwrites the values the customer tuned, such as a schedule, the active flag or a parameter value. Naming a collection, for example `"_retain": ["cronTaskInstance"]`, also preserves the instances the customer added that the deployed file does not declare.
+- Domains now support `_retain`, so redeploying a product's domain no longer wipes the values the customer tuned. Naming a value collection, for example `"_retain": ["alnDomain"]`, also preserves the values the customer added that the deployed file does not declare.
+- If an earlier deployment that used `_retain` failed, the next deployment asks whether to restore the customer values saved by that deployment or discard them. Dismissing the prompt cancels the deployment before anything is changed.
+
+### Deployment manifests
+- Manifest entries may now declare a `kind`: `configuration`, `databaseConfiguration`, `automationScript`, `deployScript`, `inspectionForm`, `screen`, `report` or `manifest`. An entry is then deployed as exactly that kind, without its predeploy and deploy companion files. A `deployScript` entry is installed, run once and removed again.
+- Manifests may include other manifests, and TypeScript entries are now built and deployed instead of being ignored.
+- A manifest entry may set `"disabled": true` to skip it without removing it. Disabling a `manifest` entry skips everything in the nested manifest.
+- Added `manifest-schema.json` for editor validation of `*.manifest.json` and `*-manifest.json` files.
+- A manifest is now validated in full before anything is sent to Maximo, and deployment stops at the first entry that fails or whose file does not exist, instead of skipping it silently.
+- Manifest entries that declare no `kind` are deprecated. They still deploy as before, but a notification and the log name each such entry.
+- Fixed manifest entry paths being resolved against the working directory instead of the manifest's own directory.
+- Fixed a manifest being deployed as configuration when it contained a configuration property.
+
+### TypeScript projects
+- The `Initialize Maximo TypeScript Project` command is now available to everyone from the Command Palette.
+- The TypeScript project template now builds every script in the project with one webpack config. Each file that declares a `scriptConfig` becomes its own script, and development and production builds are kept in separate folders.
+- Deploying a TypeScript file now always deploys the script webpack built from it. Deploying a helper file that is only imported by other scripts now shows an error naming the script to deploy instead.
+- Fixed launch point settings, such as whether a launch point is active, being lost from production builds. The template now also includes the missing `terser-webpack-plugin` dependency.
+- Fixed deploying from a freshly cloned project failing with a misleading error, because the project dependencies were not installed first.
+- Fixed the predeploy and deploy companion files of a TypeScript script not being deployed.
+
+### Automation scripts
+- Applying database configuration no longer hangs when e-signature is enabled for the "Manage Admin Mode" or "Apply Configuration Changes" options. The extension offers to disable e-signature for these options temporarily and restores the original settings afterwards.
+- Objects declared under `objects` in a script's deploy configuration now trigger a database configuration, as they already did in the predeploy configuration and under the legacy `maxObjects` key.
+- Fixed a property declared in a `scriptConfig` being created with an empty value until the script was deployed a second time. `initialPropValue` now sets the value of a new property, as documented.
+- Fixed a script being deployed without its variables or launch points when the `autoScriptVars` or `scriptLaunchPoints` keys in its `scriptConfig` were not quoted.
+- Fixed a script failing to deploy when it used a variable named `scriptConfig` for another purpose.
+- Fixed deleting an automation script that does not exist creating a stray Draft script instead.
+- Fixed an already applied predeploy configuration being reported as a failure, which skipped the script deployment.
+
+### Configuration deployment and extraction
+- Configuration now deploys and extracts correctly on a Maximo whose base language is not English. Values such as action types, cron task access levels, domain types and property security levels are translated to and from their localized form.
+- Configuration attributes that the target Maximo version does not have are now skipped and noted in the log, instead of failing the deployment.
+- Any JSON file that is not a manifest or an inspection form is now deployed as configuration.
+- Extracting configuration from an open JSON file now writes into that file even when it has no companion automation script. When the open file is a manifest or an inspection form, the result is copied to the clipboard instead.
+- Fixed table domains, which could be neither deployed nor extracted.
+- Fixed number range domain values being extracted in the server's number format, such as `1,000`. They are now extracted as numbers.
+- Fixed extracting a synonym domain value with conditions.
+- Fixed extracted loggers turning a child logger into a root logger on redeployment, and extracted messages missing the operator response.
+- Fixed adding OSLC actions, queries and query templates to a new object structure on MAS 9, and setting the query template sort order on MAS 8.11.
+- Fixed deploying `MIGRATIONMGR` object structures, where the flat supported flag is read only.
+- Fixed application authorizations of integration objects (`objectAppAuth`). They are now added or updated correctly and never removed, because other integration objects may share them.
+- Fixed redeploying an object that was previously deleted, deleting a message, and setting a query owner.
+- Fixed deploying actions of type `APPACTION`, deleting integration objects, and escalation fields being cleared when omitted.
+- Fixed deploy schema errors for integration objects and crossover domains.
+
+### MCP server
+- Removed the bundled local MCP server. The extension no longer decrypts a server into the workspace or writes a `maximo` entry to `.vscode/mcp.json`; it registers an MCP server definition that points VS Code at the Maximo MCP script instead, and keeps it current whether the environment comes from `.devtools-config.json` or the `naviam.*` settings. The server is only offered where the `NAVIAM.MCP` automation script is installed and active; otherwise starting it explains why and it is hidden until `Refresh Maximo MCP Server` is run.
+
+### General
+- BIRT report extraction now shows a clear error message naming each report that failed and why.
+- Configuration, inspection form, screen and report deployments now report failures consistently.
+- Modal dialogs no longer show a "No" button that duplicates "Cancel".
+
 ## 1.29.7
 - Fixed domain validation errors when adding new object attributes
 

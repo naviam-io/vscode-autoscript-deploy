@@ -3,7 +3,7 @@
     "displayName": "Maximo Development Tools",
     "description": "An extension for developing and deploying Maximo automation scripts, forms, reports and screens from Visual Studio Code.",
     "publisher": "Sharptree",
-    "version": "1.29.7",
+    "version": "1.30.0",
     "galleryBanner": {
         "color": "#18242C",
         "theme": "dark"
@@ -17,6 +17,10 @@
         {
             "name": "Chris Brown",
             "email": "chris.brown@naviam.io"
+        },
+        {
+            "name": "Ivan Lagunov",
+            "email": "ivan.lagunov@naviam.io"
         }
     ],
     "bugs": {
@@ -41,6 +45,12 @@
     ],
     "main": "./dist/extension",
     "contributes": {
+        "mcpServerDefinitionProviders": [
+            {
+                "id": "maximo-script-deploy.mcp",
+                "label": "Maximo (selected environment)"
+            }
+        ],
         "snippets": [
             {
                 "language": "javascript",
@@ -74,6 +84,15 @@
                     "type": "string",
                     "default": "maximo",
                     "description": "The Maximo URL context."
+                },
+                "naviam.maximo.webpackMode": {
+                    "type": "string",
+                    "enum": [
+                        "development",
+                        "production"
+                    ],
+                    "default": "development",
+                    "description": "The mode webpack is invoked with when deploying a TypeScript automation script. The configuration decides what each mode means, such as whether the deployed script is minified and where it is written."
                 },
                 "naviam.maximo.extractLocation": {
                     "type": "string",
@@ -188,6 +207,16 @@
                     "type": "string",
                     "default": "",
                     "description": "The proxy password for proxy authentication."
+                },
+                "naviam.mcp.script": {
+                    "type": "string",
+                    "default": "naviam.mcp",
+                    "description": "The Maximo automation script name for the Naviam MCP server."
+                },
+                "naviam.mcp.autoStart": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Start the Maximo MCP server when the extension starts and when the selected environment changes. Only applies when the environment has a stored password or API key."
                 }
             }
         },
@@ -203,6 +232,10 @@
             {
                 "command": "maximo-script-deploy.compare",
                 "title": "Compare with Maximo"
+            },
+            {
+                "command": "maximo-script-deploy.refreshMcpServer",
+                "title": "Refresh Maximo MCP Server"
             },
             {
                 "command": "maximo-script-deploy.screens",
@@ -237,14 +270,6 @@
                 "title": "Initialize Maximo TypeScript Project"
             }
         ],
-        "menus": {
-            "commandPalette": [
-                {
-                    "command": "maximo-script-deploy.tsTemplate",
-                    "when": "maximo-script-deploy.isNaviamUser"
-                }
-            ]
-        },
         "keybindings": [
             {
                 "command": "maximo-script-deploy.deploy",
@@ -331,25 +356,26 @@
     "scripts": {
         "lint": "eslint .",
         "pretest": "npm run lint",
-        "test": "node ./test/runTest.js",
+        "test": "npm run test:unit",
+        "test:integration": "node ./test/integration/run.js",
         "webpack": "webpack --mode production",
+        "build:dev": "webpack --mode development",
         "webpack-dev:root": "webpack --mode development --watch",
         "webpack-dev:library": "npm --prefix resources/library run webpack-dev",
         "webpack-dev": "sh -c 'npm run webpack-dev:root & npm run webpack-dev:library & wait'",
         "package": "webpack --mode production",
         "package:library": "npm --prefix resources/library run package",
         "vscode:prepublish": "npm run package",
-        "vsce:package": "npm run package && npm run package:library && vsce package"
+        "vsce:package": "npm run package && npm run package:library && vsce package",
+        "test:unit": "node --test test/unit/cases/*.test.js",
+        "dev:extension": "sh -c 'npm run package && code --disable-extensions --new-window --extensionDevelopmentPath=\"$PWD\" \"${1:-$PWD}\"' --"
     },
     "devDependencies": {
-        "@types/glob": "^7.1.4",
-        "@types/mocha": "^9.1.1",
         "@types/node": "^14.18.48",
         "@types/vscode": "^1.75.0",
-        "@vscode/test-electron": "^2.5.2",
+        "@vscode/vsce": "^4.0.0",
+        "acorn": "8.16.0",
         "eslint": "^8.57.1",
-        "glob": "^7.2.3",
-        "mocha": "^7.2.0",
         "typescript": "^4.9.5",
         "webpack": "^5.100.2",
         "webpack-cli": "^4.10.0"

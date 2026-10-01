@@ -42,7 +42,7 @@ export default async function deployReport(client, filePath, report) {
         window.showErrorMessage('The selected report cannot be empty.', {
             modal: true,
         });
-        return;
+        return false;
     }
 
     let fileName = path.basename(filePath);
@@ -63,7 +63,7 @@ export default async function deployReport(client, filePath, report) {
             'The selected report must have a reports.xml in the same folder that describes the report parameters.',
             { modal: true }
         );
-        return;
+        return false;
     }
 
     // Read the XML file
@@ -93,7 +93,7 @@ export default async function deployReport(client, filePath, report) {
             'The selected report does not have an entry that contains at least one attribute value in the reports.xml.',
             { modal: true }
         );
-        return;
+        return false;
     }
 
     let resourceData = null;
@@ -223,7 +223,7 @@ export default async function deployReport(client, filePath, report) {
         });
     }
 
-    await window.withProgress(
+    return await window.withProgress(
         {
             cancellable: false,
             title: 'Report',
@@ -261,6 +261,7 @@ export default async function deployReport(client, filePath, report) {
                             { modal: true }
                         );
                     }
+                    return false;
                 } else {
                     progress.report({
                         increment: 100,
@@ -268,6 +269,7 @@ export default async function deployReport(client, filePath, report) {
                     });
                     await new Promise((resolve) => setTimeout(resolve, 2000));
                     Logger.info(`Report ${fileName} deployed successfully.`, LOG_SOURCE);
+                    return true;
                 }
             } else {
                 Logger.error(`Report deploy did not receive a response from Maximo for ${fileName}.`, null, LOG_SOURCE);
@@ -276,7 +278,7 @@ export default async function deployReport(client, filePath, report) {
                     { modal: true }
                 );
             }
-            return result;
+            return false;
         }
     );
 }

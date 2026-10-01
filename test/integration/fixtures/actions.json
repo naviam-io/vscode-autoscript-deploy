@@ -1,0 +1,32 @@
+{
+    "actions": [
+        {
+            "action": "TEST_SET_WOPRIORITY",
+            "description": "Set work order priority",
+            "type": "SETVALUE",
+            "useWith": "ALL",
+            "objectName": "WORKORDER",
+            "parameter": "WOPRIORITY",
+            "value": "1"
+        },
+        {
+            "action": "TEST_WO_APPR",
+            "description": "Approve work order",
+            "type": "CHANGESTATUS",
+            "useWith": "ALL",
+            "objectName": "WORKORDER",
+            "value": "APPR",
+            "memo": "Approved by the integration test"
+        },
+        {
+            "action": "TEST_WO_GROUP",
+            "description": "Set priority, then approve",
+            "type": "GROUP",
+            "useWith": "ALL",
+            "actionGroup": [
+                { "member": "TEST_SET_WOPRIORITY", "sequence": 1 },
+                { "member": "TEST_WO_APPR", "sequence": 2 }
+            ]
+        }
+    ]
+}

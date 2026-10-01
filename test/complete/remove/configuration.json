@@ -1,0 +1,10 @@
+{
+    "integrationObjects": [{ "intObjectName": "TESTPERSONAPI", "_delete": true }],
+    "queries": [{ "app": "AUTOSCRIPT", "clauseName": "TESTCOMPLETE", "owner": "MAXADMIN", "_delete": true }],
+    "escalations": [{ "escalation": "TESTREPORTLONG", "_delete": true }],
+    "cronTasks": [{ "cronTaskName": "TESTNOTFCLEANUP", "_delete": true }],
+    "actions": [{ "action": "TESTSETPRIORITY", "_delete": true }],
+    "loggers": [{ "logger": "testcomplete", "_delete": true }],
+    "messages": [{ "msgGroup": "TESTCOMPLETE", "msgKey": "TESTMESSAGE", "_delete": true }],
+    "properties": [{ "propName": "TESTcomplete.property", "_delete": true }]
+}

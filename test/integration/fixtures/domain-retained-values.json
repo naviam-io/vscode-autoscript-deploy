@@ -1,0 +1,60 @@
+{
+    "productV1": {
+        "domains": [
+            {
+                "domainId": "TEST_RETAIN_DOM",
+                "domainType": "ALN",
+                "description": "Retained values test, release 1",
+                "maxType": "UPPER",
+                "length": 12,
+                "alnDomain": [{ "value": "RETVAL1", "description": "Value one" }]
+            }
+        ]
+    },
+    "customerEdit": {
+        "domains": [
+            {
+                "domainId": "TEST_RETAIN_DOM",
+                "domainType": "ALN",
+                "description": "Retained values test, release 1",
+                "maxType": "UPPER",
+                "length": 12,
+                "alnDomain": [
+                    { "value": "RETVAL1", "description": "Value one, renamed by the customer" },
+                    { "value": "CUSTVAL", "description": "Value the customer added, unknown to the product" }
+                ]
+            }
+        ]
+    },
+    "productV2": {
+        "domains": [
+            {
+                "domainId": "TEST_RETAIN_DOM",
+                "domainType": "ALN",
+                "description": "Retained values test, release 2",
+                "maxType": "UPPER",
+                "length": 12,
+                "_retain": ["alnDomain"],
+                "alnDomain": [
+                    { "value": "RETVAL1", "description": "Value one", "_retain": ["description"] },
+                    { "value": "RETVAL2", "description": "Value two, new in release 2" }
+                ]
+            }
+        ]
+    },
+    "productV2NoCollectionRetain": {
+        "domains": [
+            {
+                "domainId": "TEST_RETAIN_DOM",
+                "domainType": "ALN",
+                "description": "Retained values test, release 2",
+                "maxType": "UPPER",
+                "length": 12,
+                "alnDomain": [
+                    { "value": "RETVAL1", "description": "Value one", "_retain": ["description"] },
+                    { "value": "RETVAL2", "description": "Value two, new in release 2" }
+                ]
+            }
+        ]
+    }
+}

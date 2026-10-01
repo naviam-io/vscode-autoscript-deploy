@@ -1,0 +1,11 @@
+{
+    "manifest": [
+        { "kind": "deployScript", "path": "remove/remove-records.js" },
+        { "kind": "configuration", "path": "remove/configuration.json" },
+        { "kind": "automationScript", "path": "remove/test.complete.js" },
+        { "kind": "automationScript", "path": "remove/osaction.testpersonapi.testcomplete.js" },
+        { "kind": "configuration", "path": "remove/object.json" },
+        { "kind": "databaseConfiguration" },
+        { "kind": "configuration", "path": "remove/domain.json" }
+    ]
+}

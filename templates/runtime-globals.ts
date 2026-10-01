@@ -1,4 +1,4 @@
-var runtimeGlobals = this as {
+var runtimeGlobals = Function('return this')() as {
     javaType?: <T>(className: string) => T;
 };
 
