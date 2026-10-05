@@ -9,6 +9,7 @@ module.exports = {
             payloadKey: 'escalations',
             objectType: 'escalations',
             identityProperty: 'escalation',
+            synonymDomains: { 'escRefPoint.intervalUom': 'ESCTIMEINTERVAL' },
             compareFixture: true
         });
     }

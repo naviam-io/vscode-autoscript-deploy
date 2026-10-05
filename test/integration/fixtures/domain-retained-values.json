@@ -3,7 +3,7 @@
         "domains": [
             {
                 "domainId": "TEST_RETAIN_DOM",
-                "domainType": "ALN",
+                "domainType": "!ALN!",
                 "description": "Retained values test, release 1",
                 "maxType": "UPPER",
                 "length": 12,
@@ -15,7 +15,7 @@
         "domains": [
             {
                 "domainId": "TEST_RETAIN_DOM",
-                "domainType": "ALN",
+                "domainType": "!ALN!",
                 "description": "Retained values test, release 1",
                 "maxType": "UPPER",
                 "length": 12,
@@ -30,7 +30,7 @@
         "domains": [
             {
                 "domainId": "TEST_RETAIN_DOM",
-                "domainType": "ALN",
+                "domainType": "!ALN!",
                 "description": "Retained values test, release 2",
                 "maxType": "UPPER",
                 "length": 12,
@@ -46,7 +46,7 @@
         "domains": [
             {
                 "domainId": "TEST_RETAIN_DOM",
-                "domainType": "ALN",
+                "domainType": "!ALN!",
                 "description": "Retained values test, release 2",
                 "maxType": "UPPER",
                 "length": 12,

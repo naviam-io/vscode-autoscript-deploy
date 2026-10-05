@@ -1,27 +1,40 @@
 /* eslint-disable indent */
 // @ts-nocheck
 /* eslint-disable no-undef */
+var HashMap = Java.type('java.util.HashMap');
 var MXServer = Java.type('psdi.server.MXServer');
 
 var MboConstants = Java.type('psdi.mbo.MboConstants');
+var ScriptCache = Java.type('com.ibm.tivoli.maximo.script.ScriptCache');
+var ScriptDriverFactory = Java.type('com.ibm.tivoli.maximo.script.ScriptDriverFactory');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
 
+var LIBRARY_SCRIPT = 'NAVIAM.AUTOSCRIPT.LIBRARY';
+var libraryExports = null;
+
+/** Runs the library script with the given context, which it reads its input from and writes its output to. */
+function runLibrary(context) {
+    if (!ScriptCache.getInstance().getScriptInfo(LIBRARY_SCRIPT)) {
+        throw new Error('The ' + LIBRARY_SCRIPT + ' script is not installed. Deploy the Maximo Development Tools scripts, then try again.');
+    }
+    ScriptDriverFactory.getInstance().getScriptDriver(LIBRARY_SCRIPT).runScript(LIBRARY_SCRIPT, context);
+    return context;
+}
+
+/** The functions the library script shares through its NaviamAutoscriptLibrary global. */
+function library() {
+    if (!libraryExports) {
+        libraryExports = runLibrary(new HashMap()).get('NaviamAutoscriptLibrary');
+    }
+    return libraryExports;
+}
+
 /**
- * Translates a stored synonym domain value back into its internal (language independent) value so that
- * extracted configuration remains portable between environments with different base languages.
+ * The internal value of a stored synonym domain value, for extraction logic that depends on it.
+ * Extraction writes the stored localized value, see docs/modules/nashorn-library.md.
  */
 function toInternalSynonymValue(domainId, value, mbo) {
-    if (value === null || typeof value === 'undefined' || value === '') {
-        return value;
-    }
-
-    try {
-        var translator = MXServer.getMXServer().getMaximoDD().getTranslator();
-        var internal = mbo ? translator.toInternalString(domainId, value, mbo) : translator.toInternalString(domainId, value);
-        return internal === null || typeof internal === 'undefined' ? value : String(internal);
-    } catch (ignored) {
-        return value;
-    }
+    return library().toInternalSynonymValue(domainId, value, mbo);
 }
 
 // @ts-nocheck
@@ -161,15 +174,16 @@ function getAction(id) {
             var action = {
                 action: actionMbo.getString('ACTION'),
                 description: actionMbo.getString('DESCRIPTION'),
-                type: toInternalSynonymValue('ACTIONTYPE', actionMbo.getString('TYPE'), actionMbo),
-                useWith: toInternalSynonymValue('ACTIONUSEWITH', actionMbo.getString('USEWITH'), actionMbo),
+                type: actionMbo.getString('TYPE'),
+                useWith: actionMbo.getString('USEWITH'),
             };
+            var actionType = toInternalSynonymValue('ACTIONTYPE', action.type, actionMbo);
 
             if (!actionMbo.isNull('SENDERSYSID')) {
                 action.senderSysId = actionMbo.getString('SENDERSYSID');
             }
 
-            if (action.type === 'CUSTOM') {
+            if (actionType === 'CUSTOM') {
                 if (!actionMbo.isNull('VALUE')) {
                     action.value = actionMbo.getString('VALUE');
                 }
@@ -177,7 +191,7 @@ function getAction(id) {
                 action.value = actionMbo.getString('VALUE2');
             }
 
-            if (action.type !== 'GROUP') {
+            if (actionType !== 'GROUP') {
                 if (!actionMbo.isNull('OBJECTNAME')) {
                     action.objectName = actionMbo.getString('OBJECTNAME');
                 }
@@ -187,7 +201,7 @@ function getAction(id) {
                 }
             }
 
-            if (action.type === 'CHANGESTATUS' && !actionMbo.isNull('MEMO')) {
+            if (actionType === 'CHANGESTATUS' && !actionMbo.isNull('MEMO')) {
                 action.memo = actionMbo.getString('MEMO');
             }
 
@@ -305,7 +319,7 @@ function getIntObject(id) {
             var intObject = {
                 intObjectName: maxIntObject.getString('INTOBJECTNAME'),
                 description: maxIntObject.getString('DESCRIPTION'),
-                useWith: toInternalSynonymValue('INTUSEWITH', maxIntObject.getString('USEWITH'), maxIntObject),
+                useWith: maxIntObject.getString('USEWITH'),
             };
 
             if (maxIntObject.getBoolean('QUERYONLY')) {
@@ -744,7 +758,7 @@ function getCronTask(id) {
                 cronTaskName: cronTaskDef.getString('CRONTASKNAME'),
                 description: cronTaskDef.getString('DESCRIPTION'),
                 className: cronTaskDef.getString('CLASSNAME'),
-                accessLevel: toInternalSynonymValue('CRONACCESS', cronTaskDef.getString('ACCESSLEVEL'), cronTaskDef),
+                accessLevel: cronTaskDef.getString('ACCESSLEVEL'),
             };
 
             var cronTaskInstanceSet = cronTaskDef.getMboSet('CRONTASKINSTANCE');
@@ -870,7 +884,7 @@ function getEscalation(id) {
                     refPointNum: escRefPointMbo.getInt('REFPOINTNUM'),
                     eventAttribute: escRefPointMbo.getString('EVENTATTRIBUTE'),
                     elapsedInterval: escRefPointMbo.getDouble('ELAPSEDINTERVAL'),
-                    intervalUom: toInternalSynonymValue('ESCTIMEINTERVAL', escRefPointMbo.getString('INTERVALUOM'), escRefPointMbo),
+                    intervalUom: escRefPointMbo.getString('INTERVALUOM'),
                     repeat: escRefPointMbo.getBoolean('REPEAT'),
                 };
 
@@ -931,7 +945,7 @@ function getDomain(id) {
         if (maxDomain != null) {
             var domain = {
                 domainId: maxDomain.getString('DOMAINID'),
-                domainType: toInternalSynonymValue('DOMTYPE', maxDomain.getString('DOMAINTYPE'), maxDomain),
+                domainType: maxDomain.getString('DOMAINTYPE'),
                 description: maxDomain.getString('DESCRIPTION'),
             };
 
@@ -947,7 +961,7 @@ function getDomain(id) {
                 domain.scale = maxDomain.getInt('SCALE');
             }
 
-            switch (domain.domainType) {
+            switch (toInternalSynonymValue('DOMTYPE', domain.domainType, maxDomain)) {
                 case 'ALN':
                     domain.alnDomain = [];
                     var aldDomainSet = maxDomain.getMboSet('ALNDOMAINVALUE');
@@ -1315,7 +1329,7 @@ function getProperty(id) {
                 }
 
                 if (!maxProp.isNull('SECURELEVEL')) {
-                    property.secureLevel = toInternalSynonymValue('PROPSECURELEVEL', maxProp.getString('SECURELEVEL'), maxProp);
+                    property.secureLevel = maxProp.getString('SECURELEVEL');
                 }
 
                 if (!maxProp.isNull('MAXIMODEFAULT')) {

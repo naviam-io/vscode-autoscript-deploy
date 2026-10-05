@@ -1,12 +1,11 @@
 /// <reference path="../../globals.d.ts" />
 /// <reference path="../../manage-facade.d.ts" />
 
-import { applyValues, applyWritableValues, close, setValue, toExternalSynonymValue, updateProgress, valueOrDefault } from '../core/util';
+import { applyValues, applyWritableValues, close, setValue, toExternalSynonymValue, toInternalSynonymValue, updateProgress, valueOrDefault } from '../core/util';
 
 var MXServer = Java.type('psdi.server.MXServer');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
 
-export type MaximoActionType = 'APPACTION' | 'CHANGESTATUS' | 'CUSTOM' | 'EXECUTABLE' | 'GROUP' | 'SETVALUE';
 
 export function process(action: MaximoAction): void {
     const maximo: psdi.server.MXServer = MXServer.getMXServer();
@@ -60,20 +59,22 @@ function applyActionValues(mbo: psdi.mbo.MboRemote, action: MaximoAction): void 
         ['USEWITH', toExternalSynonymValue('ACTIONUSEWITH', action.useWith, mbo)]
     ]);
 
-    if (action.type === 'CUSTOM') {
+    const type = toInternalSynonymValue('ACTIONTYPE', action.type, mbo);
+
+    if (type === 'CUSTOM') {
         setValue(mbo, 'VALUE', action.value);
     } else {
         setValue(mbo, 'VALUE2', action.value);
     }
 
-    if (action.type !== 'GROUP') {
+    if (type !== 'GROUP') {
         applyWritableValues(mbo, [
             ['OBJECTNAME', action.objectName],
             ['PARAMETER', action.parameter]
         ]);
     }
 
-    if (action.type === 'CHANGESTATUS') {
+    if (type === 'CHANGESTATUS') {
         setValue(mbo, 'MEMO', action.memo);
     }
 
@@ -110,7 +111,7 @@ export interface MaximoActionInput {
     action: string;
     description?: string | null;
     senderSysId?: string | null;
-    type: MaximoActionType;
+    type: string;
     useWith: string;
     value?: string | null;
     objectName?: string | null;
@@ -124,7 +125,7 @@ export class MaximoAction {
     action: string;
     description: string | null = '';
     senderSysId: string | null = 'MX';
-    type: MaximoActionType;
+    type: string;
     useWith: string;
     value: string | null = '';
     objectName: string | null = '';

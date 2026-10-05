@@ -7,7 +7,7 @@
             "liveRefresh": false,
             "nullsAllowed": false,
             "maxType": "ALN",
-            "secureLevel": "SECURE",
+            "secureLevel": "!SECURE!",
             "maximoDefault": "false",
             "maxPropInstance": [
                 {

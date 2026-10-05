@@ -2,7 +2,7 @@
 /// <reference path="../manage-facade.d.ts" />
 /// <reference path="../manage.d.ts" />
 
-import { configureSse, updateError } from './core/util';
+import { configureSse, toExternalSynonymValue, toInternalSynonymValue, updateError } from './core/util';
 import { hasRetainDeclarations, retainIdentityOf } from './core/retained-values';
 import { deleteSnapshot, describeSnapshot, isSnapshotKey, snapshotKey } from './core/snapshot-store';
 import { MaximoProperty, process as processProperty } from './config/properties';
@@ -183,27 +183,21 @@ function discardSnapshots(keys: any): number {
     return keys.length;
 }
 
-/** Answers the snapshot pre-flight NAVIAM.AUTOSCRIPT.DEPLOY passes in, and reports whether it did,
- * so an ordinary deployment is unaffected. See docs/modules/nashorn-library.md. */
-function runSnapshotRequest(): boolean {
-    if (typeof snapshotRequest === 'undefined' || snapshotRequest === null || typeof snapshotRequest !== 'string') {
-        return false;
-    }
-
+/**
+ * Answers the snapshot pre-flight of NAVIAM.AUTOSCRIPT.DEPLOY, a JSON request in and a JSON answer
+ * out. See docs/modules/nashorn-library.md.
+ */
+function handleSnapshotRequest(request: string): string {
     registerSnapshotProbes();
 
-    const parsed = JSON.parse(snapshotRequest);
-
-    // A property of global rather than a bare assignment, which this bundle's strict mode rejects.
+    const parsed = JSON.parse(request);
     if (parsed.action === 'list') {
-        global.snapshotResult = JSON.stringify({ status: 'ok', snapshots: listLeftoverSnapshots(parsed.payload) });
-    } else if (parsed.action === 'discard') {
-        global.snapshotResult = JSON.stringify({ status: 'ok', discarded: discardSnapshots(parsed.keys) });
-    } else {
-        throw Error('Unsupported retained values snapshot action "' + parsed.action + '".');
+        return JSON.stringify({ status: 'ok', snapshots: listLeftoverSnapshots(parsed.payload) });
     }
-
-    return true;
+    if (parsed.action === 'discard') {
+        return JSON.stringify({ status: 'ok', discarded: discardSnapshots(parsed.keys) });
+    }
+    throw Error('Unsupported retained values snapshot action "' + parsed.action + '".');
 }
 
 function getErrorMessage(error: any): string {
@@ -244,6 +238,11 @@ var scriptConfig = {
     logLevel: 'ERROR'
 };
 
-if (!runSnapshotRequest()) {
-    runFromRequestBody();
-}
+runFromRequestBody();
+
+/** Shared with the other Naviam scripts, which read it from the NaviamAutoscriptLibrary global after running this script. */
+export default {
+    handleSnapshotRequest: handleSnapshotRequest,
+    toExternalSynonymValue: toExternalSynonymValue,
+    toInternalSynonymValue: toInternalSynonymValue
+};

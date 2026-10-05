@@ -208,7 +208,6 @@ const terserMinimizer = new TerserPlugin({
                 'scriptHome',
                 'scriptName',
                 'service',
-                'snapshotRequest',
                 'srcKeys',
                 'targetKeys',
                 'thisvalue',

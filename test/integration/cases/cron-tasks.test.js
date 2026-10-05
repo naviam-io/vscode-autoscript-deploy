@@ -9,6 +9,7 @@ module.exports = {
             payloadKey: 'cronTasks',
             objectType: 'crontasks',
             identityProperty: 'cronTaskName',
+            synonymDomains: { accessLevel: 'CRONACCESS' },
             compareFixture: true
         });
     }

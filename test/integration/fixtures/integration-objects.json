@@ -3,7 +3,7 @@
         {
             "intObjectName": "TEST_PERSONAPI",
             "description": "Integration test person API",
-            "useWith": "INTEGRATION",
+            "useWith": "!INTEGRATION!",
             "useOSSecurity": true,
             "authApp": "TEST_PERSONAPI",
             "flatSupported": true,
@@ -91,7 +91,7 @@
         {
             "intObjectName": "TEST_MIGRATIONROLE",
             "description": "Integration test migration object",
-            "useWith": "MIGRATIONMGR",
+            "useWith": "!MIGRATIONMGR!",
             "maxIntObjDetail": [
                 {
                     "objectName": "MAXROLE",

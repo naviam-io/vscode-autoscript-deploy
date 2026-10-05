@@ -100,8 +100,9 @@ module.exports = {
     run: async (client) => {
         try {
             const variables = [
-                { varname: 'MATCHLIMIT', description: 'Match limit', varBindingType: 'LITERAL', varType: 'IN', literalDataType: 'INTEGER', varBindingValue: '5' },
-                { varname: 'MATCHMODE', description: 'Match mode', varBindingType: 'LITERAL', varType: 'IN', literalDataType: 'ALN', varBindingValue: 'AUTO' }
+                { varName: 'MATCHLIMIT', description: 'Match limit', varBindingType: 'LITERAL', varType: 'IN', literalDataType: 'INTEGER', varBindingValue: '5' },
+                { varName: 'MATCHMODE', description: 'Match mode', varBindingType: 'LITERAL', varType: 'IN', literalDataType: 'ALN', varBindingValue: 'AUTO' },
+                { varName: 'MATCHNOTE', description: 'Declares neither a binding type nor a variable type', varBindingValue: 'NONE' }
             ];
 
             const first = await client.deployScriptSource(
@@ -145,7 +146,12 @@ module.exports = {
             const deployed = await launchPointsOf(client, SCRIPT_NAME);
 
             assertEquals((deployed.scriptlaunchpoint || []).length, 3, 'Stored launch point count');
-            assertEquals((deployed.autoscriptvars || []).length, 2, 'Stored script variable count');
+            assertEquals((deployed.autoscriptvars || []).length, 3, 'Stored script variable count');
+
+            const defaulted = (deployed.autoscriptvars || []).find((entry) => String(entry.varname).toUpperCase() === 'MATCHNOTE');
+            assertNotNull(defaulted, 'The script variable MATCHNOTE was not stored');
+            assertEquals(String(defaulted.varbindingtype), 'LITERAL', 'Default binding type of a script variable');
+            assertEquals(String(defaulted.vartype), 'IN', 'Default variable type of a script variable');
 
             const save = launchPoint(deployed, 'NVTEST.LP.SAVE');
             assertEquals(String(save.eventtype), '4', 'Object save launch point event type');

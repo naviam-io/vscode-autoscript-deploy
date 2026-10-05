@@ -261,7 +261,7 @@ function verifyIntegrationObjectSecurity() {
             maxIntObject = maxIntObjectSet.add();
             maxIntObject.setValue('INTOBJECTNAME', 'NAVIAM_UTILS');
             maxIntObject.setValue('DESCRIPTION', 'Naviam Developer Tools Security');
-            maxIntObject.setValue('USEWITH', 'INTEGRATION');
+            maxIntObject.setValue('USEWITH', MXServer.getMXServer().getMaximoDD().getTranslator().toExternalDefaultValue('INTUSEWITH', 'INTEGRATION', maxIntObject));
             var maxIntObjDetail = maxIntObject.getMboSet('MAXINTOBJDETAIL').add();
             maxIntObjDetail.setValue('OBJECTNAME', 'DUMMY_TABLE');
             maxIntObjectSet.save();

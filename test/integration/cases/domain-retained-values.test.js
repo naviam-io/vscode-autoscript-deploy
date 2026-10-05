@@ -11,8 +11,6 @@ const { assertEquals } = require('../harness');
 const { loadFixture } = require('../round-trip');
 
 const DOMAIN_ID = 'TEST_RETAIN_DOM';
-// The extraction list reports the domain type alongside the identifier.
-const DOMAIN_LABEL = DOMAIN_ID + ' (ALN)';
 
 function findValue(extracted, value) {
     const values = extracted.alnDomain || [];
@@ -38,13 +36,15 @@ module.exports = {
     name: 'domain-retained-values',
     run: async (client) => {
         const fixture = loadFixture('domain-retained-values');
+        // The extraction list reports the localized domain type alongside the identifier.
+        const domainLabel = DOMAIN_ID + ' (' + (await client.synonymMap('DOMTYPE')).ALN + ')';
 
         try {
             await client.deployConfig(fixture.productV1);
             await client.deployConfig(fixture.customerEdit);
             await client.deployConfig(fixture.productV2);
 
-            const extracted = await client.extract('domains', DOMAIN_LABEL);
+            const extracted = await client.extract('domains', domainLabel);
 
             assertEquals(extracted.description, 'Retained values test, release 2', 'Domain description is not retained, so it follows the product');
 
@@ -64,7 +64,7 @@ module.exports = {
             await client.deployConfig(fixture.customerEdit);
             await client.deployConfig(fixture.productV2);
 
-            const afterSecondUpgrade = await client.extract('domains', DOMAIN_LABEL);
+            const afterSecondUpgrade = await client.extract('domains', domainLabel);
             assertEquals(
                 valueNamed(afterSecondUpgrade, 'RETVAL1').description,
                 'Value one, renamed by the customer',
@@ -75,7 +75,7 @@ module.exports = {
             // the customer's value, which is the behaviour every payload has today.
             await client.deployConfig(fixture.productV2NoCollectionRetain);
 
-            const afterOptOut = await client.extract('domains', DOMAIN_LABEL);
+            const afterOptOut = await client.extract('domains', domainLabel);
             assertEquals(findValue(afterOptOut, 'CUSTVAL'), null, 'Customer added value survived without _retain on the collection');
             assertEquals(
                 valueNamed(afterOptOut, 'RETVAL1').description,
@@ -86,7 +86,7 @@ module.exports = {
             await client.deployConfig({ domains: [{ _delete: true, domainId: DOMAIN_ID, domainType: 'ALN' }] });
         }
 
-        const afterDelete = await client.extract('domains', DOMAIN_LABEL);
+        const afterDelete = await client.extract('domains', domainLabel);
         assertEquals(afterDelete, null, 'Extract of domain "' + DOMAIN_ID + '" after delete');
     }
 };

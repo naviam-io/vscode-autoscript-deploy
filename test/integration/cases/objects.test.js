@@ -48,22 +48,17 @@ function pick(raw, columns) {
     return mapped;
 }
 
-// Synonym domain values are extracted in their external form, the fixture holds the internal one.
-function internal(map, value) {
-    return Object.keys(map).find((key) => map[key] === value) || value;
-}
-
-function mapObject(raw, synonyms) {
+function mapObject(raw) {
     // Deleting an object that Database Configuration has not applied only marks it for removal.
     if (!raw || raw.changed === 'R') {
         return null;
     }
 
     return Object.assign(pick(raw, OBJECT_COLUMNS), {
-        level: internal(synonyms.SITEORGTYPE, raw.siteorgtype),
+        level: raw.siteorgtype,
         attributes: (raw.maxattributecfg || []).map((attribute) => pick(attribute, ATTRIBUTE_COLUMNS)),
         relationships: (raw.maxrelationship || []).map((relationship) =>
-            Object.assign(pick(relationship, RELATIONSHIP_COLUMNS), { cardinality: internal(synonyms.RPTCARDINALITY, relationship.cardinality) })
+            Object.assign(pick(relationship, RELATIONSHIP_COLUMNS), { cardinality: relationship.cardinality })
         ),
         indexes: (raw.maxsysindexes || []).map((index) =>
             Object.assign(pick(index, INDEX_COLUMNS), {
@@ -77,7 +72,6 @@ function mapObject(raw, synonyms) {
 module.exports = {
     name: 'objects',
     run: async (client) => {
-        const synonyms = { SITEORGTYPE: await client.synonymMap('SITEORGTYPE'), RPTCARDINALITY: await client.synonymMap('RPTCARDINALITY') };
         let raw = null;
 
         const options = {
@@ -87,9 +81,10 @@ module.exports = {
             identityProperty: 'object',
             extract: async (c, item) => {
                 raw = await c.extractObjectCfg(item.object);
-                return mapObject(raw, synonyms);
+                return mapObject(raw);
             },
             compareFixture: true,
+            synonymDomains: { level: 'SITEORGTYPE', 'relationships.cardinality': 'RPTCARDINALITY' },
             ignore: [
                 // Database Configuration derives these when it applies the object, until then MAXOBJECTCFG does not hold them.
                 'uniqueColumn',

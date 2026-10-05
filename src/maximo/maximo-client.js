@@ -40,8 +40,8 @@ export default class MaximoClient {
         this.config = config;
         this.retry = true;
 
-        this.requiredScriptVersion = '1.68.0';
-        this.currentScriptVersion = '1.68.0';
+        this.requiredScriptVersion = '1.69.0';
+        this.currentScriptVersion = '1.69.0';
 
         this.adminModeRetryCount = 0;
 
@@ -1058,6 +1058,10 @@ export default class MaximoClient {
             }.`,
             LOG_SOURCE
         );
+
+        if (Array.isArray(result?.data?.warnings)) {
+            result.data.warnings.forEach((warning) => Logger.warn(`${fileName}: ${warning}`, LOG_SOURCE));
+        }
 
         var nextProgress = 50;
         var deployId = null;
@@ -2160,7 +2164,7 @@ export default class MaximoClient {
 
         let options = {
             url: 'script/naviam.autoscript.dbc',
-            method: MaximoClient.Method.GET,
+            method: MaximoClient.Method.POST,
             params: { source: objectType, action: 'dbc' },
             headers: { common: headers },
             data: payload

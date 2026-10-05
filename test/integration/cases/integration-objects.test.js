@@ -9,6 +9,7 @@ module.exports = {
             payloadKey: 'integrationObjects',
             objectType: 'integrationobjects',
             identityProperty: 'intObjectName',
+            synonymDomains: { useWith: 'INTUSEWITH' },
             compareFixture: true
         });
     }

@@ -13,7 +13,7 @@ var scriptConfig = {
     logLevel: 'ERROR',
     autoScriptVars: [
         {
-            varname: 'TESTLIMIT',
+            varName: 'TESTLIMIT',
             description: 'Complete manifest test variable',
             varBindingType: 'LITERAL',
             varType: 'IN',

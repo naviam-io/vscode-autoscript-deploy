@@ -96,11 +96,6 @@ declare var httpMethod: string;
 declare var responseBody: string;
 declare var responseHeaders: java.util.Map<string, string>;
 
-/** Set by NAVIAM.AUTOSCRIPT.DEPLOY when it invokes the library to inspect or discard retained
- * values snapshots rather than to deploy. */
-declare var snapshotRequest: string;
-
 /** The script global, captured by the webpack banner before any strict mode module runs. This is
- * the object Maximo reads script bindings back out of. snapshotResult is written as a property of
- * this object by the library. */
+ * the object Maximo reads script bindings back out of. */
 declare var global: any;

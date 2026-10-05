@@ -3,8 +3,8 @@
         {
             "action": "TESTSETPRIORITY",
             "description": "Complete manifest test action",
-            "type": "SETVALUE",
-            "useWith": "ALL",
+            "type": "!SETVALUE!",
+            "useWith": "!ALL!",
             "objectName": "WORKORDER",
             "parameter": "WOPRIORITY",
             "value": "1",

@@ -17,14 +17,17 @@ function loadFixture(fixtureName) {
  * does not name are not compared, so defaults Maximo fills in do not fail the test. An expected array
  * item may match any actual item, because Maximo returns children, such as the attributes of an
  * object including the ones it generates, in its own order. `ignore` lists dotted paths, with array
- * indexes removed, for fields the extraction does not report.
+ * indexes removed, for fields the extraction does not report. `synonymDomains` maps such a path to the
+ * synonym values of its synonym domain, so an expected internal value !VALUE! is compared with the
+ * localized value extraction writes.
  */
-function assertSubset(expected, actual, ignore, path = '') {
-    if (expected === null || expected === undefined || ignore.includes(path.replace(/\[\d+\]/g, ''))) {
+function assertSubset(expected, actual, ignore, path = '', synonymDomains = {}) {
+    const fieldPath = path.replace(/\[\d+\]/g, '');
+    if (expected === null || expected === undefined || ignore.includes(fieldPath)) {
         return;
     }
     if (typeof expected !== 'object') {
-        assertEquals(actual, expected, 'Mismatch at ' + (path || 'root'));
+        assertEquals(actual, localizedValue(synonymDomains[fieldPath], expected), 'Mismatch at ' + (path || 'root'));
         return;
     }
 
@@ -36,7 +39,7 @@ function assertSubset(expected, actual, ignore, path = '') {
             const errors = [];
             const match = (Array.isArray(actual) ? actual : []).some((candidate) => {
                 try {
-                    assertSubset(item, candidate, ignore, itemPath);
+                    assertSubset(item, candidate, ignore, itemPath, synonymDomains);
                     return true;
                 } catch (error) {
                     errors.push(error.message);
@@ -52,7 +55,28 @@ function assertSubset(expected, actual, ignore, path = '') {
 
     Object.keys(expected)
         .filter((key) => !key.startsWith('_'))
-        .forEach((key) => assertSubset(expected[key], actual[key], ignore, path ? path + '.' + key : key));
+        .forEach((key) => assertSubset(expected[key], actual[key], ignore, path ? path + '.' + key : key, synonymDomains));
+}
+
+/** The localized value of an internal value written as !VALUE!, from the synonym domain's values. */
+function localizedValue(synonyms, value) {
+    const match = synonyms && typeof value === 'string' ? /^!([^!]+)!$/.exec(value) : null;
+    if (!match) {
+        return value;
+    }
+    if (!synonyms[match[1]]) {
+        throw new Error(match[1] + ' is not an internal value of the synonym domain.');
+    }
+    return synonyms[match[1]];
+}
+
+/** The values of each synonym domain a round trip names, keyed by its dotted path. */
+async function loadSynonymDomains(client, synonymDomains) {
+    const loaded = {};
+    for (const fieldPath of Object.keys(synonymDomains || {})) {
+        loaded[fieldPath] = await client.synonymMap(synonymDomains[fieldPath]);
+    }
+    return loaded;
 }
 
 /**
@@ -69,6 +93,7 @@ function assertSubset(expected, actual, ignore, path = '') {
  * @param {Function} [options.extract] async (client, item) => extracted, for types the extraction script does not cover
  * @param {boolean} [options.compareFixture] assert each extracted object contains its whole fixture item
  * @param {string[]} [options.ignore] dotted paths compareFixture skips
+ * @param {object} [options.synonymDomains] dotted path to synonym domain id, for fields the fixture may give as !VALUE!
  * @param {object} [options.expect] top level fields the first extracted object must match exactly
  * @param {Function} [options.verify] callback (extracted, describe, warnings, infos) for the first object, for assertions the flat expectations cannot express
  */
@@ -81,6 +106,7 @@ async function roundTrip(client, options) {
         return { item, identity, label, describe: options.objectType + ' "' + label + '"' };
     });
     const extract = (entry) => (options.extract ? options.extract(client, entry.item) : client.extract(options.objectType, entry.label));
+    const synonymDomains = await loadSynonymDomains(client, options.synonymDomains);
     let deleted = false;
 
     try {
@@ -91,7 +117,7 @@ async function roundTrip(client, options) {
             const result = await extract(entry);
             assertNotNull(result, 'Extract of ' + entry.describe + ' returned nothing');
             if (options.compareFixture) {
-                assertSubset(entry.item, result, options.ignore || []);
+                assertSubset(entry.item, result, options.ignore || [], '', synonymDomains);
             }
             extracted.push(result);
         }
@@ -126,4 +152,4 @@ async function deleteObjects(client, options, items) {
     await client.deployConfig(payload);
 }
 
-module.exports = { loadFixture, roundTrip };
+module.exports = { loadFixture, localizedValue, roundTrip };

@@ -4,7 +4,7 @@
             "cronTaskName": "TESTNOTFCLEANUP",
             "description": "Complete manifest test cron task",
             "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
-            "accessLevel": "FULL",
+            "accessLevel": "!FULL!",
             "cronTaskInstance": [
                 {
                     "instanceName": "TESTINST",

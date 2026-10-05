@@ -177,15 +177,16 @@ class MaximoTestClient {
             method: 'GET',
             params: {
                 lean: 'true',
-                'oslc.select': 'value,maxvalue',
+                'oslc.select': 'value,maxvalue,defaults',
                 'oslc.where': 'domainid="' + domainId + '"'
             }
         });
 
+        // An internal value may have several synonyms, deploy resolves it to the default one.
         const members = (response.data && response.data.member) || [];
         const map = {};
         members.forEach((item) => {
-            if (item.maxvalue) {
+            if (item.maxvalue && (item.defaults || !map[item.maxvalue])) {
                 map[item.maxvalue] = item.value;
             }
         });

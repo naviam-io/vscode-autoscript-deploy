@@ -89,7 +89,7 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
-                "varname": {
+                "varName": {
                     "type": "string",
                     "minLength": 1
                 },
@@ -97,10 +97,14 @@
                     "type": "string"
                 },
                 "varBindingType": {
-                    "type": "string"
+                    "type": "string",
+                    "examples": ["ATTRIBUTE", "LITERAL", "MAXVAR", "SYSPROP"],
+                    "default": "LITERAL"
                 },
                 "varType": {
-                    "type": "string"
+                    "type": "string",
+                    "examples": ["IN", "INOUT", "OUT"],
+                    "default": "IN"
                 },
                 "allowOverride": {
                     "type": "boolean"
@@ -121,7 +125,7 @@
                     "type": ["string", "number", "boolean", "null"]
                 }
             },
-            "required": ["varname"]
+            "required": ["varName"]
         },
         "launchPointVar": {
             "type": "object",
@@ -338,7 +342,11 @@
                     "minLength": 1
                 },
                 "secureLevel": {
-                    "type": "integer"
+                    "description": "The level of access permitted for the property (MAXPROP.SECURELEVEL). Takes the localized synonym domain value of the target Maximo, or the internal value written as !PUBLIC!.",
+                    "type": "string",
+                    "examples": ["PRIVATE", "PUBLIC", "SECURE"],
+                    "pattern": "^(?!!)|^![^!]+!$",
+                    "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !PUBLIC!."
                 },
                 "maxType": {
                     "type": "string"

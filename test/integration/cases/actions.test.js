@@ -9,6 +9,7 @@ module.exports = {
             payloadKey: 'actions',
             objectType: 'actions',
             identityProperty: 'action',
+            synonymDomains: { type: 'ACTIONTYPE', useWith: 'ACTIONUSEWITH' },
             compareFixture: true
         });
     }

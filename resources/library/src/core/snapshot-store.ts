@@ -103,7 +103,7 @@ export function writeSnapshot(key: string, snapshot: any): void {
         if (!docInfo) {
             docInfo = docInfoSet.add();
             (docInfo as any).getMboValue('DOCUMENT').autoKey();
-            docInfo.setValue('URLTYPE', toExternalSynonymValue('URLTYPE', 'FILE', docInfo), MboConstants.NOACCESSCHECK);
+            docInfo.setValue('URLTYPE', toExternalSynonymValue('URLTYPE', '!FILE!', docInfo), MboConstants.NOACCESSCHECK);
             docInfo.setValue('URLNAME', key, MboConstants.NOACCESSCHECK);
             // Non-persistent, but DOCINFO validation still requires it.
             docInfo.setValue('NEWURLNAME', key, MboConstants.NOACCESSCHECK);

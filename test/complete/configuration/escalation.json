@@ -15,7 +15,7 @@
                     "refPointNum": 1,
                     "eventAttribute": "STARTTIME",
                     "elapsedInterval": 10,
-                    "intervalUom": "MINUTES",
+                    "intervalUom": "!MINUTES!",
                     "repeat": false
                 }
             ]

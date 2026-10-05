@@ -1,7 +1,7 @@
 /// <reference path="../../globals.d.ts" />
 /// <reference path="../../manage-facade.d.ts" />
 
-import { close, setValue, toExternalSynonymValue, updateProgress, valueOrDefault } from '../core/util';
+import { close, setValue, toExternalSynonymValue, toInternalSynonymValue, updateProgress, valueOrDefault } from '../core/util';
 import { applyRetainedValues, hasRetainDeclarations, retainIdentityOf } from '../core/retained-values';
 import { deleteSnapshot, readSnapshot, snapshotKey, writeSnapshot } from '../core/snapshot-store';
 import { captureExistingState } from '../core/capture';
@@ -12,8 +12,6 @@ var MboConstants = Java.type('psdi.mbo.MboConstants');
 
 /** The Maximo object a domain snapshot is keyed by. */
 export const SNAPSHOT_OBJECT = 'MAXDOMAIN';
-
-export type MaximoDomainType = 'ALN' | 'NUMERIC' | 'NUMRANGE' | 'SYNONYM' | 'MAXTABLE' | 'CROSSOVER';
 
 export function process(domain: MaximoDomain): void {
     const maximo: psdi.server.MXServer = MXServer.getMXServer();
@@ -39,7 +37,7 @@ export function process(domain: MaximoDomain): void {
 }
 
 function deleteDomain(mboSet: psdi.mbo.MboSetRemote, domain: MaximoDomain): void {
-    if (domain.domainType === 'SYNONYM') {
+    if (internalDomainType(domain) === 'SYNONYM') {
         throw new Error('Cannot delete a synonym domain.');
     }
 
@@ -85,9 +83,10 @@ function applyDomain(mbo: psdi.mbo.MboRemote, domain: MaximoDomain): void {
         return;
     }
 
-    applyDomainHeader(mbo, domain);
+    const domainType = internalDomainType(domain, mbo);
+    applyDomainHeader(mbo, domain, domainType);
 
-    switch (domain.domainType) {
+    switch (domainType) {
         case 'ALN':
             applyDiscreteDomainValues(mbo, 'ALNDOMAINVALUE', domain.domainId, domain.alnDomain);
             break;
@@ -111,25 +110,29 @@ function applyDomain(mbo: psdi.mbo.MboRemote, domain: MaximoDomain): void {
     }
 }
 
-function applyDomainHeader(mbo: psdi.mbo.MboRemote, domain: MaximoDomain): void {
+function internalDomainType(domain: MaximoDomain, mbo?: psdi.mbo.MboRemote): string {
+    return toInternalSynonymValue('DOMTYPE', domain.domainType, mbo);
+}
+
+function applyDomainHeader(mbo: psdi.mbo.MboRemote, domain: MaximoDomain, domainType: string): void {
     if (mbo.isNull('DOMAINID')) {
         setValue(mbo, 'DOMAINID', domain.domainId);
         setValue(mbo, 'DOMAINTYPE', toExternalSynonymValue('DOMTYPE', domain.domainType, mbo));
     }
 
-    if (domain.domainType === 'SYNONYM') {
+    if (domainType === 'SYNONYM') {
         return;
     }
 
-    if (domain.domainType !== 'MAXTABLE' && domain.domainType !== 'CROSSOVER' && mbo.isNull('MAXTYPE')) {
+    if (domainType !== 'MAXTABLE' && domainType !== 'CROSSOVER' && mbo.isNull('MAXTYPE')) {
         setValue(mbo, 'MAXTYPE', domain.maxType);
     }
 
-    if (domain.domainType === 'ALN') {
+    if (domainType === 'ALN') {
         setValue(mbo, 'LENGTH', domain.length);
     }
 
-    if (isScaledNumericDomain(domain)) {
+    if (isScaledNumericDomain(domain, domainType)) {
         setValue(mbo, 'LENGTH', domain.length);
         setValue(mbo, 'SCALE', domain.scale);
     }
@@ -137,8 +140,8 @@ function applyDomainHeader(mbo: psdi.mbo.MboRemote, domain: MaximoDomain): void 
     setValue(mbo, 'DESCRIPTION', domain.description);
 }
 
-function isScaledNumericDomain(domain: MaximoDomain): boolean {
-    return (domain.domainType === 'NUMERIC' || domain.domainType === 'NUMRANGE') && (domain.maxType === 'FLOAT' || domain.maxType === 'DECIMAL');
+function isScaledNumericDomain(domain: MaximoDomain, domainType: string): boolean {
+    return (domainType === 'NUMERIC' || domainType === 'NUMRANGE') && (domain.maxType === 'FLOAT' || domain.maxType === 'DECIMAL');
 }
 
 function applyDiscreteDomainValues(mbo: psdi.mbo.MboRemote, relationship: string, domainId: string, values: MaximoDiscreteDomainValue[]): void {
@@ -565,7 +568,7 @@ export class MaximoCrossoverDomainValue {
 export interface MaximoDomainInput {
     _delete?: boolean;
     domainId: string;
-    domainType: MaximoDomainType;
+    domainType: string;
     scale?: number | null;
     description?: string | null;
     maxType?: string | null;
@@ -584,7 +587,7 @@ export class MaximoDomain {
 
     _delete = false;
     domainId: string;
-    domainType: MaximoDomainType;
+    domainType: string;
     scale: number | null = null;
     description: string | null = '';
     maxType: string | null = '';

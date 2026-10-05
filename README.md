@@ -232,7 +232,26 @@ As of version `1.13.0` a JSON document can be used to define select objects to d
 
 Currently Actions, Cron Tasks, Domains, Escalations, Integration Objects, Loggers, Maximo Objects, Messages, Properties and Queries are available. The JSON schemas for these objects are provided in the project under the `.vscode` directory and your `.vscode/settings.json` will be updated to provide intellisense support in configuration json files.
 
-A JSON deploy file can also be deployed on its own by opening it and selecting `Deploy to Maximo`. The same file deploys and extracts consistently on any Maximo, including one whose base language is not English. Attributes that the target Maximo version does not have are skipped and noted in the log.
+A JSON deploy file can also be deployed on its own by opening it and selecting `Deploy to Maximo`. Attributes that the target Maximo version does not have are skipped and noted in the log.
+
+#### Synonym domain fields
+
+Fields backed by a Maximo synonym domain, such as an action `type`, a cron task `accessLevel` or a domain `domainType`, take the localized value of the target Maximo, which is what extraction writes. On an English Maximo that is, for example, `"domainType": "TABLE"`.
+
+To write a file that deploys on a Maximo of any base language, give the internal value between exclamation marks instead. It is resolved to the target's default localized value on deploy:
+
+```json
+{
+    "domains": [
+        {
+            "domainId": "MYTABLEDOM",
+            "domainType": "!MAXTABLE!"
+        }
+    ]
+}
+```
+
+A value that starts with `!` must be an internal value written as `!VALUE!`. An internal value the synonym domain does not have fails the deployment with a message naming the value and the synonym domain. The editor suggests the English values and accepts any other value.
 
 #### JSON Pre-deploy File
 
@@ -342,8 +361,9 @@ var scriptConfig = {
     logLevel: 'INFO',
     autoScriptVars: [
         {
-            varname: 'examplevar',
-            description: 'An example variable'
+            varName: 'examplevar',
+            description: 'An example variable',
+            varBindingValue: 'Example value'
         }
     ],
     scriptLaunchPoints: [
@@ -372,45 +392,45 @@ var scriptConfig = {
 For Python / Jython scripts the same JSON script configuration is used, just triple quote it as a `string` value.
 
 ```python
-
 def main():
     # entry point for the script.
+    pass
 
 main()
 
 scriptConfig = """{
-    "autoscript":"EXAMPLE_SCRIPT",
-    "description":"An example script for deployment",
-    "version":"1.0.4",
-    "active":true,
-    "allowInvokingScriptFunctions":true,
-    "logLevel":"INFO",
-    "autoScriptVars":[
+    "autoscript": "EXAMPLE_SCRIPT",
+    "description": "An example script for deployment",
+    "version": "1.0.4",
+    "active": true,
+    "allowInvokingScriptFunctions": true,
+    "logLevel": "INFO",
+    "autoScriptVars": [
         {
-            "varname":"examplevar",
-            "description":"An example variable"
+            "varName": "examplevar",
+            "description": "An example variable",
+            "varBindingValue": "Example value"
         }
     ],
-    "scriptLaunchPoints":[
+    "scriptLaunchPoints": [
         {
-            "launchPointName":"EXAMPLELP",
-            "launchPointType":"OBJECT",
-            "description":"An example launch point for Labor",
-            "objectName":"LABOR",
-            "save":true,
-            "add":true,
-            "update":true,
-            "beforeSave":true,
-            "launchPointVars":[
+            "launchPointName": "EXAMPLELP",
+            "launchPointType": "OBJECT",
+            "description": "An example launch point for Labor",
+            "objectName": "LABOR",
+            "save": true,
+            "add": true,
+            "update": true,
+            "beforeSave": true,
+            "launchPointVars": [
                 {
-                "varName":"examplevar",
-                "varBindingValue":"Example binding"
+                    "varName": "examplevar",
+                    "varBindingValue": "Example binding"
                 }
             ]
         }
-    ],
+    ]
 }"""
-
 ```
 
 # Features

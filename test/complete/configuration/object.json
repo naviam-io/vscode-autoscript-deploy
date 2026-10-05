@@ -5,7 +5,7 @@
             "description": "Complete manifest test object",
             "service": "ASSET",
             "entity": "TESTOBJ",
-            "level": "SYSTEM",
+            "level": "!SYSTEM!",
             "mainObject": true,
             "persistent": true,
             "uniqueColumn": "TESTOBJID",
@@ -50,7 +50,7 @@
                     "child": "ASSET",
                     "remarks": "Complete manifest test relationship to ASSET",
                     "whereClause": "1=1",
-                    "cardinality": "SINGLE",
+                    "cardinality": "!SINGLE!",
                     "dbJoinRequired": 0,
                     "isDefault": true
                 }

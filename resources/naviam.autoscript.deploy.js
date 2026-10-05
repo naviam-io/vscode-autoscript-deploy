@@ -32,11 +32,29 @@ var MXLoggerFactory = Java.type('psdi.util.logging.MXLoggerFactory');
 scriptSource = '';
 
 var LIBRARY_SCRIPT = 'NAVIAM.AUTOSCRIPT.LIBRARY';
+var libraryExports = null;
 
 var logger = MXLoggerFactory.getLogger('maximo.naviam.devtools');
 
 if (typeof httpMethod !== 'undefined') {
     main();
+}
+
+/** Runs the library script with the given context, which it reads its input from and writes its output to. */
+function runLibrary(context) {
+    if (!ScriptCache.getInstance().getScriptInfo(LIBRARY_SCRIPT)) {
+        throw new ScriptError('no_library_script', 'The ' + LIBRARY_SCRIPT + ' script is not installed. Deploy the Maximo Development Tools scripts, then try again.');
+    }
+    ScriptDriverFactory.getInstance().getScriptDriver(LIBRARY_SCRIPT).runScript(LIBRARY_SCRIPT, context);
+    return context;
+}
+
+/** The functions the library script shares through its NaviamAutoscriptLibrary global. */
+function library() {
+    if (!libraryExports) {
+        libraryExports = runLibrary(new HashMap()).get('NaviamAutoscriptLibrary');
+    }
+    return libraryExports;
 }
 
 function main() {
@@ -84,7 +102,7 @@ function main() {
                 configContext.put('request', request);
                 configContext.put('userInfo', userInfo);
                 configContext.put('service', service);
-                service.invokeScript(LIBRARY_SCRIPT, configContext);
+                runLibrary(configContext);
                 return;
             } else if (action && action.startsWith('deployscript')) {
                 responseBody = JSON.stringify(runDeployScript(scriptSource, action.split('/')[1]));
@@ -195,32 +213,11 @@ function runSnapshotRequest(snapshotAction, body) {
         throw new ScriptError('unsupported_snapshot_action', 'Unsupported retained values snapshot action "' + snapshotAction + '".');
     }
 
-    if (!ScriptCache.getInstance().getScriptInfo(LIBRARY_SCRIPT)) {
-        throw new ScriptError(
-            'no_library_script',
-            'Cannot inspect retained values snapshots because the ' + LIBRARY_SCRIPT + ' script is not installed.'
-        );
-    }
-
     var payload = body && String(body).trim().length > 0 ? JSON.parse(body) : {};
     var libraryRequest =
         snapshotAction === 'list' ? { action: 'list', payload: payload } : { action: 'discard', keys: payload.keys };
 
-    var context = new HashMap();
-    context.put('snapshotRequest', JSON.stringify(libraryRequest));
-    context.put('userInfo', userInfo);
-    context.put('service', service);
-    ScriptDriverFactory.getInstance().getScriptDriver(LIBRARY_SCRIPT).runScript(LIBRARY_SCRIPT, context);
-
-    var result = context.get('snapshotResult');
-    if (result === null || typeof result === 'undefined') {
-        throw new ScriptError(
-            'no_snapshot_result',
-            'The ' + LIBRARY_SCRIPT + ' script did not answer the retained values snapshot request.'
-        );
-    }
-
-    return JSON.parse(String(result));
+    return JSON.parse(String(library().handleSnapshotRequest(JSON.stringify(libraryRequest))));
 }
 
 /**
@@ -377,8 +374,6 @@ function deployParsedScript(scriptConfig, scriptSource, language) {
     try {
         autoScriptSet = autoScriptSetFor(scriptConfig.autoscript, userInfo);
 
-        var autoscript;
-
         // Deleting is checked before the script is looked up, because a request to delete a script
         // that is not there has to do nothing. Taking the branch below would add the script and
         // then deploy the deletion request itself as the source of the very script it asks to
@@ -395,6 +390,9 @@ function deployParsedScript(scriptConfig, scriptSource, language) {
             return result;
         }
 
+        var autoscript;
+        var warnings = [];
+
         if (autoScriptSet.isEmpty()) {
             autoscript = autoScriptSet.add();
             autoscript.setValue('AUTOSCRIPT', scriptConfig.autoscript);
@@ -409,7 +407,7 @@ function deployParsedScript(scriptConfig, scriptSource, language) {
         var children = resetScriptChildren(autoScriptSet, autoscript);
 
         applyScriptAttributes(children.autoscript, scriptConfig);
-        applyScriptVariables(children.autoScriptVarsSet, scriptConfig);
+        applyScriptVariables(children.autoScriptVarsSet, scriptConfig, warnings);
         applyLaunchPoints(children.scriptLaunchPointSet, scriptConfig);
 
         autoScriptSet.save();
@@ -420,8 +418,10 @@ function deployParsedScript(scriptConfig, scriptSource, language) {
         var backgroundResult = runPostDeploy(scriptConfig, scriptSource, language);
 
         if (backgroundResult) {
+            backgroundResult.warnings = warnings;
             return backgroundResult;
         }
+        result.warnings = warnings;
     } finally {
         _close(autoScriptSet);
     }
@@ -490,25 +490,36 @@ function applyScriptAttributes(autoscript, scriptConfig) {
  *
  * @param {object} autoScriptVarsSet the empty variable set of the script
  * @param {object} scriptConfig the configuration declared by the script
+ * @param {Array} warnings collects the warnings returned to the client
  */
-function applyScriptVariables(autoScriptVarsSet, scriptConfig) {
+function applyScriptVariables(autoScriptVarsSet, scriptConfig, warnings) {
     if (typeof scriptConfig.autoScriptVars === 'undefined') {
         return;
     }
 
     scriptConfig.autoScriptVars.forEach(function (element) {
-        if (typeof element.varname === 'undefined') {
-            return;
+        var varName = element.varName || element.varname;
+
+        if (element.varname) {
+            var warning = 'The script variable ' + element.varname + ' uses the deprecated property "varname", rename it to "varName".';
+            warnings.push(warning);
         }
 
+        if (!varName) {
+            throw new ScriptError('missing_attribute', 'A varName is required when defining a script variable.');
+        }
+
+        var varBindingType = element.varBindingType || 'LITERAL';
+        var varType = element.varType || 'IN';
+
         var autoScriptVar = autoScriptVarsSet.add();
-        autoScriptVar.setValue('VARNAME', element.varname);
+        autoScriptVar.setValue('VARNAME', varName);
         setValueIfAvailable(autoScriptVar, 'DESCRIPTION', element.description);
-        setValueIfAvailable(autoScriptVar, 'VARBINDINGTYPE', element.varBindingType);
-        setValueIfAvailable(autoScriptVar, 'VARTYPE', element.varType);
+        setValueIfAvailable(autoScriptVar, 'VARBINDINGTYPE', varBindingType);
+        setValueIfAvailable(autoScriptVar, 'VARTYPE', varType);
         setValueIfAvailable(autoScriptVar, 'ALLOWOVERRIDE', element.allowOverride);
 
-        if (element.varBindingType.toUpperCase() != 'LITERAL' && element.varType.toUpperCase() != 'IN') {
+        if (varBindingType.toUpperCase() !== 'LITERAL' && varType.toUpperCase() !== 'IN') {
             setValueIfAvailable(autoScriptVar, 'NOVALIDATION', element.noValidation);
             setValueIfAvailable(autoScriptVar, 'NOACCESSCHECK', element.noAccessCheck);
             setValueIfAvailable(autoScriptVar, 'NOACTION', element.noAction);
@@ -1287,6 +1298,17 @@ function getConfigFromPythonScript(scriptSource) {
     }
 }
 
+/** The value to set on a synonym domain field, see docs/modules/nashorn-library.md. */
+function toExternalSynonymValue(domainId, value, mbo) {
+    var helpers = library();
+    try {
+        return helpers.toExternalSynonymValue(domainId, value, mbo);
+    } catch (error) {
+        var message = error && error.message ? String(error.message) : String(error);
+        throw new ScriptError('invalid_synonym_value', message.replace(/^Error: /, ''));
+    }
+}
+
 function createOrUpdateProperty(property) {
     if (typeof property.propName === 'undefined' || !property.propName) {
         throw new ScriptError('message_missing_varname', 'The property record is missing the required property "propName"');
@@ -1315,7 +1337,7 @@ function createOrUpdateProperty(property) {
             }
 
             if (typeof property.secureLevel !== 'undefined') {
-                maxProp.setValue('SECURELEVEL', MXServer.getMXServer().getMaximoDD().getTranslator().toExternalDefaultValue('PROPSECURELEVEL', property.secureLevel, maxProp));
+                maxProp.setValue('SECURELEVEL', toExternalSynonymValue('PROPSECURELEVEL', property.secureLevel, maxProp));
             }
 
             if (typeof property.maxType !== 'undefined') {
@@ -1596,7 +1618,7 @@ function getRequestAction() {
         if (!resourceReq.toLowerCase().startsWith('/api/script/' + service.scriptName.toLowerCase())) {
             return null;
         } else {
-            osOSLC = false;
+            isOSLC = false;
         }
     }
 

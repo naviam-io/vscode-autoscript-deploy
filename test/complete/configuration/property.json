@@ -7,7 +7,7 @@
             "liveRefresh": true,
             "nullsAllowed": true,
             "maxType": "ALN",
-            "secureLevel": "PUBLIC",
+            "secureLevel": "!PUBLIC!",
             "maximoDefault": "deployed",
             "maxPropInstance": [
                 {

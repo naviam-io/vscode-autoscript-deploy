@@ -7,7 +7,6 @@ var MXServer = Java.type('psdi.server.MXServer');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
 var MboConstants = Java.type('psdi.mbo.MboConstants');
 export type MaximoPropertyType = 'ALN' | 'INTEGER' | 'YORN';
-export type MaximoSecureLevel = 'PRIVATE' | 'PUBLIC' | 'SECURE';
 
 export function process(property: MaximoProperty): void {
     const maximo: psdi.server.MXServer = MXServer.getMXServer();
@@ -169,7 +168,7 @@ export interface MaximoPropertyInput {
     maxType?: MaximoPropertyType | null;
     nullsAllowed?: boolean | null;
     onlineChanges?: boolean | null;
-    secureLevel?: MaximoSecureLevel | null;
+    secureLevel?: string | null;
     propValue?: string | null;
     maximoDefault?: string | null;
     maxPropInstance?: MaximoPropertyInstanceInput[] | null;
@@ -188,7 +187,7 @@ export class MaximoProperty {
     maxType: MaximoPropertyType | null = 'ALN';
     nullsAllowed = true;
     onlineChanges = true;
-    secureLevel: MaximoSecureLevel | null = 'PUBLIC';
+    secureLevel: string | null = '!PUBLIC!';
     propValue: string | null = '';
     maximoDefault: string | null = '';
     maxPropInstance: MaximoPropertyInstance[] = [];

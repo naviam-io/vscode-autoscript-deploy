@@ -13,7 +13,6 @@ var MboConstants = Java.type('psdi.mbo.MboConstants');
 /** The Maximo object a cron task snapshot is keyed by. */
 export const SNAPSHOT_OBJECT = 'CRONTASKDEF';
 
-export type MaximoCronTaskAccessLevel = 'FULL' | 'MODIFYONLY' | 'READONLY';
 
 export function process(cronTask: MaximoCronTask): void {
     const maximo: psdi.server.MXServer = MXServer.getMXServer();
@@ -52,7 +51,7 @@ function deleteCronTask(mboSet: psdi.mbo.MboSetRemote, cronTask: MaximoCronTask)
     }
 
     cronTaskInstanceSet.deleteAll();
-    setValue(mbo, 'ACCESSLEVEL', toExternalSynonymValue('CRONACCESS', 'FULL', mbo), MboConstants.NOACCESSCHECK);
+    setValue(mbo, 'ACCESSLEVEL', toExternalSynonymValue('CRONACCESS', '!FULL!', mbo), MboConstants.NOACCESSCHECK);
     mboSet.save();
 
     setCronTaskWhere(mboSet, cronTask.cronTaskName);
@@ -108,7 +107,7 @@ function removeExistingCronTaskForReplace(mboSet: psdi.mbo.MboSetRemote, mbo: ps
         instance = cronTaskInstanceSet.moveNext();
     }
 
-    setValue(mbo, 'ACCESSLEVEL', toExternalSynonymValue('CRONACCESS', 'FULL', mbo), MboConstants.NOACCESSCHECK);
+    setValue(mbo, 'ACCESSLEVEL', toExternalSynonymValue('CRONACCESS', '!FULL!', mbo), MboConstants.NOACCESSCHECK);
     mboSet.save();
     setCronTaskWhere(mboSet, cronTaskName);
     mboSet.reset();
@@ -247,7 +246,7 @@ export interface MaximoCronTaskInput {
     cronTaskName: string;
     description?: string | null;
     className: string;
-    accessLevel?: MaximoCronTaskAccessLevel | null;
+    accessLevel?: string | null;
     cronTaskInstance?: MaximoCronTaskInstanceInput[] | null;
     _retain?: any;
 }
@@ -259,7 +258,7 @@ export class MaximoCronTask {
     cronTaskName: string;
     description: string | null = '';
     className: string;
-    accessLevel: MaximoCronTaskAccessLevel | null = 'FULL';
+    accessLevel: string | null = '!FULL!';
     cronTaskInstance: MaximoCronTaskInstance[] = [];
     _retain: any = [];
 

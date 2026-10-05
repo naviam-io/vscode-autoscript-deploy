@@ -42,7 +42,7 @@ function property(name, value) {
                 liveRefresh: false,
                 nullsAllowed: true,
                 maxType: 'ALN',
-                secureLevel: 'SECURE'
+                secureLevel: '!SECURE!'
             }
         ]
     };

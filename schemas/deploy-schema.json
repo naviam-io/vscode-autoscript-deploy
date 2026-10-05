@@ -75,15 +75,18 @@
                     "default": "MX"
                 },
                 "type": {
-                    "description": "The type of Maximo action (ACTION.TYPE)",
+                    "description": "The type of Maximo action (ACTION.TYPE). Takes the localized synonym domain value of the target Maximo, or the internal value written as !CUSTOM!.",
                     "type": "string",
-                    "enum": ["APPACTION", "CHANGESTATUS", "CUSTOM", "EXECUTABLE", "GROUP", "SETVALUE"],
-                    "default": "CUSTOM"
+                    "examples": ["APPACTION", "CHANGESTATUS", "CUSTOM", "EXECUTABLE", "GROUP", "SETVALUE"],
+                    "pattern": "^(?!!)|^![^!]+!$",
+                    "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !CUSTOM!."
                 },
                 "useWith": {
-                    "description": "Indicates where the Maximo action can be used (ACTION.USEWITH)",
+                    "description": "Indicates where the Maximo action can be used (ACTION.USEWITH). Takes the localized synonym domain value of the target Maximo, or the internal value written as !ALL!.",
                     "type": "string",
-                    "default": "ALL"
+                    "examples": ["ALL", "ESCALATION", "WORKFLOW"],
+                    "pattern": "^(?!!)|^![^!]+!$",
+                    "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !ALL!."
                 },
                 "value": {
                     "description": "The action value. CUSTOM actions deploy to ACTION.VALUE; other action types deploy to ACTION.VALUE2.",
@@ -272,8 +275,11 @@
                                 "type": "number"
                             },
                             "intervalUom": {
-                                "description": "The escalation point interval unit of measure (ESCREFPOINT.INTERVALUOM)",
-                                "type": "string"
+                                "description": "The escalation point interval unit of measure (ESCREFPOINT.INTERVALUOM). Takes the localized synonym domain value of the target Maximo, or the internal value written as !HOURS!.",
+                                "type": "string",
+                                "examples": ["DAYS", "HOURS", "MINUTES", "MONTHS", "SECONDS", "WEEKS"],
+                                "pattern": "^(?!!)|^![^!]+!$",
+                                "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !HOURS!."
                             },
                             "repeat": {
                                 "description": "Whether the escalation point repeats (ESCREFPOINT.REPEAT)",
@@ -320,9 +326,12 @@
                     "type": "string"
                 },
                 "useWith": {
-                    "description": "Indicates from where in Maximo the Maximo Object Structure is accessible. Possible values include: ALL, INTEGRATION and DEPLOYMENT MGR. If you choose ALL, the MOS can be used from any Maximo application. If you choose INTEGRATION, the template is available from the INTEGRATION applications, but cannot be used in other app. Chosing either DEPLOYMENT MGR or someother app limits the use of the MOS to within that specific application.",
+                    "description": "The applications that can use the object structure (MAXINTOBJECT.USEWITH): INTEGRATION for the integration applications, MIGRATIONMGR for Migration Manager, OSLC for the REST and OSLC APIs, REPORTING for reports and WOS for Watson object structures. Takes the localized synonym domain value of the target Maximo, or the internal value written as !INTEGRATION!.",
                     "type": "string",
-                    "enum": ["INTEGRATION", "MIGRATIONMGR", "OSLC", "REPORTING", "WOS"]
+                    "examples": ["INTEGRATION", "MIGRATIONMGR", "OSLC", "REPORTING", "WOS"],
+                    "default": "!INTEGRATION!",
+                    "pattern": "^(?!!)|^![^!]+!$",
+                    "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !INTEGRATION!."
                 },
                 "useOSSecurity": {
                     "description": "Use Object Structure for Authorization Name",
@@ -750,9 +759,11 @@
                     "type": "string"
                 },
                 "domainType": {
-                    "description": "The domain type for the Maximo domain (MAXDOMAIN.DOMAINTYPE)",
+                    "description": "The domain type for the Maximo domain (MAXDOMAIN.DOMAINTYPE). Takes the localized synonym domain value of the target Maximo, or the internal value written as !MAXTABLE!.",
                     "type": "string",
-                    "enum": ["ALN", "NUMERIC", "NUMRANGE", "SYNONYM", "MAXTABLE", "CROSSOVER"]
+                    "examples": ["ALN", "NUMERIC", "NUMRANGE", "SYNONYM", "TABLE", "CROSSOVER"],
+                    "pattern": "^(?!!)|^![^!]+!$",
+                    "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !MAXTABLE!."
                 },
                 "scale": {
                     "description": "The scale for the Maximo domain (MAXDOMAIN.SCALE)",
@@ -1156,10 +1167,12 @@
                     "type": "string"
                 },
                 "accessLevel": {
-                    "description": "The access level for the Maximo Cron Task (CRONTASKDEF.ACCESSLEVEL)",
+                    "description": "The access level for the Maximo Cron Task (CRONTASKDEF.ACCESSLEVEL). Takes the localized synonym domain value of the target Maximo, or the internal value written as !FULL!.",
                     "type": "string",
-                    "enum": ["FULL", "MODIFYONLY", "READONLY"],
-                    "default": "FULL"
+                    "examples": ["FULL", "MODIFYONLY", "READONLY"],
+                    "default": "!FULL!",
+                    "pattern": "^(?!!)|^![^!]+!$",
+                    "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !FULL!."
                 },
                 "cronTaskInstance": {
                     "description": "An array of Maximo Cron Task instance definitions",
@@ -1425,10 +1438,12 @@
                     "default": true
                 },
                 "secureLevel": {
-                    "description": "The level of access permitted for the property (MAXPROP.SECURELEVEL)",
+                    "description": "The level of access permitted for the property (MAXPROP.SECURELEVEL). Takes the localized synonym domain value of the target Maximo, or the internal value written as !PUBLIC!.",
                     "type": "string",
-                    "enum": ["PRIVATE", "PUBLIC", "SECURE"],
-                    "default": "PUBLIC"
+                    "examples": ["PRIVATE", "PUBLIC", "SECURE"],
+                    "default": "!PUBLIC!",
+                    "pattern": "^(?!!)|^![^!]+!$",
+                    "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !PUBLIC!."
                 },
                 "propValue": {
                     "description": "The global value for the property (MAXPROP.DISPPROPVALUE)",

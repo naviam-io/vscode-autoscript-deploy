@@ -139,19 +139,63 @@ export function isWritable(mbo: psdi.mbo.MboRemote, field: string): boolean {
 }
 
 /**
- * Translates an internal (language independent) synonym domain value into the external value expected by
- * the Maximo value list of the target environment. Required because synonym domain values are stored and
- * validated using the localized external value, which differs from the internal value in non-English base
- * language environments.
+ * The internal value of a synonym domain field written as !VALUE!, or null for a plain localized value.
+ * A value that starts with ! is reserved for this syntax. See docs/modules/nashorn-library.md.
+ */
+export function parseInternalValue(value: any): string | null {
+    if (typeof value !== 'string' || value.charAt(0) !== '!') {
+        return null;
+    }
+
+    const match = /^!([^!]+)!$/.exec(value);
+    if (!match) {
+        throw new Error('The value "' + value + '" is not valid. A value that starts with ! must be an internal value written as !VALUE!, for example !MAXTABLE!.');
+    }
+
+    return match[1];
+}
+
+/**
+ * The value to set on a synonym domain field: a plain localized value unchanged, an internal value
+ * resolved to the target server's default localized value.
  */
 export function toExternalSynonymValue(domainId: string, value: any, mbo?: psdi.mbo.MboRemote): any {
-    if (value === null || typeof value === 'undefined') {
+    const internalValue = parseInternalValue(value);
+    if (internalValue === null) {
         return value;
     }
 
-    const internalValue = String(value);
-    const translator = MXServerType.getMXServer().getMaximoDD().getTranslator();
-    const external = mbo ? translator.toExternalDefaultValue(domainId, internalValue, mbo) : translator.toExternalDefaultValue(domainId, internalValue);
+    let external: any = null;
+    try {
+        const translator = MXServerType.getMXServer().getMaximoDD().getTranslator();
+        external = mbo ? translator.toExternalDefaultValue(domainId, internalValue, mbo) : translator.toExternalDefaultValue(domainId, internalValue);
+    } catch (ignored) {
+        external = null;
+    }
 
-    return external === null || typeof external === 'undefined' ? internalValue : String(external);
+    if (external === null || typeof external === 'undefined' || String(external) === '') {
+        throw new Error('The value "' + value + '" is not valid. ' + internalValue + ' is not an internal value of the ' + domainId + ' synonym domain.');
+    }
+
+    return String(external);
+}
+
+/** The internal value of a synonym domain field, whichever form it is written in, for logic that depends on it. */
+export function toInternalSynonymValue(domainId: string, value: any, mbo?: psdi.mbo.MboRemote): any {
+    const internalValue = parseInternalValue(value);
+    if (internalValue !== null) {
+        return internalValue;
+    }
+
+    if (value === null || typeof value === 'undefined' || value === '') {
+        return value;
+    }
+
+    try {
+        const translator = MXServerType.getMXServer().getMaximoDD().getTranslator();
+        const internal = mbo ? translator.toInternalString(domainId, value, mbo) : translator.toInternalString(domainId, value);
+        return internal === null || typeof internal === 'undefined' || String(internal) === '' ? value : String(internal);
+    } catch (ignored) {
+        return value;
+    }
 }

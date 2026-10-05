@@ -325,21 +325,6 @@ function equalsIgnoreCase(left: any, right: any): boolean {
     return String(left).toLowerCase() === String(right).toLowerCase();
 }
 
-export enum MaximoObjectLevel {
-    CompanySet = 'COMPANYSET',
-    ItemSet = 'ITEMSET',
-    Org = 'ORG',
-    OrgAppFilter = 'ORGAPPFILTER',
-    OrgSite = 'ORGSITE',
-    Site = 'SITE',
-    SiteAppFilter = 'SITEAPPFILTER',
-    System = 'SYSTEM',
-    SystemAppFilter = 'SYSTEMAPPFILTER',
-    SystemOrg = 'SYSTEMORG',
-    SystemOrgSite = 'SYSTEMORGSITE',
-    SystemSite = 'SYSTEMSITE'
-}
-
 export enum SearchType {
     None = 'NONE',
     Exact = 'EXACT',
@@ -353,19 +338,13 @@ export enum TextDirection {
     RTL = 'RTL'
 }
 
-export enum Cardinality {
-    Multiple = 'MULTIPLE',
-    Single = 'SINGLE',
-    Undefined = 'UNDEFINED'
-}
-
 export interface RelationshipInput {
     _delete?: boolean;
     relationship: string;
     remarks?: string | null;
     child: string;
     whereClause?: string | null;
-    cardinality?: Cardinality | null;
+    cardinality?: string | null;
     dbJoinRequired?: number | null;
     isDefault?: boolean;
 }
@@ -376,7 +355,7 @@ export class Relationship {
     remarks: string | null = null;
     child: string;
     whereClause: string | null = null;
-    cardinality: Cardinality | null = null;
+    cardinality: string | null = null;
     dbJoinRequired: number | null = null;
     isDefault: boolean = false;
 
@@ -553,7 +532,7 @@ export interface MaximoObjectInput {
     entity?: string | null;
     class?: string | null;
     extendsObject?: string | null;
-    level?: MaximoObjectLevel;
+    level?: string;
     textDirection?: TextDirection | null;
     mainObject?: boolean;
     loadDefaultAttributes?: boolean;
@@ -589,7 +568,7 @@ export class MaximoObject {
     entity: string | null = null;
     class: string | null = null;
     extendsObject: string | null = null;
-    level?: MaximoObjectLevel;
+    level?: string;
     textDirection: TextDirection | null = null;
     mainObject: boolean = false;
     loadDefaultAttributes: boolean = true;

@@ -1,4 +1,11 @@
 # Release Notes
+## 1.6.0
+- Script variables are now named with `varName`, consistent with launch point variables. `varname` is still accepted but returns a deprecation warning to the client, a variable without a name fails the deployment instead of being skipped, and extraction writes `varName`.
+- Value list fields of the JSON configuration take the localized value of the target Maximo again, and extraction writes the stored localized value, reverting the internal values introduced in 1.5.0. A field also accepts an internal value written as `!VALUE!`, for example `!MAXTABLE!`, which deploys to the target's default localized value, and an unknown internal value fails the deployment with a message naming the value and the synonym domain.
+- The synonym domain helpers and the retained values snapshot requests are shared from the library, so the deploy and objects scripts no longer keep their own copies.
+- Fixed a script variable without a `varBindingType` or `varType` failing the deployment. It is now created as a literal input.
+- Fixed installing the developer tools on a Maximo whose base language is not English failing when the `NAVIAM_UTILS` integration object is created.
+
 ## 1.5.0
 - Added a generic retained values engine, and cron tasks now support `_retain`, so redeploying a cron task keeps the values the customer tuned and, when a collection is named, the instances the customer added. The existing record is captured as a snapshot before it is replaced, and the snapshot is discarded only once the deployment has succeeded, so a retry recovers from a failed run.
 - Domains now support `_retain`, so redeploying a domain keeps the values the customer tuned and, when a value collection is named, the values the customer added.

@@ -9,6 +9,7 @@ module.exports = {
             payloadKey: 'properties',
             objectType: 'properties',
             identityProperty: 'propName',
+            synonymDomains: { secureLevel: 'PROPSECURELEVEL' },
             compareFixture: true
         });
     }

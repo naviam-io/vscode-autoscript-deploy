@@ -2,7 +2,7 @@
     "domains": [
         {
             "domainId": "TEST_ABCTYPE",
-            "domainType": "ALN",
+            "domainType": "!ALN!",
             "description": "Integration test ALN domain",
             "maxType": "UPPER",
             "length": 12,
@@ -23,7 +23,7 @@
         },
         {
             "domainId": "TEST_NUMDOM",
-            "domainType": "NUMERIC",
+            "domainType": "!NUMERIC!",
             "description": "Integration test numeric domain",
             "maxType": "INTEGER",
             "length": 12,
@@ -41,7 +41,7 @@
         },
         {
             "domainId": "TEST_RANGEDOM",
-            "domainType": "NUMRANGE",
+            "domainType": "!NUMRANGE!",
             "description": "Integration test numeric range domain",
             "maxType": "INTEGER",
             "length": 12,
@@ -57,7 +57,7 @@
         },
         {
             "domainId": "TEST_TABLEDOM",
-            "domainType": "MAXTABLE",
+            "domainType": "!MAXTABLE!",
             "description": "Integration test table domain",
             "tableDomain": [
                 {
@@ -71,7 +71,7 @@
         },
         {
             "domainId": "TEST_XOVERDOM",
-            "domainType": "CROSSOVER",
+            "domainType": "!CROSSOVER!",
             "description": "Integration test crossover domain",
             "crossoverDomain": [
                 {

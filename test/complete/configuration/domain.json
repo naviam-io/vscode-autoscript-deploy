@@ -2,7 +2,7 @@
     "domains": [
         {
             "domainId": "TESTABCTYPE",
-            "domainType": "ALN",
+            "domainType": "!ALN!",
             "description": "Complete manifest test ALN domain",
             "maxType": "UPPER",
             "length": 1,
@@ -16,7 +16,7 @@
         },
         {
             "domainId": "TESTNUMDOM",
-            "domainType": "NUMERIC",
+            "domainType": "!NUMERIC!",
             "description": "Complete manifest test numeric domain",
             "maxType": "INTEGER",
             "length": 12,
@@ -30,7 +30,7 @@
         },
         {
             "domainId": "TESTRANGEDOM",
-            "domainType": "NUMRANGE",
+            "domainType": "!NUMRANGE!",
             "description": "Complete manifest test numeric range domain",
             "maxType": "INTEGER",
             "length": 12,
@@ -46,7 +46,7 @@
         },
         {
             "domainId": "TESTTABLEDOM",
-            "domainType": "MAXTABLE",
+            "domainType": "!MAXTABLE!",
             "description": "Complete manifest test table domain",
             "tableDomain": [
                 {
@@ -60,7 +60,7 @@
         },
         {
             "domainId": "TESTXOVERDOM",
-            "domainType": "CROSSOVER",
+            "domainType": "!CROSSOVER!",
             "description": "Complete manifest test crossover domain",
             "crossoverDomain": [
                 {

@@ -4,7 +4,7 @@
             "cronTaskName": "TEST_NOTFDELETE",
             "description": "Expired notifications cleanup",
             "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
-            "accessLevel": "FULL",
+            "accessLevel": "!FULL!",
             "cronTaskInstance": [
                 {
                     "instanceName": "TESTINST",

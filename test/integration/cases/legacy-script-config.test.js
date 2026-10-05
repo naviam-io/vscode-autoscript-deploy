@@ -143,7 +143,7 @@ module.exports = {
                             liveRefresh: false,
                             nullsAllowed: true,
                             maxType: 'ALN',
-                            secureLevel: 'SECURE'
+                            secureLevel: '!SECURE!'
                         },
                         {
                             propName: INITIAL_PROPERTY_NAME,
@@ -170,6 +170,7 @@ module.exports = {
             assertNotNull(property, 'The property declared in the scriptConfig was not created');
             assertEquals(property.description, 'Legacy property', 'Property description');
             assertEquals(property.maxType, 'ALN', 'Property type');
+            assertEquals(property.secureLevel, (await client.synonymMap('PROPSECURELEVEL')).SECURE, 'Property secure level');
             // The value is set on a property that did not exist before this deployment, which is the
             // case that writing the MAXPROPVALUE child directly silently loses.
             assertEquals(property.propValue, 'legacy', 'Property value');

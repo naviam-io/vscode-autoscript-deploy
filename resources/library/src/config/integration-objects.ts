@@ -968,7 +968,7 @@ export class MaximoIntegrationObject {
     _delete = false;
     intObjectName: string;
     description: string | null = '';
-    useWith: string | null = 'INTEGRATION';
+    useWith: string | null = '!INTEGRATION!';
     useOSSecurity: boolean | null = false;
     authApp: string | null = '';
     selfReferencing: boolean | null = false;

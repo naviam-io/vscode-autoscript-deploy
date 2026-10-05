@@ -15,14 +15,14 @@
                     "refPointNum": 1,
                     "eventAttribute": "STARTTIME",
                     "elapsedInterval": 10,
-                    "intervalUom": "MINUTES",
+                    "intervalUom": "!MINUTES!",
                     "repeat": false
                 },
                 {
                     "refPointNum": 2,
                     "eventAttribute": "LASTACTIVETIME",
                     "elapsedInterval": 20,
-                    "intervalUom": "HOURS",
+                    "intervalUom": "!HOURS!",
                     "repeat": true
                 }
             ]

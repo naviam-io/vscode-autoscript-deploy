@@ -5,7 +5,7 @@
             "description": "Integration test object",
             "service": "ASSET",
             "entity": "NVTEST_OBJ",
-            "level": "SYSTEM",
+            "level": "!SYSTEM!",
             "mainObject": true,
             "persistent": true,
             "uniqueColumn": "NVTEST_OBJID",
@@ -66,7 +66,7 @@
                     "child": "ASSET",
                     "remarks": "Test relationship to ASSET",
                     "whereClause": "1=1",
-                    "cardinality": "SINGLE",
+                    "cardinality": "!SINGLE!",
                     "dbJoinRequired": 0,
                     "isDefault": true
                 }

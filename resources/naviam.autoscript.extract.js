@@ -304,7 +304,7 @@ function extractScriptConfiguration(autoScript) {
         var autoScriptVar = autoScriptVarsSet.moveFirst();
         while (autoScriptVar) {
             var scriptVar = {};
-            scriptVar.varname = autoScriptVar.getString('VARNAME');
+            scriptVar.varName = autoScriptVar.getString('VARNAME');
             if (!autoScriptVar.isNull('DESCRIPTION')) {
                 scriptVar.description = autoScriptVar.getString('DESCRIPTION');
             }

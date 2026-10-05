@@ -3,7 +3,7 @@
         {
             "intObjectName": "TESTPERSONAPI",
             "description": "Complete manifest test object structure",
-            "useWith": "INTEGRATION",
+            "useWith": "!INTEGRATION!",
             "useOSSecurity": true,
             "authApp": "TESTPERSONAPI",
             "flatSupported": true,

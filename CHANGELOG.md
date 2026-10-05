@@ -1,5 +1,26 @@
 # Release Notes
+## 1.30.1
+- Reverted the 1.30.0 changes to synonym domain fields, so configuration files extracted with 1.29 validate and deploy again. Fields such as an action type, a cron task access level, a domain type, an escalation interval unit, integration object usage, a property security level, an object level and a relationship cardinality take the localized value of the target Maximo, and extraction writes the stored localized value. Table domains use `TABLE` again on an English Maximo.
+- Synonym domain fields now also accept an internal value written as `!VALUE!`, for example `"domainType": "!MAXTABLE!"`, which deploys to the target's default localized value, so one file deploys on a Maximo of any base language. An unknown internal value fails the deployment with a message naming the value and the synonym domain, and the schemas reject a value that starts with `!` but is not written as `!VALUE!`.
+- The schemas suggest the English values of synonym domain fields and accept any other value instead of only the English ones. Their defaults are written as `!VALUE!` and match what deploy applies, and the defaults deploy never applied are removed.
+- Script variables in a `scriptConfig` are now named with `varName`, consistent with launch point variables. `varname` still deploys but logs a deprecation warning in the output, and the schema flags it, so rename it to `varName`. Extraction now writes `varName`.
+- Fixed deploying a script whose script variables were named with `varName`, which failed with "A launch point variable has been defined, but there are no script variables defined", and a script variable without a `varBindingType` or `varType` failing the deployment. Such a variable is now created as a literal input, and the schema shows these defaults.
+- Fixed the script configuration schema expecting a number for a property's `secureLevel`.
+- Fixed installing the developer tools on a Maximo whose base language is not English failing when the `NAVIAM_UTILS` integration object is created.
+
 ## 1.30.0
+### Breaking changes
+These changes may require you to update existing configuration files, manifests or TypeScript projects.
+
+- Table domains now use the domain type `MAXTABLE`, the internal value Maximo stores, instead of `TABLE`. Replace `"domainType": "TABLE"` with `"domainType": "MAXTABLE"`. A domain still declared as `TABLE` fails schema validation, and its deployment fails with "Provided domain type is not a valid value". Extraction now writes `MAXTABLE`. Reverted in 1.30.1.
+- Values from Maximo synonym domains, such as action types, cron task access levels, domain types, escalation interval units, integration object usage and property security levels, are now read as internal values and translated to the target server's language. If you wrote localized values for a Maximo whose base language is not English, replace them with the internal values that extraction now produces. Reverted in 1.30.1.
+- A manifest is now validated in full before anything is deployed, and the whole deployment is refused if any entry is invalid. Entries that 1.29 skipped silently now stop the deployment: a file that does not exist, a file without a deployable extension, the same file listed twice, or an entry that is neither a path nor an object with a `path`. Remove such entries or mark them `"disabled": true`.
+- Manifest entries that name a `.ts` file were ignored and are now built and deployed. Remove or disable them if they should not be deployed.
+- A JSON file is now deployed as an inspection form only when it contains `inspformnum`. A form that has no `inspformnum` is deployed as configuration instead, so add the property, or in a manifest declare the entry with `"kind": "inspectionForm"`.
+- Deploying a TypeScript file now deploys the script webpack built from that file, so the file must be a webpack entry. In a project created from an earlier template, deploy `src/index.ts`, not one of the files it imports, which previously deployed the project's bundle and now fails. Deployment also needs the webpack 5 command line, because it reads the build statistics to find the output file.
+- The deploy schema now flags two properties that were documented incorrectly and never applied: rename `errorResourcBundle` on crossover domain rows to `errorResourceBundle`, and change `sortByOn` on query template attributes from an attribute name to `true` or `false`.
+- Logger files extracted by earlier versions name their parent in `parentLogger`, which deployment ignores, so redeploying them turns a child logger into a root logger. Rename it to `parentLogKey` with the parent's log key, or extract the logger again.
+
 ### Retaining customer values
 - Cron tasks now support `_retain`, so redeploying a product's cron task no longer overwrites the values the customer tuned, such as a schedule, the active flag or a parameter value. Naming a collection, for example `"_retain": ["cronTaskInstance"]`, also preserves the instances the customer added that the deployed file does not declare.
 - Domains now support `_retain`, so redeploying a product's domain no longer wipes the values the customer tuned. Naming a value collection, for example `"_retain": ["alnDomain"]`, also preserves the values the customer added that the deployed file does not declare.

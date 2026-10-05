@@ -5,7 +5,7 @@
                 "cronTaskName": "TEST_RETAIN",
                 "description": "Retained values test, release 1",
                 "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
-                "accessLevel": "FULL",
+                "accessLevel": "!FULL!",
                 "cronTaskInstance": [
                     {
                         "instanceName": "RETAININST1",
@@ -30,7 +30,7 @@
                 "cronTaskName": "TEST_RETAIN",
                 "description": "Retained values test, release 1",
                 "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
-                "accessLevel": "FULL",
+                "accessLevel": "!FULL!",
                 "cronTaskInstance": [
                     {
                         "instanceName": "RETAININST1",
@@ -68,7 +68,7 @@
                 "cronTaskName": "TEST_RETAIN",
                 "description": "Retained values test, release 2",
                 "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
-                "accessLevel": "FULL",
+                "accessLevel": "!FULL!",
                 "_retain": ["cronTaskInstance"],
                 "cronTaskInstance": [
                     {
@@ -109,7 +109,7 @@
                 "cronTaskName": "TEST_RETAIN",
                 "description": "Retained values test, release 2",
                 "className": "com.ibm.tivoli.maximo.notification.NotfCleanupCronTask",
-                "accessLevel": "FULL",
+                "accessLevel": "!FULL!",
                 "cronTaskInstance": [
                     {
                         "instanceName": "RETAININST1",

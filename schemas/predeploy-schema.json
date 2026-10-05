@@ -46,9 +46,9 @@
                     "type": "string"
                 },
                 "level": {
-                    "description": "The organizational level to which the object applies (MAXOBJECTCFG.SITEORGTYPE)",
+                    "description": "The organizational level to which the object applies (MAXOBJECTCFG.SITEORGTYPE). Takes the localized synonym domain value of the target Maximo, or the internal value written as !SYSTEM!.",
                     "type": "string",
-                    "enum": [
+                    "examples": [
                         "COMPANYSET",
                         "ITEMSET",
                         "ORG",
@@ -62,7 +62,8 @@
                         "SYSTEMORGSITE",
                         "SYSTEMSITE"
                     ],
-                    "default": "SYSTEM"
+                    "pattern": "^(?!!)|^![^!]+!$",
+                    "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !SYSTEM!."
                 },
                 "textDirection": {
                     "description": "The orientation of text that you enter into fields (MAXOBJECTCFG.TEXTDIRECTION)",
@@ -403,8 +404,11 @@
                                 "type": "string"
                             },
                             "cardinality": {
-                                "description": "Is the database relationship single or multiple?",
-                                "type": "string"
+                                "description": "Is the database relationship single or multiple? (MAXRELATIONSHIP.CARDINALITY) Takes the localized synonym domain value of the target Maximo, or the internal value written as !SINGLE!.",
+                                "type": "string",
+                                "examples": ["MULTIPLE", "SINGLE", "UNDEFINED"],
+                                "pattern": "^(?!!)|^![^!]+!$",
+                                "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !SINGLE!."
                             },
                             "dbJoinRequired": {
                                 "description": "Identifies whether the relationship join is required (MAXRELATIONSHIP.DBJOINREQUIRED)",
