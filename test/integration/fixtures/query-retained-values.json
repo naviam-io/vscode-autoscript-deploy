@@ -1,0 +1,64 @@
+{
+    "productV1": {
+        "queries": [
+            {
+                "app": "AUTOSCRIPT",
+                "clauseName": "NVTEST_RETAIN_QUERY",
+                "owner": "MAXADMIN",
+                "clause": "status = 'ACTIVE'",
+                "description": "Retained values test, release 1",
+                "isPublic": true,
+                "isUserList": false,
+                "notes": "Release 1 notes",
+                "priority": 1,
+                "_retain": ["clause", "notes", "priority"]
+            }
+        ]
+    },
+    "customerEdit": {
+        "queries": [
+            {
+                "app": "AUTOSCRIPT",
+                "clauseName": "NVTEST_RETAIN_QUERY",
+                "owner": "MAXADMIN",
+                "clause": "status = 'DRAFT'",
+                "description": "Retained values test, release 1",
+                "isPublic": true,
+                "isUserList": false,
+                "notes": "Notes written by the customer",
+                "priority": 5
+            }
+        ]
+    },
+    "customerEditCleared": {
+        "queries": [
+            {
+                "app": "AUTOSCRIPT",
+                "clauseName": "NVTEST_RETAIN_QUERY",
+                "owner": "MAXADMIN",
+                "clause": "status = 'INACTIVE'",
+                "description": "Retained values test, release 1",
+                "isPublic": true,
+                "isUserList": false,
+                "notes": null,
+                "priority": 7
+            }
+        ]
+    },
+    "productV2": {
+        "queries": [
+            {
+                "app": "AUTOSCRIPT",
+                "clauseName": "NVTEST_RETAIN_QUERY",
+                "owner": "MAXADMIN",
+                "clause": "status = 'ACTIVE' and active = 1",
+                "description": "Retained values test, release 2",
+                "isPublic": false,
+                "isUserList": false,
+                "notes": "Release 2 notes",
+                "priority": 2,
+                "_retain": ["clause", "notes", "priority"]
+            }
+        ]
+    }
+}

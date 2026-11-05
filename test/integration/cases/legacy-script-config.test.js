@@ -11,7 +11,7 @@
  * MAXVARTYPE has no object structure, so the maxvar is read back by a one-off deploy script that
  * reports what Maximo holds by throwing it. That script removes itself, whether it ran or not.
  */
-const { assertEquals, assertNotNull } = require('../harness');
+import { assertEquals, assertNotNull } from '../harness.js';
 
 const SCRIPT_NAME = 'NVTEST.LEGACYCONFIG';
 const MAXVAR_NAME = 'NVTESTLEGACYVAR';
@@ -120,7 +120,7 @@ async function deleteScript(client, name) {
     });
 }
 
-module.exports = {
+export default {
     name: 'legacy-script-config',
     run: async (client) => {
         try {

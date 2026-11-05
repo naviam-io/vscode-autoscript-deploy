@@ -7,10 +7,10 @@
  * closures rather than at the top level. The harness has to reach them, otherwise none of the
  * library's logic can be unit tested.
  */
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
 
-const { extractFunctionSources, loadScriptFunctions } = require('../harness');
+import { extractFunctionSources, loadScriptFunctions } from '../harness.js';
 
 describe('extractFunctionSources', () => {
     it('finds a function declared inside a nested closure', () => {

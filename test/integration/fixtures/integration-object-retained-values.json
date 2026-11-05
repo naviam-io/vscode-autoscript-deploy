@@ -1,0 +1,340 @@
+{
+    "productV1": {
+        "integrationObjects": [
+            {
+                "intObjectName": "NVTEST_RETAINIO",
+                "description": "Retained values test, release 1",
+                "useWith": "!INTEGRATION!",
+                "useOSSecurity": true,
+                "authApp": "NVTEST_RETAINIO",
+                "_retain": ["searchAttrs", "maxIntObjDetail", "sigOption", "osOSLCAction", "queryTemplate"],
+                "maxIntObjDetail": [
+                    {
+                        "objectName": "ASSET",
+                        "objectOrder": 1,
+                        "maxIntObjCols": [
+                            {
+                                "name": "ROWSTAMP",
+                                "intObjFldType": "EXCLUDE"
+                            }
+                        ],
+                        "_retain": ["skipKeyUpdate", "maxIntObjCols"]
+                    },
+                    {
+                        "objectName": "ASSETMETER",
+                        "parentObjName": "ASSET",
+                        "relation": "ASSETMETER",
+                        "objectOrder": 1
+                    }
+                ],
+                "sigOption": [
+                    {
+                        "optionName": "NVTESTPROD",
+                        "description": "Product option, release 1",
+                        "_retain": ["description"]
+                    }
+                ],
+                "osOSLCAction": [
+                    {
+                        "name": "NVTESTPRODACT",
+                        "description": "Product action",
+                        "implType": "script",
+                        "scriptName": "OSACTION.NVTEST_RETAINIO.NVTESTPRODACT",
+                        "optionName": "NVTESTPROD"
+                    }
+                ],
+                "queryTemplate": [
+                    {
+                        "templateName": "NVTESTTPL",
+                        "description": "Product template, release 1",
+                        "_retain": ["description"],
+                        "queryTemplateAttr": [
+                            {
+                                "selectAttrName": "assetnum",
+                                "selectOrder": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "customerEdit": {
+        "integrationObjects": [
+            {
+                "intObjectName": "NVTEST_RETAINIO",
+                "description": "Customer description",
+                "useWith": "!INTEGRATION!",
+                "useOSSecurity": true,
+                "authApp": "NVTEST_RETAINIO",
+                "maxIntObjDetail": [
+                    {
+                        "objectName": "ASSET",
+                        "objectOrder": 1,
+                        "maxIntObjCols": [
+                            {
+                                "name": "ROWSTAMP",
+                                "intObjFldType": "EXCLUDE"
+                            },
+                            {
+                                "name": "VENDOR",
+                                "intObjFldType": "EXCLUDE"
+                            }
+                        ],
+                        "skipKeyUpdate": true
+                    },
+                    {
+                        "objectName": "ASSETMETER",
+                        "parentObjName": "ASSET",
+                        "relation": "ASSETMETER",
+                        "objectOrder": 1
+                    },
+                    {
+                        "objectName": "ASSETSPEC",
+                        "parentObjName": "ASSET",
+                        "relation": "ASSETSPEC",
+                        "objectOrder": 2
+                    },
+                    {
+                        "objectName": "METERREADING",
+                        "parentObjName": "ASSETMETER",
+                        "relation": "METERREADING",
+                        "objectOrder": 1
+                    }
+                ],
+                "sigOption": [
+                    {
+                        "optionName": "NVTESTPROD",
+                        "description": "Customer option"
+                    },
+                    {
+                        "optionName": "NVTESTCUST",
+                        "description": "Customer added option"
+                    }
+                ],
+                "osOSLCAction": [
+                    {
+                        "name": "NVTESTPRODACT",
+                        "description": "Product action",
+                        "implType": "script",
+                        "scriptName": "OSACTION.NVTEST_RETAINIO.NVTESTPRODACT",
+                        "optionName": "NVTESTPROD"
+                    },
+                    {
+                        "name": "NVTESTCUSTACT",
+                        "description": "Customer action",
+                        "implType": "script",
+                        "scriptName": "OSACTION.NVTEST_RETAINIO.NVTESTCUSTACT",
+                        "optionName": "NVTESTCUST"
+                    }
+                ],
+                "queryTemplate": [
+                    {
+                        "templateName": "NVTESTTPL",
+                        "description": "Customer template",
+                        "queryTemplateAttr": [
+                            {
+                                "selectAttrName": "assetnum",
+                                "selectOrder": 1
+                            }
+                        ]
+                    }
+                ],
+                "searchAttrs": "ASSETNUM,DESCRIPTION"
+            }
+        ]
+    },
+    "productV2": {
+        "integrationObjects": [
+            {
+                "intObjectName": "NVTEST_RETAINIO",
+                "description": "Retained values test, release 2",
+                "useWith": "!INTEGRATION!",
+                "useOSSecurity": true,
+                "authApp": "NVTEST_RETAINIO",
+                "_retain": ["searchAttrs", "maxIntObjDetail", "sigOption", "osOSLCAction", "queryTemplate"],
+                "maxIntObjDetail": [
+                    {
+                        "objectName": "ASSET",
+                        "objectOrder": 1,
+                        "maxIntObjCols": [
+                            {
+                                "name": "ROWSTAMP",
+                                "intObjFldType": "EXCLUDE"
+                            }
+                        ],
+                        "_retain": ["skipKeyUpdate", "maxIntObjCols"]
+                    }
+                ],
+                "sigOption": [
+                    {
+                        "optionName": "NVTESTPROD",
+                        "description": "Product option, release 2",
+                        "_retain": ["description"]
+                    }
+                ],
+                "osOSLCAction": [
+                    {
+                        "name": "NVTESTPRODACT",
+                        "description": "Product action",
+                        "implType": "script",
+                        "scriptName": "OSACTION.NVTEST_RETAINIO.NVTESTPRODACT",
+                        "optionName": "NVTESTPROD"
+                    }
+                ],
+                "queryTemplate": [
+                    {
+                        "templateName": "NVTESTTPL",
+                        "description": "Product template, release 2",
+                        "_retain": ["description"],
+                        "queryTemplateAttr": [
+                            {
+                                "selectAttrName": "assetnum",
+                                "selectOrder": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "customerEditAgain": {
+        "integrationObjects": [
+            {
+                "intObjectName": "NVTEST_RETAINIO",
+                "description": "Customer description",
+                "useWith": "!INTEGRATION!",
+                "useOSSecurity": true,
+                "authApp": "NVTEST_RETAINIO",
+                "maxIntObjDetail": [
+                    {
+                        "objectName": "ASSET",
+                        "objectOrder": 1,
+                        "maxIntObjCols": [
+                            {
+                                "name": "ROWSTAMP",
+                                "intObjFldType": "EXCLUDE"
+                            },
+                            {
+                                "name": "VENDOR",
+                                "intObjFldType": "EXCLUDE"
+                            }
+                        ],
+                        "skipKeyUpdate": true
+                    },
+                    {
+                        "objectName": "ASSETMETER",
+                        "parentObjName": "ASSET",
+                        "relation": "ASSETMETER",
+                        "objectOrder": 1
+                    },
+                    {
+                        "objectName": "ASSETSPEC",
+                        "parentObjName": "ASSET",
+                        "relation": "ASSETSPEC",
+                        "objectOrder": 2
+                    },
+                    {
+                        "objectName": "METERREADING",
+                        "parentObjName": "ASSETMETER",
+                        "relation": "METERREADING",
+                        "objectOrder": 1
+                    }
+                ],
+                "sigOption": [
+                    {
+                        "optionName": "NVTESTPROD",
+                        "description": "Customer option"
+                    },
+                    {
+                        "optionName": "NVTESTCUST",
+                        "description": "Customer added option"
+                    }
+                ],
+                "osOSLCAction": [
+                    {
+                        "name": "NVTESTPRODACT",
+                        "description": "Product action",
+                        "implType": "script",
+                        "scriptName": "OSACTION.NVTEST_RETAINIO.NVTESTPRODACT",
+                        "optionName": "NVTESTPROD"
+                    },
+                    {
+                        "name": "NVTESTCUSTACT",
+                        "description": "Customer action",
+                        "implType": "script",
+                        "scriptName": "OSACTION.NVTEST_RETAINIO.NVTESTCUSTACT",
+                        "optionName": "NVTESTCUST"
+                    }
+                ],
+                "queryTemplate": [
+                    {
+                        "templateName": "NVTESTTPL",
+                        "description": "Customer template",
+                        "queryTemplateAttr": [
+                            {
+                                "selectAttrName": "assetnum",
+                                "selectOrder": 1
+                            }
+                        ]
+                    }
+                ],
+                "searchAttrs": "ASSETNUM,SITEID"
+            }
+        ]
+    },
+    "productV2NoOptionRetain": {
+        "integrationObjects": [
+            {
+                "intObjectName": "NVTEST_RETAINIO",
+                "description": "Retained values test, release 2",
+                "useWith": "!INTEGRATION!",
+                "useOSSecurity": true,
+                "authApp": "NVTEST_RETAINIO",
+                "_retain": ["searchAttrs", "maxIntObjDetail", "queryTemplate"],
+                "maxIntObjDetail": [
+                    {
+                        "objectName": "ASSET",
+                        "objectOrder": 1,
+                        "maxIntObjCols": [
+                            {
+                                "name": "ROWSTAMP",
+                                "intObjFldType": "EXCLUDE"
+                            }
+                        ],
+                        "_retain": ["skipKeyUpdate", "maxIntObjCols"]
+                    }
+                ],
+                "sigOption": [
+                    {
+                        "optionName": "NVTESTPROD",
+                        "description": "Product option, release 2",
+                        "_retain": ["description"]
+                    }
+                ],
+                "osOSLCAction": [
+                    {
+                        "name": "NVTESTPRODACT",
+                        "description": "Product action",
+                        "implType": "script",
+                        "scriptName": "OSACTION.NVTEST_RETAINIO.NVTESTPRODACT",
+                        "optionName": "NVTESTPROD"
+                    }
+                ],
+                "queryTemplate": [
+                    {
+                        "templateName": "NVTESTTPL",
+                        "description": "Product template, release 2",
+                        "_retain": ["description"],
+                        "queryTemplateAttr": [
+                            {
+                                "selectAttrName": "assetnum",
+                                "selectOrder": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

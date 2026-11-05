@@ -1,0 +1,100 @@
+{
+    "integrationObjects": [
+        {
+            "intObjectName": "TESTPERSONAPI",
+            "_retain": ["searchAttrs", "maxIntObjDetail", "sigOption", "osOSLCAction", "oslcQuery", "queryTemplate"],
+            "description": "Complete manifest test object structure",
+            "useWith": "!INTEGRATION!",
+            "useOSSecurity": true,
+            "authApp": "TESTPERSONAPI",
+            "flatSupported": true,
+            "defClass": "psdi.iface.mic.MicSetOut",
+            "procClass": "psdi.iface.mic.MicSetIn",
+            "searchAttrs": "PERSONID,DISPLAYNAME",
+            "module": "WO",
+            "autoPagingThreshold": 100,
+            "maxIntObjDetail": [
+                {
+                    "objectName": "PERSON",
+                    "_retain": ["skipKeyUpdate", "maxIntObjCols", "maxIntObjAlias"],
+                    "skipKeyUpdate": true,
+                    "excludeParentKey": false,
+                    "deleteOnCreate": false,
+                    "objectOrder": 1,
+                    "maxIntObjCols": [
+                        {
+                            "name": "PASSWORDINPUT",
+                            "intObjFldType": "NONPERSISTENT"
+                        }
+                    ],
+                    "maxIntObjAlias": [
+                        {
+                            "name": "DISPLAYNAME",
+                            "_retain": ["aliasName"],
+                            "aliasName": "NAME"
+                        }
+                    ],
+                    "objectAppAuth": [
+                        {
+                            "context": "/testcomplete",
+                            "_retain": ["description"],
+                            "description": "Complete manifest test",
+                            "authApp": "PERSON"
+                        }
+                    ]
+                }
+            ],
+            "sigOption": [
+                {
+                    "optionName": "TESTOPT",
+                    "_retain": ["description"],
+                    "description": "Complete manifest test option",
+                    "alsoGrants": "READ",
+                    "prerequisite": "READ"
+                }
+            ],
+            "osOSLCAction": [
+                {
+                    "name": "testcomplete",
+                    "_retain": ["description"],
+                    "description": "Complete manifest test action",
+                    "implType": "script",
+                    "scriptName": "OSACTION.TESTPERSONAPI.TESTCOMPLETE",
+                    "optionName": "TESTOPT",
+                    "collection": false
+                }
+            ],
+            "oslcQuery": [
+                {
+                    "queryType": "osclause",
+                    "clauseName": "TESTACTIVE",
+                    "_retain": ["clause"],
+                    "description": "Active people",
+                    "clause": "status = 'ACTIVE'",
+                    "isPublic": true
+                }
+            ],
+            "queryTemplate": [
+                {
+                    "templateName": "TESTTEMPLATE",
+                    "_retain": ["pageSize", "queryTemplateAttr"],
+                    "description": "Complete manifest test template",
+                    "pageSize": 20,
+                    "searchAttributes": "PERSONID",
+                    "timelineAttributes": "STATUSDATE",
+                    "queryTemplateAttr": [
+                        {
+                            "selectAttrName": "personid",
+                            "_retain": ["title"],
+                            "title": "Person",
+                            "selectOrder": 1,
+                            "sortByOn": true,
+                            "ascending": true,
+                            "sortByOrder": 1
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

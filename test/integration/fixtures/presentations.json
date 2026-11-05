@@ -1,0 +1,113 @@
+{
+    "add": {
+        "presentations": [
+            {
+                "app": "ACTION",
+                "changes": [
+                    {
+                        "add": {
+                            "name": "dialog",
+                            "id": "nvtest_pres_dlg",
+                            "label": "NV Test",
+                            "children": [
+                                {
+                                    "name": "section",
+                                    "id": "nvtest_pres_s1",
+                                    "label": "One",
+                                    "children": [{ "name": "textbox", "id": "nvtest_pres_t1", "dataattribute": "description", "label": "Text One" }]
+                                }
+                            ]
+                        }
+                    },
+                    { "add": { "name": "section", "id": "nvtest_pres_s2", "label": "Two" }, "before": { "name": "section", "id": "nvtest_pres_s1" } }
+                ]
+            },
+            {
+                "app": "ACTION",
+                "changes": [
+                    {
+                        "add": {
+                            "name": "buttongroup",
+                            "id": "nvtest_pres_bg",
+                            "children": [{ "name": "pushbutton", "id": "nvtest_pres_ok", "label": "OK", "mxevent": "dialogok", "sigoption": "READ" }]
+                        },
+                        "into": { "name": "dialog", "id": "nvtest_pres_dlg" }
+                    }
+                ]
+            }
+        ]
+    },
+    "modifyAndMove": {
+        "presentations": [
+            {
+                "app": "ACTION",
+                "changes": [
+                    { "modify": { "name": "section", "id": "nvtest_pres_s1" }, "set": { "label": "First" } },
+                    { "modify": { "name": "section", "id": "nvtest_pres_s2" }, "unset": ["label"] },
+                    { "move": { "name": "section", "id": "nvtest_pres_s2" }, "after": { "name": "section", "id": "nvtest_pres_s1" } }
+                ]
+            }
+        ]
+    },
+    "replace": {
+        "presentations": [
+            {
+                "app": "ACTION",
+                "changes": [
+                    {
+                        "add": {
+                            "name": "section",
+                            "id": "nvtest_pres_s1",
+                            "label": "First",
+                            "children": [{ "name": "textbox", "id": "nvtest_pres_t2", "dataattribute": "description", "label": "Text Two" }]
+                        },
+                        "into": { "name": "buttongroup", "id": "nvtest_pres_bg" }
+                    }
+                ]
+            }
+        ]
+    },
+    "missingAnchor": {
+        "properties": [{ "propName": "nvtest.presentations.atomic", "description": "Presentations atomicity test", "maxType": "ALN", "propValue": "x" }],
+        "presentations": [
+            {
+                "app": "ACTION",
+                "changes": [{ "add": { "name": "section", "id": "nvtest_pres_s3" }, "after": { "name": "section", "id": "nvtest_pres_missing" } }]
+            }
+        ]
+    },
+    "unknownSignatureOption": {
+        "properties": [{ "propName": "nvtest.presentations.atomic", "description": "Presentations atomicity test", "maxType": "ALN", "propValue": "x" }],
+        "presentations": [
+            {
+                "app": "ACTION",
+                "changes": [{ "modify": { "name": "pushbutton", "id": "nvtest_pres_ok" }, "set": { "sigoption": "NVTEST_NOPE" } }]
+            }
+        ]
+    },
+    "systemPresentation": {
+        "presentations": [
+            {
+                "app": "TOOLBOX",
+                "changes": [
+                    {
+                        "add": {
+                            "name": "dialog",
+                            "id": "nvtest_pres_dlg",
+                            "children": [{ "name": "pushbutton", "id": "nvtest_pres_sys", "sigoption": "NVTEST_NOPE" }]
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "removeDialog": {
+        "presentations": [{ "app": "ACTION", "changes": [{ "remove": { "name": "dialog", "id": "nvtest_pres_dlg" } }] }]
+    },
+    "removeSystemDialog": {
+        "presentations": [{ "app": "TOOLBOX", "changes": [{ "remove": { "name": "dialog", "id": "nvtest_pres_dlg" } }] }]
+    },
+    "removeProperty": {
+        "properties": [{ "_delete": true, "propName": "nvtest.presentations.atomic" }]
+    }
+}

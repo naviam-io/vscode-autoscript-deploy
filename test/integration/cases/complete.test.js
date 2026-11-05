@@ -16,11 +16,12 @@
  * The handlers are the REST calls the extension makes, because the extension's own handlers are
  * bundled ES modules that depend on the "vscode" module and cannot be required here.
  */
-const fs = require('fs');
-const path = require('path');
-const { assertEquals, assertNotNull, REPO_ROOT } = require('../harness');
-const { planManifest } = require('../../../src/deploy/manifest-planner');
-const { executePlan } = require('../../../src/deploy/manifest-executor');
+import fs from 'fs';
+import path from 'path';
+import { assertEquals, assertNotNull, REPO_ROOT } from '../harness.js';
+import { childIds, findById, parsePresentation } from '../../unit/support/presentation-tree.js';
+import { planManifest } from '../../../src/core/deploy/manifest-planner.js';
+import { executePlan } from '../../../src/core/deploy/manifest-executor.js';
 
 const COMPLETE_DIR = path.join(REPO_ROOT, 'test', 'complete');
 const RELEASE_MANIFEST = path.join(COMPLETE_DIR, 'release.manifest.json');
@@ -28,13 +29,20 @@ const REMOVE_MANIFEST = path.join(COMPLETE_DIR, 'remove.manifest.json');
 
 const SCRIPT_NAME = 'TEST.COMPLETE';
 const ACTION_SCRIPT_NAME = 'OSACTION.TESTPERSONAPI.TESTCOMPLETE';
-const DEPLOY_SCRIPTS = ['TEST.COMPLETE.CREATEAPP', 'TEST.COMPLETE.REMOVE', 'TEST.COMPLETE.VERIFY'];
+const DEPLOY_SCRIPTS = [
+    'TEST.COMPLETE.COMMTEMPLATE',
+    'TEST.COMPLETE.CREATEAPP',
+    'TEST.COMPLETE.REMOVE',
+    'TEST.COMPLETE.REMOVECOMMTEMPLATE',
+    'TEST.COMPLETE.VERIFY'
+];
 const OBJECT_NAME = 'TESTOBJ';
 const APP = 'TESTACTION';
 const FORM_NAME = 'TEST Complete Inspection';
 const APP_AUTH_CONTEXT = '/testcomplete';
 
 const RELEASE_KINDS = [
+    'deployScript', // configuration/create-comm-template.js
     'configuration', // property.json, from the nested configuration manifest
     'configuration', // message.json
     'configuration', // logger.json
@@ -44,17 +52,23 @@ const RELEASE_KINDS = [
     'configuration', // cron-task.json
     'configuration', // escalation.json
     'configuration', // query.json
+    'configuration', // end-point.json
+    'configuration', // publish-channel.json
+    'configuration', // enterprise-service.json
+    'configuration', // external-system.json
     'databaseConfiguration',
     'automationScript', // test.complete.js
     'automationScript', // osaction.testpersonapi.testcomplete.js
-    'configuration', // object-structure.json
+    'configuration', // configuration/object-structure.json
     'inspectionForm',
     'deployScript',
-    'screen'
+    'screen',
+    'configuration' // testaction-changes.json
 ];
 
 // The records the deployment formats cannot delete, which remove/remove-records.js deletes instead.
 const LEFTOVER_QUERIES = [
+    ['COMMTEMPLATE', 'templateid', 'TESTCOMPLETE'],
     ['INSPECTIONFORM', 'name', FORM_NAME],
     ['MAXAPPS', 'app', APP],
     ['MAXPRESENTATION', 'app', APP],
@@ -90,7 +104,15 @@ async function configurationRecords(client) {
         ['crontasks', 'TESTNOTFCLEANUP'],
         ['escalations', 'TESTREPORTLONG'],
         ['queries', 'AUTOSCRIPT: TESTCOMPLETE'],
-        ['integrationobjects', 'TESTPERSONAPI']
+        ['endpoints', 'TESTCOMPLETEHTTP'],
+        ['publishchannels', 'TESTPERSONPC'],
+        ['integrationobjects', 'TESTPCPERSON'],
+        ['integrationobjects', 'TESTPERSONAPI'],
+        ['enterpriseservices', 'TESTPERSONES'],
+        ['integrationobjects', 'TESTESPERSON'],
+        ['externalsystems', 'TESTCOMPLETEXS'],
+        ['publishchannels', 'TESTXSPERSONPC'],
+        ['enterpriseservices', 'TESTXSPERSONES']
     ];
 }
 
@@ -166,7 +188,11 @@ function stepHandlers(client, warnings) {
 
 function plan(manifestPath) {
     const planned = planManifest(manifestPath);
-    assertEquals(planned.errors.length, 0, 'Planning ' + path.basename(manifestPath) + ' reported ' + JSON.stringify(planned.errors.map((error) => error.message)));
+    assertEquals(
+        planned.errors.length,
+        0,
+        'Planning ' + path.basename(manifestPath) + ' reported ' + JSON.stringify(planned.errors.map((error) => error.message))
+    );
     assertEquals(planned.deprecations.length, 0, path.basename(manifestPath) + ' entries without a kind');
     assertEquals(planned.disabled.length, 0, path.basename(manifestPath) + ' disabled entries');
     return planned;
@@ -248,6 +274,13 @@ async function verifyDeployment(client) {
         assertNotNull(await client.extract(type, label), 'The manifest did not deploy ' + type + ' "' + label + '"');
     }
 
+    const escalation = await client.extract('escalations', 'TESTREPORTLONG');
+    assertEquals(
+        escalation.escRefPoint[0].escNotification && escalation.escRefPoint[0].escNotification[0].templateId,
+        'TESTCOMPLETE',
+        'Escalation notification deployed by the manifest'
+    );
+
     // Applied by the database configuration step, rather than only declared.
     const object = await client.extractObjectCfg(OBJECT_NAME);
     assertNotNull(object, 'The manifest did not deploy the object ' + OBJECT_NAME);
@@ -256,7 +289,11 @@ async function verifyDeployment(client) {
     const script = await client.client.request({
         url: 'os/mxapiautoscript',
         method: 'GET',
-        params: { lean: 'true', 'oslc.where': 'autoscript="' + SCRIPT_NAME + '"', 'oslc.select': 'autoscript,scriptlaunchpoint{launchpointname,objectname},autoscriptvars{varname}' }
+        params: {
+            lean: 'true',
+            'oslc.where': 'autoscript="' + SCRIPT_NAME + '"',
+            'oslc.select': 'autoscript,scriptlaunchpoint{launchpointname,objectname},autoscriptvars{varname}'
+        }
     });
     const deployedScript = ((script.data && script.data.member) || [])[0];
     assertNotNull(deployedScript, 'The manifest did not deploy the script ' + SCRIPT_NAME);
@@ -271,6 +308,13 @@ async function verifyDeployment(client) {
     const appAuth = (structure.maxIntObjDetail[0].objectAppAuth || []).filter((auth) => auth.context === APP_AUTH_CONTEXT);
     assertEquals(appAuth.length, 1, 'Object application authorization of TESTPERSONAPI for ' + APP_AUTH_CONTEXT);
 
+    const system = await client.extract('externalsystems', 'TESTCOMPLETEXS');
+    assertEquals(system.publishChannels[0].publishChannel.ifaceName, 'TESTXSPERSONPC', 'Embedded publish channel of TESTCOMPLETEXS');
+    assertEquals(system.enterpriseServices[0].enterpriseService.ifaceName, 'TESTXSPERSONES', 'Embedded enterprise service of TESTCOMPLETEXS');
+    const control = (system.integrationControls || []).find((entry) => entry.control === 'WOSTART');
+    const workOrderStatuses = await client.synonymMap('WOSTATUS');
+    assertEquals(control && control.listValues.map((row) => row.value).join(), workOrderStatuses.APPR, 'WOSTART list values of TESTCOMPLETEXS');
+
     const forms = (await client.listForms()).filter((form) => form.name === FORM_NAME);
     assertEquals(forms.length, 1, 'Inspection forms named ' + FORM_NAME);
 
@@ -278,6 +322,14 @@ async function verifyDeployment(client) {
     assertNotNull(screen, 'The manifest did not deploy the ' + APP + ' screen');
     assertEquals(screen.indexOf('label="TEST Action"') >= 0, true, 'The deployed ' + APP + ' screen is not testaction.xml');
     assertEquals(screen.indexOf('optionname="TESTMEMO"') >= 0, true, 'The ' + APP + ' screen conditional UI metadata was not deployed');
+
+    // The presentation changes applied on top of testaction.xml.
+    const root = await parsePresentation(screen);
+    assertEquals(childIds(findById(root, 'maintabs')).join(), 'results,main,testaction_details', 'Tabs after the presentation changes');
+    assertEquals(findById(root, 'testaction_details_memo').attributes.sigoption, 'TESTMEMO', 'Signature option of the added field');
+    assertEquals(findById(root, 'member_table_buttongroup_1').attributes.label, 'Choose Members', 'Label of the modified button');
+    assertEquals(childIds(findById(root, 'main_grid11_c1_1')).at(-1), 'main_grid11_12', 'The moved field is last in its new section');
+    assertEquals(findById(root, 'main_grid1_members_table_tablebody_10'), null, 'The removed column');
 
     for (const name of DEPLOY_SCRIPTS) {
         assertEquals(await client.findScript(name), null, 'The deploy script ' + name + ' was left installed in Maximo');
@@ -302,7 +354,7 @@ async function remove(client, steps) {
     return failures;
 }
 
-module.exports = {
+export default {
     name: 'complete',
     run: async (client) => {
         const release = plan(RELEASE_MANIFEST);
@@ -315,10 +367,19 @@ module.exports = {
             'BIRT report extraction does not work on existing environments, so the complete test does not deploy one'
         );
 
-        // The case creates its own state, so anything already there belongs to someone else.
+        // Records left behind by an earlier run that stopped half way are removed before starting.
         client.log('Checking that no records of the complete test exist.');
         const existing = await remainingRecords(client);
-        assertEquals(existing.length, 0, 'Records of the complete test already exist, run test/complete/remove.manifest.json first: ' + existing.join(', '));
+        if (existing.length > 0) {
+            client.log('Removing records left by an earlier run: ' + existing.join(', '));
+            const cleanupFailures = await remove(client, removal.steps);
+            const left = await remainingRecords(client);
+            assertEquals(
+                left.length,
+                0,
+                'Records of the complete test remain after the initial cleanup: ' + left.join(', ') + '. Removal failures: ' + cleanupFailures.join('; ')
+            );
+        }
 
         const warnings = [];
         let deploymentError = null;

@@ -6,12 +6,12 @@
     "properties": {
         "objects": {
             "type": "array",
-            "items": { "$ref": "#/definitions/maximo_object" },
+            "items": { "$ref": "#/definitions/maximoObject" },
             "description": "An array of Maximo objects to be deployed to the target system."
         }
     },
     "definitions": {
-        "maximo_object": {
+        "maximoObject": {
             "title": "Maximo Object",
             "description": "A Maximo Object",
             "type": "object",

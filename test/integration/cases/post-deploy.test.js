@@ -11,7 +11,7 @@
  * evidence that it was called, and the message it throws is evidence of what it was given; a
  * separate script that is gone afterwards is evidence that it ran and was cleaned up.
  */
-const { assertEquals, assertNotNull } = require('../harness');
+import { assertEquals, assertNotNull } from '../harness.js';
 
 const HELPER_NAME = 'NVTEST.POSTDEPLOY.HELPER';
 
@@ -41,7 +41,7 @@ function assertContains(actual, expected, message) {
     }
 }
 
-module.exports = {
+export default {
     name: 'post-deploy',
     run: async (client) => {
         const scripts = [];

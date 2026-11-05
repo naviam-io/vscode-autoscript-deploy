@@ -1,7 +1,10 @@
 /// <reference path="../../globals.d.ts" />
 /// <reference path="../../manage-facade.d.ts" />
 
-import { applyOptionalValues, applyValues, close, setValue, updateProgress, valueOrDefault } from '../core/util';
+import { applyOptionalValues, applyValues, close, requireKeys, setValue, updateProgress, valueOrDefault } from '../core/util';
+import { applyRetainedValues, hasRetainDeclarations, retainIdentityOf } from '../core/retained-values';
+import { deleteSnapshot, readSnapshot, snapshotKey, writeSnapshot } from '../core/snapshot-store';
+import { captureExistingState } from '../core/capture';
 
 var MXServer = Java.type('psdi.server.MXServer');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
@@ -12,8 +15,12 @@ export type MaximoMessageOption = 'close' | 'ok' | 'cancel' | 'yes' | 'no' | 'wa
 
 const messageOptions: MaximoMessageOption[] = ['close', 'ok', 'cancel', 'yes', 'no', 'warning', 'stop', 'exclamation'];
 
+/** The Maximo object a message snapshot is keyed by. */
+export const SNAPSHOT_OBJECT = 'MAXMESSAGES';
+
 export function process(message: MaximoMessage): void {
     const maximo: psdi.server.MXServer = MXServer.getMXServer();
+    const key = snapshotKey(SNAPSHOT_OBJECT, retainIdentityOf(message));
     let mboSet: psdi.mbo.MboSetRemote | null = null;
     try {
         mboSet = maximo.getMboSet('MAXMESSAGES', maximo.getSystemUserInfo());
@@ -22,10 +29,12 @@ export function process(message: MaximoMessage): void {
         if (message._delete) {
             updateProgress('Deleting message ' + messageName);
             deleteMessage(mboSet, message);
+            deleteSnapshot(key);
             updateProgress('Deleted message ' + messageName);
         } else {
             updateProgress('Adding/Updating message ' + messageName);
-            addOrUpdateMessage(mboSet, message);
+            addOrUpdateMessage(mboSet, message, key);
+            deleteSnapshot(key);
             updateProgress('Added/Updated message ' + messageName);
         }
     } finally {
@@ -41,8 +50,26 @@ function deleteMessage(mboSet: psdi.mbo.MboSetRemote, message: MaximoMessage): v
     }
 }
 
-function addOrUpdateMessage(mboSet: psdi.mbo.MboSetRemote, message: MaximoMessage): void {
+function addOrUpdateMessage(mboSet: psdi.mbo.MboSetRemote, message: MaximoMessage, key: string): void {
     const mbo = findMessage(mboSet, message);
+
+    if (hasRetainDeclarations(message)) {
+        let snapshot = readSnapshot(key);
+        if (!snapshot && mbo) {
+            snapshot = captureExistingState('messages', mbo.getUniqueIDValue());
+            if (!snapshot) {
+                throw Error(
+                    'Message ' +
+                        retainIdentityOf(message) +
+                        ' has an existing record whose state could not be captured, so its retained values cannot be preserved.'
+                );
+            }
+            writeSnapshot(key, snapshot);
+        }
+
+        message = applyRetainedValues(message, snapshot ? new MaximoMessage(snapshot) : null);
+    }
+
     if (mbo) {
         mbo.delete();
         mboSet.save();
@@ -119,9 +146,12 @@ export interface MaximoMessageInput {
     operatorResponse?: string | null;
     adminResponse?: string | null;
     systemAction?: string | null;
+    _retain?: any;
 }
 
 export class MaximoMessage {
+    static _keys = ['msgGroup', 'msgKey'];
+
     _delete = false;
     msgGroup: string;
     msgKey: string;
@@ -135,15 +165,11 @@ export class MaximoMessage {
     operatorResponse: string | null = null;
     adminResponse: string | null = null;
     systemAction: string | null = null;
+    _retain: any = [];
 
     constructor(input: MaximoMessageInput) {
-        if (!input) {
-            throw new Error('A message JSON is required to create the Message object.');
-        } else if (typeof input.msgGroup === 'undefined') {
-            throw new Error('The msgGroup property is required and must a Maximo Message Group field value.');
-        } else if (typeof input.msgKey === 'undefined') {
-            throw new Error('The msgKey property is required and must a Maximo Message Key field value.');
-        } else if (!input._delete && typeof input.value === 'undefined') {
+        requireKeys(MaximoMessage, input, 'message');
+        if (!input._delete && typeof input.value === 'undefined') {
             throw new Error('The value property is required and must a Maximo Value field value.');
         }
 
@@ -161,5 +187,6 @@ export class MaximoMessage {
         this.operatorResponse = valueOrDefault(input.operatorResponse, this.operatorResponse);
         this.adminResponse = valueOrDefault(input.adminResponse, this.adminResponse);
         this.systemAction = valueOrDefault(input.systemAction, this.systemAction);
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }

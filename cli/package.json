@@ -1,0 +1,54 @@
+{
+    "name": "@naviam/maximo-dev-tools",
+    "version": "1.31.0",
+    "description": "Tools used with the development of Maximo projects",
+    "main": "dist/index.js",
+    "type": "module",
+    "files": [
+        "dist",
+        "CHANGELOG.md"
+    ],
+    "engines": {
+        "node": ">=20"
+    },
+    "homepage": "https://github.com/naviam-io/vscode-autoscript-deploy/tree/main/cli#readme",
+    "bugs": {
+        "url": "https://github.com/naviam-io/vscode-autoscript-deploy/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/naviam-io/vscode-autoscript-deploy.git",
+        "directory": "cli"
+    },
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org"
+    },
+    "keywords": [
+        "utilities",
+        "maximo",
+        "development"
+    ],
+    "bin": {
+        "maximo-dev-tools": "dist/index.js"
+    },
+    "author": {
+        "name": "Naviam",
+        "url": "https://naviam.io"
+    },
+    "contributors": [
+        {
+            "name": "Jason VenHuizen",
+            "email": "jason.venhuizen@naviam.io"
+        },
+        {
+            "name": "Ivan Lagunov",
+            "email": "ivan.lagunov@naviam.io"
+        }
+    ],
+    "license": "GPL-3.0",
+    "devDependencies": {
+        "is-valid-hostname": "^1.0.2",
+        "yargs": "^17.5.1"
+    }
+}

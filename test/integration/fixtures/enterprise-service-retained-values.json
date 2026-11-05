@@ -1,0 +1,101 @@
+{
+    "productV1": {
+        "enterpriseServices": [
+            {
+                "ifaceName": "NVTEST_ES_RETAIN",
+                "description": "Retained values test, release 1",
+                "intObjectName": "MXASSET",
+                "storeMsg": false,
+                "integrationControls": [{ "control": "WOSTART" }],
+                "gatewayProperties": [{ "param": "NVPARAM", "value": "Release 1" }],
+                "processingRules": [
+                    {
+                        "procName": "NVSKIP",
+                        "action": "!SKIP!",
+                        "objectName": "ASSET",
+                        "description": "Release 1",
+                        "enabled": true,
+                        "applyOnInsert": true,
+                        "conditions": [
+                            {
+                                "condition": 10,
+                                "details": [{ "condType": "FIELD", "evalType": "!EQUALS!", "changeType": "!ALWAYS!", "compareType": "VALUE", "columnName": "STATUS", "value": "BROKEN" }]
+                            }
+                        ]
+                    }
+                ],
+                "objectProcessingRules": [{ "procName": "NVOBJSKIP", "action": "!SKIP!", "objectName": "ASSET", "description": "Release 1", "enabled": true }]
+            }
+        ]
+    },
+    "customerEdit": {
+        "enterpriseServices": [
+            {
+                "ifaceName": "NVTEST_ES_RETAIN",
+                "description": "Customer description",
+                "intObjectName": "MXASSET",
+                "storeMsg": true,
+                "integrationControls": [{ "control": "WOSTART" }, { "control": "POSEND" }],
+                "gatewayProperties": [{ "param": "NVPARAM", "value": "Customer value" }],
+                "processingRules": [
+                    {
+                        "procName": "NVSKIP",
+                        "action": "!SKIP!",
+                        "objectName": "ASSET",
+                        "description": "Customer rule",
+                        "enabled": false,
+                        "applyOnInsert": true,
+                        "conditions": [
+                            {
+                                "condition": 10,
+                                "details": [{ "condType": "FIELD", "evalType": "!EQUALS!", "changeType": "!ALWAYS!", "compareType": "VALUE", "columnName": "STATUS", "value": "MISSING" }]
+                            }
+                        ]
+                    }
+                ],
+                "objectProcessingRules": [{ "procName": "NVOBJSKIP", "action": "!SKIP!", "objectName": "ASSET", "description": "Customer object rule", "enabled": false }]
+            }
+        ]
+    },
+    "productV2": {
+        "enterpriseServices": [
+            {
+                "ifaceName": "NVTEST_ES_RETAIN",
+                "_retain": ["description", "integrationControls"],
+                "description": "Retained values test, release 2",
+                "intObjectName": "MXASSET",
+                "storeMsg": false,
+                "integrationControls": [{ "control": "WOSTART" }],
+                "gatewayProperties": [{ "param": "NVPARAM", "_retain": ["value"], "value": "Release 2" }],
+                "processingRules": [
+                    {
+                        "procName": "NVSKIP",
+                        "_retain": ["enabled"],
+                        "action": "!SKIP!",
+                        "objectName": "ASSET",
+                        "description": "Release 2",
+                        "enabled": true,
+                        "applyOnInsert": true,
+                        "conditions": [
+                            {
+                                "condition": 10,
+                                "details": [
+                                    {
+                                        "_retain": ["value"],
+                                        "condType": "FIELD",
+                                        "evalType": "!EQUALS!",
+                                        "changeType": "!ALWAYS!",
+                                        "compareType": "VALUE",
+                                        "columnName": "STATUS",
+                                        "value": "BROKEN"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "objectProcessingRules": [{ "procName": "NVOBJSKIP", "_retain": ["description"], "action": "!SKIP!", "objectName": "ASSET", "description": "Release 2", "enabled": true }]
+            }
+        ]
+    }
+}

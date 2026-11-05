@@ -8,6 +8,10 @@
         { "kind": "configuration", "path": "action.json" },
         { "kind": "configuration", "path": "cron-task.json" },
         { "kind": "configuration", "path": "escalation.json" },
-        { "kind": "configuration", "path": "query.json" }
+        { "kind": "configuration", "path": "query.json" },
+        { "kind": "configuration", "path": "end-point.json" },
+        { "kind": "configuration", "path": "publish-channel.json" },
+        { "kind": "configuration", "path": "enterprise-service.json" },
+        { "kind": "configuration", "path": "external-system.json" }
     ]
 }

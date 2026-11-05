@@ -18,7 +18,7 @@ They communicate over REST. A question like "why does deploying a domain fail?" 
 has its answer on one side alone. Trace the call across the boundary:
 
 ```text
-src/commands/*.js  →  src/maximo/maximo-client.js  →  REST  →  resources/naviam.autoscript.*.js
+src/commands/*.js  →  src/core/maximo/maximo-client.js  →  REST  →  resources/naviam.autoscript.*.js
 ```
 
 If you report a conclusion drawn from only one side, say so explicitly.
@@ -37,10 +37,10 @@ If you report a conclusion drawn from only one side, say so explicitly.
    and API references, and each page cites its source symbol.
 2. Verify against the code. Documentation can drift; the code is the truth. When they
    disagree, report the discrepancy rather than picking one.
-3. Prefer symbol-level navigation over reading whole files. `src/maximo/maximo-client.js` is
+3. Prefer symbol-level navigation over reading whole files. `src/core/maximo/maximo-client.js` is
    ~2,500 lines.
-4. Check whether `resources/` (a git submodule) is actually checked out before concluding a
-   server-side script does not exist.
+4. Check whether `resources/naviam.autoscript.library.js` has been built (`npm run package:library`)
+   before concluding a library function does not exist; it is generated and not tracked.
 
 ## Traps documented in this repository
 
@@ -55,7 +55,7 @@ If you report a conclusion drawn from only one side, say so explicitly.
 - The script endpoint is negotiated at runtime: `mxscript`, falling back to
   `mxapiautoscript`.
 - The API base path is `/api` when an API key is configured and `/oslc` otherwise.
-- There is no installer module under `src/maximo/`. Installation lives in
+- There is no installer module under `src/core/maximo/`. Installation lives in
   `MaximoClient.installOrUpgrade()`, which deploys `resources/naviam.autoscript.install.js`.
 - TLS settings are applied to the **global** HTTPS agent, affecting the whole extension host
   process.

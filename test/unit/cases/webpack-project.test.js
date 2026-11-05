@@ -7,13 +7,12 @@
  * temporary directory. A fake "npm" and a fake local "webpack" binary are put on the PATH so that
  * no network access is required and the test cannot touch the real project.
  */
-const { describe, it, after } = require('node:test');
-const assert = require('node:assert');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-
-const webpackProject = require('../../../src/webpack/webpack-project');
+import { describe, it, after } from 'node:test';
+import assert from 'node:assert';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import * as webpackProject from '../../../src/core/webpack/webpack-project.js';
 
 const IS_WINDOWS = process.platform === 'win32';
 
@@ -540,5 +539,16 @@ describe('webpack-project', function () {
 
             assert.deepStrictEqual(resolved, []);
         });
+    });
+});
+
+describe('stripLicenseBanner', () => {
+    it('removes the banner webpack adds and the whitespace after it', () => {
+        const banner = '/*! For license information please see bundle.js.LICENSE.txt */';
+        assert.strictEqual(webpackProject.stripLicenseBanner(`${banner}\n\nmain();`), 'main();');
+    });
+
+    it('leaves source without the banner unchanged', () => {
+        assert.strictEqual(webpackProject.stripLicenseBanner('main();\n'), 'main();\n');
     });
 });

@@ -1,0 +1,3 @@
+{
+    "messages": [{ "_delete": true, "msgGroup": "NVTESTCLI", "msgKey": "SMOKE" }]
+}

@@ -80,8 +80,14 @@ function main() {
                 return;
             } else if (httpMethod.toLowerCase() === 'post' && typeof requestBody !== 'undefined') {
                 var formData = JSON.parse(requestBody);
+                var formExisted = formExists(formData.name);
 
-                importForm(formData);
+                if (isCreateOnlyRequest() && formExisted) {
+                    response.outcome = 'skipped';
+                } else {
+                    importForm(formData);
+                    response.outcome = formExisted ? 'updated' : 'created';
+                }
                 response.status = 'success';
                 responseBody = JSON.stringify(response);
             } else if (httpMethod.toLowerCase() === 'post' && request.getQueryParam('fix')) {
@@ -138,6 +144,38 @@ function main() {
     }
 }
 
+/** Whether the request asks to leave an existing item unchanged: see docs/flows/deploy.md. */
+function isCreateOnlyRequest() {
+    return typeof request !== 'undefined' && request !== null && String(request.getQueryParam('createOnly')) === 'true';
+}
+
+/** Whether a current revision of a form with this name exists, in any status. Form names are unique. */
+function formExists(name) {
+    var inspectionFormSet;
+    try {
+        inspectionFormSet = MXServer.getMXServer().getMboSet('INSPECTIONFORM', userInfo);
+        var sqlf = new SqlFormat('name = :1 and hasrevision = :no');
+        sqlf.setObject(1, 'INSPECTIONFORM', 'NAME', name);
+        inspectionFormSet.setWhere(sqlf.format());
+        return !inspectionFormSet.isEmpty();
+    } finally {
+        _close(inspectionFormSet);
+    }
+}
+
+/**
+ * The stored values of the given internal inspection form statuses, as a list for an SQL in clause.
+ * STATUS holds the synonym value, which differs from the internal one on a translated system.
+ */
+function formStatuses(internalValues) {
+    var translator = MXServer.getMXServer().getMaximoDD().getTranslator();
+    return internalValues
+        .map(function (value) {
+            return String(translator.toExternalList('INSPECTFORMSTATUS', value));
+        })
+        .join(', ');
+}
+
 function importForm(form) {
     // Make sure the inspection doc types are set up before importing.
     fixInspectionAppDocTypes();
@@ -145,16 +183,14 @@ function importForm(form) {
     var inspectionFormSet;
     try {
         inspectionFormSet = MXServer.getMXServer().getMboSet('INSPECTIONFORM', userInfo);
-        var sqlf = new SqlFormat('name = :1 and hasrevision = :no and (status = :2 or status = :3) ');
+        var sqlf = new SqlFormat('name = :1 and hasrevision = :no and status in (' + formStatuses(['ACTIVE', 'INACTIVE']) + ')');
         sqlf.setObject(1, 'INSPECTIONFORM', 'NAME', form.name);
-        sqlf.setObject(2, 'INSPECTIONFORM', 'STATUS', 'ACTIVE');
-        sqlf.setObject(3, 'INSPECTIONFORM', 'STATUS', 'INACTIVE');
 
         inspectionFormSet.setWhere(sqlf.format());
         var inspectionForm;
         if (inspectionFormSet.isEmpty()) {
-            sqlf.setObject(2, 'INSPECTIONFORM', 'STATUS', 'PNDREV');
-            sqlf.setObject(3, 'INSPECTIONFORM', 'STATUS', 'DRAFT');
+            sqlf = new SqlFormat('name = :1 and hasrevision = :no and status in (' + formStatuses(['PNDREV', 'DRAFT']) + ')');
+            sqlf.setObject(1, 'INSPECTIONFORM', 'NAME', form.name);
 
             inspectionFormSet.setWhere(sqlf.format());
             inspectionFormSet.reset();

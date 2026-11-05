@@ -9,22 +9,22 @@
  * The library helpers run from the built bundle with a stubbed Maximo translator; the integration
  * tests cover the real translator.
  */
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
-const fs = require('node:fs');
-const path = require('node:path');
-const Ajv = require('ajv');
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import fs from 'node:fs';
+import path from 'node:path';
+import Ajv from 'ajv';
 
-const { loadScriptFunctions, REPO_ROOT } = require('../harness');
+import { loadScriptFunctions, REPO_ROOT } from '../harness.js';
 
-const vm = require('node:vm');
+import vm from 'node:vm';
 
 const LIBRARY_SOURCE = fs.readFileSync(path.join(REPO_ROOT, 'resources', 'naviam.autoscript.library.js'), 'utf8');
 const { parseInternalValue } = loadScriptFunctions('resources/naviam.autoscript.library.js', ['parseInternalValue']);
 
 /** Runs the library bundle as Maximo would, with the given translator, and returns what it shares. */
-function runLibrary(translator) {
-    const MXServer = { getMXServer: () => ({ getMaximoDD: () => ({ getTranslator: () => translator }) }) };
+function runLibrary(translator, dataDictionary = {}) {
+    const MXServer = { getMXServer: () => ({ getMaximoDD: () => ({ getTranslator: () => translator, ...dataDictionary }) }) };
     const sandbox = { Java: { type: (name) => (name === 'psdi.server.MXServer' ? MXServer : function () {}) } };
     vm.createContext(sandbox);
     vm.runInContext(LIBRARY_SOURCE, sandbox);
@@ -51,9 +51,17 @@ const SYNONYM_FIELDS = {
         '/definitions/integrationObject/properties/useWith',
         '/definitions/domain/properties/domainType',
         '/definitions/cronTask/properties/accessLevel',
-        '/definitions/maximo_properties/properties/secureLevel'
+        '/definitions/maximoProperty/properties/secureLevel',
+        '/definitions/maximoObject/properties/level',
+        '/definitions/maximoObject/properties/relationships/items/properties/cardinality',
+        '/definitions/processingRule/properties/action',
+        '/definitions/processingRule/properties/conditions/items/properties/details/items/properties/evalType',
+        '/definitions/processingRule/properties/conditions/items/properties/details/items/properties/changeType'
     ],
-    'predeploy-schema.json': ['/definitions/maximo_object/properties/level', '/definitions/maximo_object/properties/relationships/items/properties/cardinality'],
+    'predeploy-schema.json': [
+        '/definitions/maximoObject/properties/level',
+        '/definitions/maximoObject/properties/relationships/items/properties/cardinality'
+    ],
     'script-config-schema.json': ['/definitions/property/properties/secureLevel']
 };
 
@@ -91,7 +99,9 @@ describe('synonym domain fields in the schemas', () => {
             });
 
             it(pointer + ' accepts a localized and an internal value', () => {
-                ['TABLENL', 'ALLEEN WIJZIGEN', 'ORGTOEP.FILTER', '!MAXTABLE!', '!SOME VALUE!'].forEach((value) => assert.strictEqual(validate(value), true, value));
+                ['TABLENL', 'ALLEEN WIJZIGEN', 'ORGTOEP.FILTER', '!MAXTABLE!', '!SOME VALUE!'].forEach((value) =>
+                    assert.strictEqual(validate(value), true, value)
+                );
             });
 
             it(pointer + ' has no default, or a default in the internal form the library applies', () => {
@@ -115,7 +125,9 @@ describe('synonym domain fields in the schemas', () => {
     it('validates a table domain declared as TABLE, as localized and as !MAXTABLE!', () => {
         const validate = new Ajv({ strict: false, allErrors: true }).compile(deploySchema);
         ['TABLE', 'TABLENL', '!MAXTABLE!'].forEach((domainType) => {
-            const payload = { domains: [{ domainId: 'TEST_TABLEDOM', domainType: domainType, tableDomain: [{ objectName: 'MAXUSER', errorResourceBundle: 'system' }] }] };
+            const payload = {
+                domains: [{ domainId: 'TEST_TABLEDOM', domainType: domainType, tableDomain: [{ objectName: 'MAXUSER', errorResourceBundle: 'system' }] }]
+            };
             assert.strictEqual(validate(payload), true, domainType + ': ' + JSON.stringify(validate.errors));
         });
         assert.strictEqual(validate({ domains: [{ domainId: 'TEST_TABLEDOM', domainType: '!MAXTABLE' }] }), false);
@@ -127,8 +139,8 @@ describe('synonym domain fields in the schemas', () => {
         assert.strictEqual(definitions.action.properties.useWith.default, undefined);
         assert.strictEqual(definitions.cronTask.properties.accessLevel.default, '!FULL!');
         assert.strictEqual(definitions.integrationObject.properties.useWith.default, '!INTEGRATION!');
-        assert.strictEqual(definitions.maximo_properties.properties.secureLevel.default, '!PUBLIC!');
-        assert.strictEqual(readSchema('predeploy-schema.json').definitions.maximo_object.properties.level.default, undefined);
+        assert.strictEqual(definitions.maximoProperty.properties.secureLevel.default, '!PUBLIC!');
+        assert.strictEqual(readSchema('predeploy-schema.json').definitions.maximoObject.properties.level.default, undefined);
     });
 
     it('keeps the errorResourceBundle and sortByOn corrections', () => {
@@ -145,7 +157,9 @@ describe('synonym domain fields in the schemas', () => {
 
 describe('parseInternalValue', () => {
     it('returns null for a plain value, which deploys unchanged', () => {
-        ['TABLE', 'TABLENL', 'MAXTABLE', 'MAX!TABLE', '', null, undefined, 12, true].forEach((value) => assert.strictEqual(parseInternalValue(value), null, String(value)));
+        ['TABLE', 'TABLENL', 'MAXTABLE', 'MAX!TABLE', '', null, undefined, 12, true].forEach((value) =>
+            assert.strictEqual(parseInternalValue(value), null, String(value))
+        );
     });
 
     it('returns the internal value of !VALUE!', () => {
@@ -164,9 +178,53 @@ describe('parseInternalValue', () => {
     });
 });
 
-describe('the synonym domain helpers the library shares', () => {
+describe('the helpers the library shares', () => {
     it('are the default export, assigned to NaviamAutoscriptLibrary', () => {
-        assert.deepStrictEqual(Object.keys(runLibrary(translator)).sort(), ['handleSnapshotRequest', 'toExternalSynonymValue', 'toInternalSynonymValue']);
+        assert.deepStrictEqual(Object.keys(runLibrary(translator)).sort(), [
+            'applyOptionalValues',
+            'applyValues',
+            'deployPresentationXml',
+            'handleSnapshotRequest',
+            'toExternalSynonymValue',
+            'toInternalSynonymValue'
+        ]);
+    });
+
+    it('applyOptionalValues skips a null value and passes an access modifier through', () => {
+        const library = runLibrary(translator, { getMboSetInfo: () => ({ getMboValueInfo: () => ({}) }) });
+        const calls = [];
+        const mbo = { getName: () => 'SIGOPTION', setValue: (...args) => calls.push(args), setValueNull: () => assert.fail('a null value is not written') };
+
+        library.applyOptionalValues(mbo, [
+            ['DESCRIPTION', 'Memo'],
+            ['LANGCODE', null],
+            ['APP', 'TESTACTION', 2]
+        ]);
+
+        assert.deepStrictEqual(calls, [
+            ['DESCRIPTION', 'Memo'],
+            ['APP', 'TESTACTION', 2]
+        ]);
+    });
+
+    it('applyValues clears the field for a null value and passes an access modifier through', () => {
+        const library = runLibrary(translator, { getMboSetInfo: () => ({ getMboValueInfo: () => ({}) }) });
+        const calls = [];
+        const mbo = {
+            getName: () => 'SIGOPTION',
+            setValue: (...args) => calls.push(['setValue', ...args]),
+            setValueNull: (...args) => calls.push(['setValueNull', ...args])
+        };
+
+        library.applyValues(mbo, [
+            ['APP', null],
+            ['OPTIONNAME', 'TESTMEMO', 2]
+        ]);
+
+        assert.deepStrictEqual(calls, [
+            ['setValueNull', 'APP'],
+            ['setValue', 'OPTIONNAME', 'TESTMEMO', 2]
+        ]);
     });
 
     it('toExternalSynonymValue leaves a plain value unchanged', () => {
@@ -180,7 +238,11 @@ describe('the synonym domain helpers the library shares', () => {
     });
 
     it('toExternalSynonymValue fails for an unknown internal value, naming the value and the synonym domain', () => {
-        const throwing = { toExternalDefaultValue: () => { throw new Error('BMXAA0000E'); } };
+        const throwing = {
+            toExternalDefaultValue: () => {
+                throw new Error('BMXAA0000E');
+            }
+        };
         [runLibrary(translator), runLibrary(throwing)].forEach((library) => {
             assert.throws(
                 () => library.toExternalSynonymValue('PROPSECURELEVEL', '!OPEN!'),
@@ -235,7 +297,10 @@ describe('toExternalSynonymValue in the deploy script', () => {
         ['!OPEN!', '!PUBLIC'].forEach((value) => {
             assert.throws(
                 () => load(true)('PROPSECURELEVEL', value, {}),
-                (error) => error instanceof ScriptError && error.reason === 'invalid_synonym_value' && error.message.startsWith('The value "' + value + '" is not valid.')
+                (error) =>
+                    error instanceof ScriptError &&
+                    error.reason === 'invalid_synonym_value' &&
+                    error.message.startsWith('The value "' + value + '" is not valid.')
             );
         });
     });

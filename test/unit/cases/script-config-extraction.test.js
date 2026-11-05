@@ -7,12 +7,12 @@
  * object. Picking one of those up made the deploy script itself undeployable with "The auto
  * script name (autoscript) is required in the script configuration".
  */
-const fs = require('fs');
-const path = require('path');
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
-const acorn = require('acorn');
-const { loadScriptFunctions, REPO_ROOT } = require('../harness');
+import fs from 'fs';
+import path from 'path';
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import * as acorn from 'acorn';
+import { loadScriptFunctions, REPO_ROOT } from '../harness.js';
 
 const DEPLOY_SCRIPT = 'resources/naviam.autoscript.deploy.js';
 const RESOURCES_DIR = path.join(REPO_ROOT, 'resources');

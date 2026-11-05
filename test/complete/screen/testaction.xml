@@ -2,10 +2,10 @@
 <presentation id="testaction" debug="0" mboname="ACTION" resultstableid="results_showlist" beanclass="psdi.webclient.beans.action.ActionAppBean" version="6.0.0" apphelp="com.ibm.mbs.doc,action/c_actions_application.html">
     <metadata>
         <ctrlgroup groupname="MAXADMIN" optionname="TESTMEMO" app="TESTACTION" groupseq="10">
-            <sigoption optionname="TESTMEMO" app="TESTACTION" description="Complete manifest test conditional memo" esigenabled="N" visible="N" alsogrants="" alsorevokes="" prerequisite="" />
-            <ctrlcondition conditionnum="TESTCOND" conditionseq="10" reevaluate="Y">
-                <condition conditionnum="TESTCOND" type="EXPRESSION" expression="type = 'SETVALUE'" classname="" description="Complete manifest test condition" nocaching="1" />
-                <ctrlcondprop property="inputmode" propertyvalue="readonly" conditionresult="Y" />
+            <sigoption optionname="TESTMEMO" app="TESTACTION" description="Complete manifest test conditional memo" esigenabled="0" visible="0" alsogrants="" alsorevokes="" prerequisite="" />
+            <ctrlcondition conditionnum="TESTCOND" conditionseq="10" reevaluate="1">
+                <condition conditionnum="TESTCOND" expression="type = 'SETVALUE'" classname="" description="Complete manifest test condition" nocaching="1" />
+                <ctrlcondprop property="inputmode" propertyvalue="readonly" conditionresult="1" />
             </ctrlcondition>
         </ctrlgroup>
     </metadata>

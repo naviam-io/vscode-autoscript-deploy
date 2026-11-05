@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<presentation id="startcntr" apphelp="com.ibm.mbs.doc,startcntr/c_start_center_overview.html" beanclass="psdi.webclient.beans.startcntr.StartCenterAppBean" mboname="SCCONFIG" trackrecent="false" version="7.1.0.0">
+  <page id="mainrec">
+    <include id="selfServicePageHeader" />
+    <clientarea id="clientarea">
+      <startcenter id="scportlets" relationship="LAYOUTALL" />
+      <section id="switchss_section">
+        <hyperlink id="stdsslink" classname="text scs" eventvalue="standard" hidewhen="{mobile}==false" label="Standard Start Center" mxevent="startcenter" />
+        <hyperlink id="mobsslink" classname="text scs" eventvalue="mobile" hidewhen="{mobile}==true" label="Mobile Start Center" licensekey="EVERYPLACE" mxevent="startcenter" />
+      </section>
+    </clientarea>
+    <include id="pageFooter" />
+  </page>
+  <dialog id="displaysettings" beanclass="psdi.webclient.beans.startcntr.DisplaySettings" label="Display Settings" mboname="SCCONFIG">
+    <table id="displaysettings_table" label="Start Centers">
+      <tablebody id="displaysettings_tablebody" displayrowsperpage="20" filterexpanded="false">
+        <tablecol id="displaysettings_col1" dataattribute="description" filterable="true" sortable="false" />
+        <tablecol id="displaysettings_col2" dataattribute="display" filterable="true" sortable="false">
+          <checkbox id="displaysettings_col2_chb" dataattribute="display" />
+        </tablecol>
+        <tablecol id="displaysettings_col3" dataattribute="isdefault" filterable="true" ondatachange="refreshtable" sortable="false">
+          <checkbox id="displaysettings_col3_chb" />
+        </tablecol>
+        <tablecol id="displaysettings_col4" dataattribute="ismobile" filterable="true" licensekey="EVERYPLACE" ondatachange="refreshtable" sortable="false">
+          <checkbox id="displaysettings_col4_chb" />
+        </tablecol>
+      </tablebody>
+    </table>
+    <buttongroup id="displaysettings_btn_1">
+      <pushbutton id="displaysettings_btn_1_1" default="true" label="OK" mxevent="dialogok" />
+      <pushbutton id="displaysettings_btn_1_2" label="Cancel" mxevent="dialogcancel" />
+    </buttongroup>
+  </dialog>
+  <dialog id="lookup_rsconfigatt" beanclass="psdi.webclient.beans.rsconfig.RSConfigLookupBean" icon="img_lookup.gif" label="Select Value">
+    <table id="lookup_rsconfig_table" inputmode="readonly" selectmode="single">
+      <tablebody id="rsconfig_lookup_tablebody" displayrowsperpage="20" filterable="true" filterexpanded="true">
+        <tablecol id="rsconfig_lookup_tablebody_col_a" dataattribute="querycolumn" mxevent="selectrecord" mxevent_desc="Go To %1" sortable="true" type="link" />
+        <tablecol id="rsconfig_lookup_tablebody_col_2" dataattribute="description" sortable="true" />
+      </tablebody>
+    </table>
+    <buttongroup id="rsconfig_lookup_btns">
+      <pushbutton id="rsconfig_lookup_btn_1" default="true" label="Cancel" mxevent="dialogcancel" />
+    </buttongroup>
+  </dialog>
+  <dialog id="modifytemplate" beanclass="psdi.webclient.beans.startcntr.ModifyTemplates" label="Modify A Template" mboname="SCTEMPLATE">
+    <table id="modifytemplate_table" inputmode="readonly" label="Start Center Templates" orderby="description asc" rowsperpage="15" selectmode="single">
+      <tablebody id="modifytemplate_table_tablebody" displayrowsperpage="10" filterable="true" filterexpanded="false">
+        <tablecol id="modifytemplate_table_tablebody_col_1" dataattribute="name" mxevent="selectrecord" mxevent_desc="Go To %1" type="link" />
+        <tablecol id="modifytemplate_table_tablebody_col_2" dataattribute="description" />
+        <tablecol id="modifytemplate_table_tablebody_col_3" dataattribute="createdon" />
+        <tablecol id="modifytemplate_table_tablebody_col_4" filterable="false" mxevent="deleterow" mxevent_desc="Delete Template" mxevent_icon="btn_delete.gif" sortable="false" type="event" />
+      </tablebody>
+    </table>
+    <buttongroup id="modifytemplate_btn_1">
+      <pushbutton id="modifytemplate_btn_1_2" label="Cancel" mxevent="dialogcancel" />
+    </buttongroup>
+  </dialog>
+  <dialog id="rsdisplay" beanclass="psdi.webclient.beans.startcntr.ModifyRSDisplay" label="Chart Options" mboname="LAYOUT">
+    <section id="rsdisplay_section">
+      <checkbox id="rsdisplay_section_row1_col1_1" dataattribute="showchart" />
+      <combobox id="rsdisplay_section_row1_col2_1" allowblank="false" dataattribute="charttype" />
+      <textbox id="rsdisplay_section_row1_col3_1" dataattribute="rsgraphattr" lookup="rsconfigatt" />
+    </section>
+    <buttongroup id="rsdisplay_btn_1">
+      <pushbutton id="rsdisplay_btn_1_1" default="true" label="OK" mxevent="dialogok" />
+      <pushbutton id="rsdisplay_btn_1_2" label="Cancel" mxevent="dialogcancel" />
+    </buttongroup>
+  </dialog>
+</presentation>

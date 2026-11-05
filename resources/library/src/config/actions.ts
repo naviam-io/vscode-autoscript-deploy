@@ -1,14 +1,31 @@
 /// <reference path="../../globals.d.ts" />
 /// <reference path="../../manage-facade.d.ts" />
 
-import { applyValues, applyWritableValues, close, setValue, toExternalSynonymValue, toInternalSynonymValue, updateProgress, valueOrDefault } from '../core/util';
+import {
+    applyValues,
+    applyWritableValues,
+    close,
+    requireKeys,
+    setValue,
+    toExternalSynonymValue,
+    toInternalSynonymValue,
+    updateProgress,
+    valueOrDefault
+} from '../core/util';
+import { applyRetainedValues, hasRetainDeclarations, retainIdentityOf } from '../core/retained-values';
+import { deleteSnapshot, readSnapshot, snapshotKey, writeSnapshot } from '../core/snapshot-store';
+import { captureExistingState } from '../core/capture';
 
 var MXServer = Java.type('psdi.server.MXServer');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
+var MboConstants = Java.type('psdi.mbo.MboConstants');
 
+/** The Maximo object an action snapshot is keyed by. */
+export const SNAPSHOT_OBJECT = 'ACTION';
 
 export function process(action: MaximoAction): void {
     const maximo: psdi.server.MXServer = MXServer.getMXServer();
+    const key = snapshotKey(SNAPSHOT_OBJECT, retainIdentityOf(action));
     let mboSet: psdi.mbo.MboSetRemote | null = null;
     try {
         mboSet = maximo.getMboSet('ACTION', maximo.getSystemUserInfo());
@@ -16,10 +33,12 @@ export function process(action: MaximoAction): void {
         if (action._delete) {
             updateProgress('Deleting action ' + action.action);
             deleteAction(mboSet, action);
+            deleteSnapshot(key);
             updateProgress('Deleted action ' + action.action);
         } else {
             updateProgress('Adding/Updating action ' + action.action);
-            addOrUpdateAction(mboSet, action);
+            addOrUpdateAction(mboSet, action, key);
+            deleteSnapshot(key);
             updateProgress('Added/Updated action ' + action.action);
         }
     } finally {
@@ -33,13 +52,39 @@ function deleteAction(mboSet: psdi.mbo.MboSetRemote, action: MaximoAction): void
     mboSet.save();
 }
 
-function addOrUpdateAction(mboSet: psdi.mbo.MboSetRemote, action: MaximoAction): void {
+function addOrUpdateAction(mboSet: psdi.mbo.MboSetRemote, action: MaximoAction, key: string): void {
     setActionWhere(mboSet, action.action);
-    mboSet.deleteAll();
-    mboSet.save();
-    mboSet.reset();
+    let mbo = mboSet.moveFirst();
 
-    const mbo = mboSet.add();
+    if (hasRetainDeclarations(action)) {
+        let snapshot = readSnapshot(key);
+        if (!snapshot && mbo) {
+            snapshot = captureExistingState('actions', mbo.getUniqueIDValue());
+            if (!snapshot) {
+                throw Error(
+                    'Action ' + action.action + ' has an existing record whose state could not be captured, so its retained values cannot be preserved.'
+                );
+            }
+            writeSnapshot(key, snapshot);
+        }
+
+        action = applyRetainedValues(action, snapshot ? new MaximoAction(snapshot) : null);
+    }
+
+    // An existing action is updated in place, because Maximo refuses to delete one that an
+    // escalation point refers to. A change of type is the exception: the action is recreated so
+    // that no value the new type does not use is left behind.
+    if (mbo && toInternalSynonymValue('ACTIONTYPE', mbo.getString('TYPE'), mbo) !== toInternalSynonymValue('ACTIONTYPE', action.type, mbo)) {
+        mboSet.deleteAll();
+        mboSet.save();
+        mboSet.reset();
+        mbo = null;
+    }
+
+    if (!mbo) {
+        mbo = mboSet.add();
+    }
+
     applyActionValues(mbo, action);
     mboSet.save();
 }
@@ -51,8 +96,11 @@ function setActionWhere(mboSet: psdi.mbo.MboSetRemote, actionName: string): void
 }
 
 function applyActionValues(mbo: psdi.mbo.MboRemote, action: MaximoAction): void {
+    if (mbo.toBeAdded()) {
+        setValue(mbo, 'ACTION', action.action);
+    }
+
     applyValues(mbo, [
-        ['ACTION', action.action],
         ['DESCRIPTION', action.description],
         ['SENDERSYSID', action.senderSysId],
         ['TYPE', toExternalSynonymValue('ACTIONTYPE', action.type, mbo)],
@@ -67,11 +115,15 @@ function applyActionValues(mbo: psdi.mbo.MboRemote, action: MaximoAction): void 
         setValue(mbo, 'VALUE2', action.value);
     }
 
+    // A group takes an object too, which an escalation point requires of its action group. Setting
+    // the object removes a group's members, so it is applied only when it changes, before they are
+    // reconciled.
+    if (String(mbo.getString('OBJECTNAME')) !== String(action.objectName || '')) {
+        applyWritableValues(mbo, [['OBJECTNAME', action.objectName]]);
+    }
+
     if (type !== 'GROUP') {
-        applyWritableValues(mbo, [
-            ['OBJECTNAME', action.objectName],
-            ['PARAMETER', action.parameter]
-        ]);
+        applyWritableValues(mbo, [['PARAMETER', action.parameter]]);
     }
 
     if (type === 'CHANGESTATUS') {
@@ -81,13 +133,42 @@ function applyActionValues(mbo: psdi.mbo.MboRemote, action: MaximoAction): void 
     applyActionGroups(mbo, action.actionGroup);
 }
 
+/**
+ * Maximo rejects a sequence that another member of the group already holds, even one marked for
+ * deletion, so a member cannot be removed and another added at the same sequence. Rows are
+ * therefore matched by sequence: a changed member is set on the existing row (MEMBER is read only
+ * once saved, hence NOACCESSCHECK), and a row that changing the group's object marked for deletion
+ * is restored.
+ */
 function applyActionGroups(mbo: psdi.mbo.MboRemote, actionGroups: MaximoActionGroup[]): void {
     const actionGroupSet = mbo.getMboSet('ACTION_MEMBERS');
-
+    const missing: { [sequence: string]: MaximoActionGroup } = {};
     actionGroups.forEach(function (actionGroup: MaximoActionGroup): void {
-        const actionGroupMbo = actionGroupSet.add();
-        setValue(actionGroupMbo, 'MEMBER', actionGroup.member);
-        setValue(actionGroupMbo, 'SEQUENCE', actionGroup.sequence);
+        missing[String(Number(actionGroup.sequence))] = actionGroup;
+    });
+
+    let actionGroupMbo = actionGroupSet.moveFirst();
+    while (actionGroupMbo) {
+        const sequence = String(actionGroupMbo.getInt('SEQUENCE'));
+        const actionGroup = missing[sequence];
+        if (Object.prototype.hasOwnProperty.call(missing, sequence)) {
+            if (actionGroupMbo.toBeDeleted()) {
+                actionGroupMbo.undelete();
+            }
+            if (String(actionGroupMbo.getString('MEMBER')) !== String(actionGroup.member)) {
+                setValue(actionGroupMbo, 'MEMBER', actionGroup.member, MboConstants.NOACCESSCHECK);
+            }
+            delete missing[sequence];
+        } else if (!actionGroupMbo.toBeDeleted()) {
+            actionGroupMbo.delete();
+        }
+        actionGroupMbo = actionGroupSet.moveNext();
+    }
+
+    Object.keys(missing).forEach(function (sequence: string): void {
+        const added = actionGroupSet.add();
+        setValue(added, 'MEMBER', missing[sequence].member);
+        setValue(added, 'SEQUENCE', missing[sequence].sequence);
     });
 }
 
@@ -97,6 +178,8 @@ export interface MaximoActionGroupInput {
 }
 
 export class MaximoActionGroup {
+    static _keys = ['sequence'];
+
     member: string;
     sequence: number;
 
@@ -118,9 +201,12 @@ export interface MaximoActionInput {
     parameter?: string | null;
     memo?: string | null;
     actionGroup?: MaximoActionGroupInput[] | null;
+    _retain?: any;
 }
 
 export class MaximoAction {
+    static _keys = ['action'];
+
     _delete = false;
     action: string;
     description: string | null = '';
@@ -132,8 +218,11 @@ export class MaximoAction {
     parameter: string | null = '';
     memo: string | null = '';
     actionGroup: MaximoActionGroup[] = [];
+    _retain: any = [];
 
     constructor(input: MaximoActionInput) {
+        requireKeys(MaximoAction, input, 'action');
+
         this.action = input.action;
         this.type = input.type;
         this.useWith = input.useWith;
@@ -146,5 +235,6 @@ export class MaximoAction {
         this.parameter = valueOrDefault(input.parameter, this.parameter);
         this.memo = valueOrDefault(input.memo, this.memo);
         this.actionGroup = (input.actionGroup || []).map((actionGroup) => new MaximoActionGroup(actionGroup));
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }

@@ -7,11 +7,11 @@
  * storage and cannot be read outside of VS Code, so the key has to be supplied through the
  * MAXIMO_APIKEY environment variable (or stored unencrypted in the configuration file).
  */
-const fs = require('fs');
-const path = require('path');
-const axios = require('axios');
+import fs from 'fs';
+import path from 'path';
+import axios from 'axios';
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
+const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
 const CONFIG_PATH = path.join(REPO_ROOT, '.devtools-config.json');
 
 function loadEnvironment(environmentName) {
@@ -279,12 +279,13 @@ class MaximoTestClient {
      * Deploys an automation script from its source, the way the extension's script deployment does.
      * Returns the parsed response body.
      */
-    async deployScriptSource(source, isPython) {
+    async deployScriptSource(source, isPython, params) {
         const response = await this.client.request({
             url: 'script/naviam.autoscript.deploy' + (isPython ? '/python' : ''),
             method: 'POST',
             headers: { 'Content-Type': 'text/plain', Accept: 'application/json' },
             validateStatus: () => true,
+            params: params,
             data: source
         });
 
@@ -351,7 +352,6 @@ class MaximoTestClient {
             data: fs.readFileSync(sourcePath, 'utf8')
         });
 
-
         if (response.status >= 400 || (response.data && response.data.status === 'error')) {
             const data = response.data || {};
             const reason = data.message || (data.Error && data.Error.message) || 'HTTP ' + response.status;
@@ -360,26 +360,32 @@ class MaximoTestClient {
     }
 
     /** Deploys a screen definition through the same action the extension uses. Returns the parsed response body. */
-    async deployScreen(xml) {
-        return await this._postText('script/naviam.autoscript.screens', xml, 'screen');
+    async deployScreen(xml, params) {
+        return await this._postText('script/naviam.autoscript.screens', xml, 'screen', params);
     }
 
     /** Deploys an inspection form through the same action the extension uses. Returns the parsed response body. */
-    async deployForm(form) {
-        return await this._postText('script/naviam.autoscript.form', JSON.stringify(form, null, 4), 'inspection form');
+    async deployForm(form, params) {
+        return await this._postText('script/naviam.autoscript.form', JSON.stringify(form, null, 4), 'inspection form', params);
     }
 
-    async _postText(url, data, what) {
+    /** Deploys a report through the same action the extension uses. Returns the parsed response body. */
+    async deployReport(report, params) {
+        return await this._postText('script/naviam.autoscript.report', JSON.stringify(report), 'report', params);
+    }
+
+    async _postText(url, data, what, params) {
         const response = await this.client.request({
             url: url,
             method: 'POST',
             headers: { 'Content-Type': 'text/plain', Accept: 'application/json' },
             validateStatus: () => true,
+            params: params,
             data: data
         });
 
-        if (response.status >= 400 && !response.data) {
-            throw new Error('Deploying the ' + what + ' failed with HTTP ' + response.status + '.');
+        if (response.status >= 400 || (response.data && response.data.status === 'error')) {
+            throw new Error('Deploying the ' + what + ' failed with HTTP ' + response.status + ': ' + JSON.stringify(response.data));
         }
 
         return response.data;
@@ -394,6 +400,28 @@ class MaximoTestClient {
         }
 
         throw new Error((response.data && response.data.message) || 'Unexpected response from the form script.');
+    }
+
+    /** An inspection form as the extraction returns it. */
+    async extractForm(id) {
+        const response = await this.client.request({ url: 'script/naviam.autoscript.form/' + id, method: 'GET' });
+
+        if (response.data && response.data.status === 'success') {
+            return response.data.form;
+        }
+
+        throw new Error((response.data && response.data.message) || 'Unexpected response from the form script.');
+    }
+
+    /** The BIRT reports Maximo holds, as the extraction lists them. */
+    async listReports() {
+        const response = await this.client.request({ url: 'script/naviam.autoscript.report', method: 'GET' });
+
+        if (response.data && response.data.status === 'success') {
+            return response.data.reports || [];
+        }
+
+        throw new Error((response.data && response.data.message) || 'Unexpected response from the report script.');
     }
 
     /** The presentation XML of an application, or null when Maximo has none for it. */
@@ -531,4 +559,4 @@ function assertNotNull(actual, message) {
     }
 }
 
-module.exports = { loadEnvironment, MaximoTestClient, assertEquals, assertNotNull, REPO_ROOT };
+export { loadEnvironment, MaximoTestClient, assertEquals, assertNotNull, REPO_ROOT };

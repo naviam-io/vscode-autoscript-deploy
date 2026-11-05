@@ -7,8 +7,8 @@
  * updates the record, redeploying must not fail on the existing record, and deleting an object
  * structure must leave the record for the others.
  */
-const { assertEquals } = require('../harness');
-const { loadFixture } = require('../round-trip');
+import { assertEquals } from '../harness.js';
+import { loadFixture } from '../round-trip.js';
 
 const CONTEXT = '/nvtest/appauth';
 // A second context for the same object, declared by the same detail.
@@ -52,7 +52,7 @@ async function deleteAppAuth(client) {
     assertEquals(response && response.status, 'success', 'Cleanup of the OBJECTAPPAUTH records reported ' + JSON.stringify(response));
 }
 
-module.exports = {
+export default {
     name: 'integration-object-app-auth',
     run: async (client) => {
         const fixture = loadFixture('integration-object-app-auth');

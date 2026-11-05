@@ -8,12 +8,12 @@
  * getters themselves talk to Maximo and are covered by the integration tests; these tests only pin
  * the routing, using a stub per getter.
  */
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
 
-const { loadScriptFunctions } = require('../harness');
+import { loadScriptFunctions } from '../harness.js';
 
-const GETTERS = ['getMessage', 'getAction', 'getProperty', 'getDomain', 'getCronTask', 'getEscalation', 'getLogger', 'getIntObject', 'getQuery'];
+const GETTERS = ['getMessage', 'getAction', 'getProperty', 'getDomain', 'getCronTask', 'getEscalation', 'getLogger', 'getIntObject', 'getQuery', 'getEndPoint', 'getPublishChannel', 'getEnterpriseService', 'getExternalSystem', 'getMaximoObject'];
 
 function load() {
     const calls = [];
@@ -42,7 +42,12 @@ describe('getObjectDetail', () => {
             escalations: 'getEscalation',
             loggers: 'getLogger',
             integrationobjects: 'getIntObject',
-            queries: 'getQuery'
+            queries: 'getQuery',
+            endpoints: 'getEndPoint',
+            publishchannels: 'getPublishChannel',
+            enterpriseservices: 'getEnterpriseService',
+            externalsystems: 'getExternalSystem',
+            objects: 'getMaximoObject'
         };
 
         Object.keys(expected).forEach((objectType) => {

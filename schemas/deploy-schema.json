@@ -6,7 +6,7 @@
     "properties": {
         "properties": {
             "type": "array",
-            "items": { "$ref": "#/definitions/maximo_properties" },
+            "items": { "$ref": "#/definitions/maximoProperty" },
             "description": "An array of Maximo properties to be deployed to the target system."
         },
         "messages": {
@@ -48,9 +48,555 @@
             "type": "array",
             "items": { "$ref": "#/definitions/query" },
             "description": "An array of Maximo queries."
+        },
+        "endPoints": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/endPoint" },
+            "description": "An array of Maximo integration end points. The handler of an end point defines its properties, so only the values of existing properties are deployed."
+        },
+        "publishChannels": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/publishChannel"
+            },
+            "description": "An array of Maximo integration publish channels."
+        },
+        "enterpriseServices": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/enterpriseService"
+            },
+            "description": "An array of Maximo integration enterprise services."
+        },
+        "externalSystems": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/externalSystem"
+            },
+            "description": "An array of Maximo integration external systems."
+        },
+        "presentations": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/presentation" },
+            "description": "Ordered changes to existing application or system presentations, applied to the stored screen definition in place of deploying the whole screen."
+        },
+        "objects": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/maximoObject" },
+            "description": "An array of Maximo objects to be deployed to the target system. The database configuration is applied after the deployment unless noDBConfig is set."
+        },
+        "noDBConfig": {
+            "type": "boolean",
+            "default": false,
+            "description": "Do not apply the database configuration after deploying objects; an administrator applies it later."
+        },
+        "noAdminMode": {
+            "type": "boolean",
+            "default": false,
+            "description": "Do not turn on Admin Mode when the database configuration requires it; an administrator applies the configuration later."
         }
     },
     "definitions": {
+        "maximoObject": {
+            "title": "Maximo Object",
+            "description": "A Maximo Object",
+            "type": "object",
+            "properties": {
+                "_delete": {
+                    "description": "Flag to indicate that the object should be deleted if it exists from the target system.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "_retain": {
+                    "description": "Names of object settings whose existing values in the target system must be preserved when the object already exists. Ignored when the object is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "description",
+                            "service",
+                            "entity",
+                            "class",
+                            "level",
+                            "textDirection",
+                            "mainObject",
+                            "storagePartition",
+                            "languageTable",
+                            "languageColumn",
+                            "alternateIndex",
+                            "triggerRoot",
+                            "textSearchEnabled",
+                            "viewWhere",
+                            "viewSelect",
+                            "automaticallySelect",
+                            "viewFrom",
+                            "auditEnabled",
+                            "auditTable",
+                            "eAuditFilter",
+                            "eSignatureFilter"
+                        ]
+                    }
+                },
+                "object": {
+                    "description": "The name for the Maximo object (MAXOBJECTCFG.OBJECTNAME)",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "The object description for the Maximo object (MAXOBJECTCFG.DESCRIPTION)",
+                    "type": "string"
+                },
+                "service": {
+                    "description": "The Maximo service associated with the Maximo object. (MAXOBJECTCFG.SERVICENAME)",
+                    "type": "string"
+                },
+                "entity": {
+                    "description": "The entity name for the Maximo object (MAXOBJECTCFG.ENTITYNAME)",
+                    "type": "string"
+                },
+                "class": {
+                    "description": "The class name for the Maximo object (MAXOBJECTCFG.CLASSNAME)",
+                    "type": "string"
+                },
+                "extendsObject": {
+                    "description": "The business object that the specified business object extends. Extend an object only when the corresponding entity of the specified business object is a view. (MAXOBJECTCFG.EXTENDSOBJECT) ",
+                    "type": "string"
+                },
+                "level": {
+                    "description": "The organizational level to which the object applies (MAXOBJECTCFG.SITEORGTYPE). Takes the localized synonym domain value of the target Maximo, or the internal value written as !SYSTEM!.",
+                    "type": "string",
+                    "examples": [
+                        "COMPANYSET",
+                        "ITEMSET",
+                        "ORG",
+                        "ORGAPPFILTER",
+                        "ORGSITE",
+                        "SITE",
+                        "SITEAPPFILTER",
+                        "SYSTEM",
+                        "SYSTEMAPPFILTER",
+                        "SYSTEMORG",
+                        "SYSTEMORGSITE",
+                        "SYSTEMSITE"
+                    ],
+                    "pattern": "^(?!!)|^![^!]+!$",
+                    "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !SYSTEM!."
+                },
+                "textDirection": {
+                    "description": "The orientation of text that you enter into fields (MAXOBJECTCFG.TEXTDIRECTION)",
+                    "type": "string",
+                    "enum": ["CONTEXTUAL", "LTR", "RTL"]
+                },
+                "mainObject": {
+                    "description": "Indicates a main object for business applications and workflows (MAXOBJECTCFG.MAINOBJECT)",
+                    "type": "boolean",
+                    "default": false
+                },
+                "loadDefaultAttributes": {
+                    "description": "When true (default), Maximo auto-creates its default attributes for a new object: the DESCRIPTION attribute and the generated HASLD and DESCRIPTION_LONGDESCRIPTION attributes, along with the primary key/ID column. When false, Maximo skips creating these defaults, giving you full control over which attributes - including the primary key/ID column - are created; only the explicitly declared attributes are created (MaxObjectCfg.setLoadDefaultAttributes)",
+                    "type": "boolean",
+                    "default": true
+                },
+                "persistent": {
+                    "description": "Indicates a persistent object that can be a view or a table. An object must be persistent for you to define an index on it (MAXOBJECTCFG.PERSISTENT)",
+                    "type": "boolean",
+                    "default": true
+                },
+                "storagePartition": {
+                    "description": "Database dependent, named storage partition, for the table. This is Tablespace for Oracle and Segment for Microsoft SQLServer (MAXOBJECTCFG.STORAGEPARTITION)",
+                    "type": "string"
+                },
+                "uniqueColumn": {
+                    "description": "Contains the name of the column that composes a one-column unique index on this table (MAXOBJECTCFG.UNIQUECOLUMNNAME)",
+                    "type": "string"
+                },
+                "languageTable": {
+                    "description": "The name of this table's language table (MAXOBJECTCFG.LANGTABLENAME)",
+                    "type": "string"
+                },
+                "languageColumn": {
+                    "description": "The name of the language column on this table (MAXOBJECTCFG.LANGCOLUMNNAME)",
+                    "type": "string"
+                },
+                "alternateIndex": {
+                    "description": "Alternate index name for record identification by external systems, when primarykeycolseq or unique key are not appropriate (MAXOBJECTCFG.ALTIXNAME)",
+                    "type": "string"
+                },
+                "triggerRoot": {
+                    "description": "Trigger name root. The actual trigger name will be composed of this root plus a suffix (MAXOBJECTCFG.TRIGROOT)",
+                    "type": "string"
+                },
+                "addRowstamp": {
+                    "description": "Indicates whether this table should have a Rowstamp column (MAXOBJECTCFG.ADDROWSTAMP)",
+                    "type": "boolean",
+                    "default": true
+                },
+                "textSearchEnabled": {
+                    "description": "When checked, indicates that any of the attributes on this table may be flagged for a text search (MAXOBJECTCFG.TEXTSEARCHENABLED)",
+                    "type": "boolean",
+                    "default": false
+                },
+                "view": {
+                    "description": "When checked, indicates that this is a view; when clear, indicates that this is a table (MAXOBJECTCFG.ISVIEW)",
+                    "type": "boolean",
+                    "default": false
+                },
+                "viewWhere": {
+                    "description": "Where Clause to be specified when creating the view (MAXOBJECTCFG.VIEWWHERE)",
+                    "type": "string"
+                },
+                "joinToObject": {
+                    "description": "The secondary object that is used in the join for this view (MAXOBJECTCFG.JOINOBJECT)",
+                    "type": "string"
+                },
+                "viewSelect": {
+                    "description": "The Select clause for the view, used by DB Config when AutoSelect is not checked (MAXOBJECTCFG.VIEWSELECT)",
+                    "type": "string"
+                },
+                "automaticallySelect": {
+                    "description": "When selected, indicates a dynamic view, which automatically updates with any changes made to the data in the underlying tables (MAXOBJECTCFG.AUTOSELECT)",
+                    "type": "boolean",
+                    "default": false
+                },
+                "viewFrom": {
+                    "description": "The From clause to be used by Database Configuration when Automatically Select? is not checked (MAXOBJECTCFG.VIEWFROM)",
+                    "type": "string"
+                },
+                "auditEnabled": {
+                    "description": "When checked, indicates that Electronic Auditing (EAUDIT) is enabled for this object (MAXOBJECTCFG.EAUDITENABLED)",
+                    "type": "boolean",
+                    "default": false
+                },
+                "auditTable": {
+                    "description": "Name of the Audit Table, if EAUDIT is enabled (MAXOBJECTCFG.EAUDITTBNAME)",
+                    "type": "string"
+                },
+                "eAuditFilter": {
+                    "description": "User defined filter for an Electronic Audit record (MAXOBJECTCFG.EAUDITFILTER)",
+                    "type": "string"
+                },
+                "eSignatureFilter": {
+                    "description": "User defined filter for an Electronic Signature (MAXOBJECTCFG.ESIGFILTER)",
+                    "type": "string"
+                },
+                "attributes": {
+                    "description": "The attributes for the Maximo object",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "_delete": {
+                                "description": "Flag to indicate that the attirbute should be deleted if it exists from the target system.",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "_retain": {
+                                "description": "Names of attribute attributes whose existing values in the target system must be preserved when the attribute already exists. Ignored when the attribute is created, so the values in this file are installed as the product defaults.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "description",
+                                        "title",
+                                        "type",
+                                        "length",
+                                        "scale",
+                                        "searchType",
+                                        "required",
+                                        "class",
+                                        "domain",
+                                        "defaultValue",
+                                        "alias",
+                                        "column",
+                                        "sameAsObject",
+                                        "sameAsAttribute",
+                                        "autonumber",
+                                        "localizable",
+                                        "textDirection",
+                                        "persistent",
+                                        "mustBe",
+                                        "positive",
+                                        "canAutonumber",
+                                        "longDescriptionOwner",
+                                        "sequenceName",
+                                        "typeOfComplexExpression",
+                                        "auditEnabled",
+                                        "multilanguageSupported",
+                                        "multilanguageInUse",
+                                        "eSignatureEnabled",
+                                        "primaryColumn"
+                                    ]
+                                }
+                            },
+                            "attribute": {
+                                "description": "Standard Maximo name of the attribute (MAXATTRIBUTECFG.ATTRIBUTENAME)",
+                                "type": "string"
+                            },
+                            "description": {
+                                "description": "A clear description of this attribute (MAXATTRIBUTECFG.REMARKS)",
+                                "type": "string"
+                            },
+                            "type": {
+                                "description": "Maximo data type (MAXATTRIBUTECFG.MAXTYPE)",
+                                "type": "string"
+                            },
+                            "length": {
+                                "description": "The number characters that can be entered into this attribute (MAXATTRIBUTECFG.LENGTH)",
+                                "type": "integer"
+                            },
+                            "scale": {
+                                "description": "The column scale (if numeric). Number of digits to the right of the decimal point if the data type is DECIMAL or DURATION (MAXATTRIBUTECFG.SCALE)",
+                                "type": "integer"
+                            },
+                            "searchType": {
+                                "description": "Determines how the attribute is searched (MAXATTRIBUTECFG.SEARCHTYPE)",
+                                "type": "string",
+                                "enum": ["NONE", "EXACT", "WILDCARD", "TEXT"]
+                            },
+                            "required": {
+                                "description": "When checked, indicates that a value is required in this field (MAXATTRIBUTECFG.REQUIRED)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "title": {
+                                "description": "A clear, short column identifier to be substituted in messages, screen labels, etc (MAXATTRIBUTECFG.TITLE)",
+                                "type": "string"
+                            },
+                            "class": {
+                                "description": "Field validation class name (MAXATTRIBUTECFG.CLASSNAME)",
+                                "type": "string"
+                            },
+                            "domain": {
+                                "description": "Name of the validation domain for this attribute (MAXATTRIBUTECFG.DOMAINID)",
+                                "type": "string"
+                            },
+                            "defaultValue": {
+                                "description": "Default value (MAXATTRIBUTECFG.DEFAULTVALUE)",
+                                "type": "string"
+                            },
+                            "alias": {
+                                "description": "The attribute alias (MAXATTRIBUTECFG.ALIAS)",
+                                "type": "string"
+                            },
+                            "column": {
+                                "description": "The name of the column within the database table (MAXATTRIBUTECFG.COLUMNNAME)",
+                                "type": "string"
+                            },
+                            "sameAsObject": {
+                                "description": "SameAsObject + SameAsAttribute indicate the master attribute that controls the maxtype, length, and scale of this attribute (MAXATTRIBUTECFG.SAMEASOBJECT)",
+                                "type": "string"
+                            },
+                            "sameAsAttribute": {
+                                "description": "SameAsObject + SameAsAttribute indicate the master attribute that controls the maxtype, length, and scale of this attribute (MAXATTRIBUTECFG.SAMEASATTRIBUTE)",
+                                "type": "string"
+                            },
+                            "autonumber": {
+                                "description": "Autokey name (MAXATTRIBUTECFG.AUTOKEYNAME)",
+                                "type": "string"
+                            },
+                            "localizable": {
+                                "description": "Identifies whether the value of this attribute can be localized (MAXATTRIBUTECFG.LOCALIZABLE)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "textDirection": {
+                                "description": "Text direction (MAXATTRIBUTECFG.TEXTDIRECTION)",
+                                "type": "string"
+                            },
+                            "persistent": {
+                                "description": "When checked, indicates that this attribute (for a persistent view or table) is saved to the database (MAXATTRIBUTECFG.PERSISTENT)",
+                                "type": "boolean",
+                                "default": true
+                            },
+                            "mustBe": {
+                                "description": "When checked, indicates that Maxtype, Length, and Scale of the attribute can NOT be changed. When cleared, indicates that they can be changed (MAXATTRIBUTECFG.MUSTBE)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "positive": {
+                                "description": "For a numeric field, when checked, only positive values (and zero) are allowed; when cleared, both positive and negative values are allowed (MAXATTRIBUTECFG.ISPOSITIVE)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "canAutonumber": {
+                                "description": "When checked, indicates that this attribute is able to support autokey (MAXATTRIBUTECFG.CANAUTONUM)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "longDescriptionOwner": {
+                                "description": "When checked, indicates that this a Long Description owner (MAXATTRIBUTECFG.ISLDOWNER)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "sequenceName": {
+                                "description": "The name of the sequence to be used for generating values for this attribute (MAXATTRIBUTECFG.SEQUENCENAME)",
+                                "type": "string"
+                            },
+                            "typeOfComplexExpression": {
+                                "description": "Type of Complex Expression (MAXATTRIBUTECFG.COMPLEXEXPRESSION)",
+                                "type": "string"
+                            },
+                            "auditEnabled": {
+                                "description": "When checked, indicates that Electronic Auditing (EAUDIT) is enabled for this attribute (MAXATTRIBUTECFG.EAUDITENABLED)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "multilanguageSupported": {
+                                "description": "When checked, indicates that this column supports multilanguage values (MAXATTRIBUTECFG.MLSUPPORTED)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "multilanguageInUse": {
+                                "description": "When checked, indicates that multilanguage is in use for this column. This can be set only if MLSupported is checked (MAXATTRIBUTECFG.MLINUSE)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "eSignatureEnabled": {
+                                "description": "When checked, indicates that Electronic Signature (ESIG) is enabled for this attribute (MAXATTRIBUTECFG.ESIGENABLED)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "primaryColumn": {
+                                "description": "If a value exists in this field, it indicates that the column is used by business object components when constructing a dynamic where clause to update or delete a row in the database. Values in the Primary column must be sequential, unique, and greater than zero (MAXATTRIBUTECFG.PRIMARYKEYCOLSEQ)",
+                                "type": "integer"
+                            }
+                        },
+                        "required": ["attribute", "description", "title"]
+                    }
+                },
+                "indexes": {
+                    "description": "The indexes for the Maximo object",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "_delete": {
+                                "description": "Flag to indicate that the index should be deleted if it exists from the target system.",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "index": {
+                                "description": "The name of the index (MAXSYSINDEXES.NAME)",
+                                "type": "string"
+                            },
+                            "enforceUniqueness": {
+                                "description": "When checked, indicates that the index is unique (MAXSYSINDEXES.UNIQUERULE)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "clusteredIndex": {
+                                "description": "SQL Server only - Clustered Index Flag (1=Clustered, 0=Non-Clustered) (MAXSYSINDEXES.CLUSTERRULE)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "required": {
+                                "description": "When checked, indicates that the index is required by the system (MAXSYSINDEXES.REQUIRED)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "textSearchIndex": {
+                                "description": "Indicates whether this index has been created to enabvle text search (MAXSYSINDEXES.TEXTSEARCH)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "storagePartition": {
+                                "description": "Database dependent, named storage partition, for the table. This is Tablespace for Oracle and Segment for Microsoft SQLServer (MAXSYSINDEXES.STORAGEPARTITION)",
+                                "type": "string"
+                            },
+                            "columns": {
+                                "description": "The columns for the index",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "column": {
+                                            "description": "The name of the column (MAXSYSKEYS.COLNAME)",
+                                            "type": "string"
+                                        },
+                                        "ascending": {
+                                            "description": "When checked, indicates that this is an ascending key (MAXSYSKEYS.ORDERING)",
+                                            "type": "boolean",
+                                            "default": false
+                                        },
+                                        "sequence": {
+                                            "description": "Column Sequence Within This Index (MAXSYSKEYS.COLSEQ)",
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "required": ["column", "sequence"]
+                                }
+                            }
+                        },
+                        "required": ["index"]
+                    }
+                },
+                "relationships": {
+                    "description": "The relationships for the Maximo object",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "_delete": {
+                                "description": "Flag to indicate that the relationship should be deleted if it exists from the target system.",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "_retain": {
+                                "description": "Names of relationship attributes whose existing values in the target system must be preserved when the relationship already exists. Ignored when the relationship is created, so the values in this file are installed as the product defaults.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "child",
+                                        "remarks",
+                                        "whereClause",
+                                        "cardinality",
+                                        "dbJoinRequired",
+                                        "isDefault"
+                                    ]
+                                }
+                            },
+                            "relationship": {
+                                "description": "The name of the relationship (MAXRELATIONSHIP.NAME)",
+                                "type": "string"
+                            },
+                            "child": {
+                                "description": "Table name of the related child (MAXRELATIONSHIP.CHILD)",
+                                "type": "string"
+                            },
+                            "remarks": {
+                                "description": "A clear description of the relationship (MAXRELATIONSHIP.REMARKS)",
+                                "type": "string"
+                            },
+                            "whereClause": {
+                                "description": "The clause used to set the condition for the join. If this condition is not met, the tables will not be joined (MAXRELATIONSHIP.WHERECLAUSE)",
+                                "type": "string"
+                            },
+                            "cardinality": {
+                                "description": "Is the database relationship single or multiple? (MAXRELATIONSHIP.CARDINALITY) Takes the localized synonym domain value of the target Maximo, or the internal value written as !SINGLE!.",
+                                "type": "string",
+                                "examples": ["MULTIPLE", "SINGLE", "UNDEFINED"],
+                                "pattern": "^(?!!)|^![^!]+!$",
+                                "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !SINGLE!."
+                            },
+                            "dbJoinRequired": {
+                                "description": "Identifies whether the relationship join is required (MAXRELATIONSHIP.DBJOINREQUIRED)",
+                                "type": "integer"
+                            },
+                            "isDefault": {
+                                "description": "Flag used for default relationship between two objects",
+                                "type": "boolean",
+                                "default": false
+                            }
+                        },
+                        "required": ["relationship", "child"]
+                    }
+                }
+            },
+            "required": ["object"]
+        },
         "action": {
             "title": "Maximo Action",
             "description": "A Maximo action",
@@ -60,6 +606,15 @@
                     "description": "Flag to indicate that the action should be deleted if it exists from the target system.",
                     "type": "boolean",
                     "default": false
+                },
+                "_retain": {
+                    "description": "Names of action properties whose existing values in the target system must be preserved when the action already exists. Naming actionGroup keeps the group members the customer added. Ignored when the action is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": ["actionGroup", "description", "memo", "objectName", "parameter", "senderSysId", "type", "useWith", "value"]
+                    }
                 },
                 "action": {
                     "description": "The name of the Maximo action (ACTION.ACTION)",
@@ -93,7 +648,7 @@
                     "type": "string"
                 },
                 "objectName": {
-                    "description": "The object associated with the Maximo action (ACTION.OBJECTNAME)",
+                    "description": "The object associated with the Maximo action (ACTION.OBJECTNAME). A GROUP action run by an escalation point takes the escalation's object.",
                     "type": "string"
                 },
                 "parameter": {
@@ -134,6 +689,15 @@
                     "description": "Flag to indicate that the query should be deleted if it exists from the target system.",
                     "type": "boolean",
                     "default": false
+                },
+                "_retain": {
+                    "description": "Names of query properties whose existing values in the target system must be preserved when the query already exists. Ignored when the query is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": ["clause", "description", "intObjectName", "isPublic", "isUserList", "notes", "priority"]
+                    }
                 },
                 "app": {
                     "description": "The application for the Maximo query (QUERY.APP)",
@@ -187,6 +751,32 @@
                     "description": "Flag to indicate that the escalation should be deleted if it exists from the target system.",
                     "type": "boolean",
                     "default": false
+                },
+                "_retain": {
+                    "description": "Names of escalation properties whose existing values in the target system must be preserved when the escalation already exists. Naming escRefPoint keeps the escalation points the customer added. Ignored when the escalation is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "active",
+                            "condition",
+                            "cronTaskName",
+                            "description",
+                            "escCalendar",
+                            "escCalOrgId",
+                            "escRefPoint",
+                            "escShift",
+                            "escStatusFlag",
+                            "instanceName",
+                            "langCode",
+                            "objectName",
+                            "orgId",
+                            "schedule",
+                            "siteId",
+                            "slaNum"
+                        ]
+                    }
                 },
                 "escalation": {
                     "description": "The name of the Maximo escalation (ESCALATION.ESCALATION)",
@@ -266,17 +856,37 @@
                                 "description": "The escalation point number (ESCREFPOINT.REFPOINTNUM)",
                                 "type": "integer"
                             },
+                            "_retain": {
+                                "description": "Names of escalation point properties whose existing values in the target system must be preserved when an escalation point with this refPointNum already exists. Naming escNotification keeps the notifications the customer added. Ignored when the escalation point is created.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "action",
+                                        "calcCalendar",
+                                        "calcOrgId",
+                                        "calcShift",
+                                        "elapsedInterval",
+                                        "escNotification",
+                                        "eventAttribute",
+                                        "eventCondition",
+                                        "intervalUom",
+                                        "repeat"
+                                    ]
+                                }
+                            },
                             "eventAttribute": {
                                 "description": "The escalation point event attribute (ESCREFPOINT.EVENTATTRIBUTE)",
-                                "type": "string"
+                                "type": ["string", "null"]
                             },
                             "elapsedInterval": {
                                 "description": "The escalation point elapsed interval (ESCREFPOINT.ELAPSEDINTERVAL)",
-                                "type": "number"
+                                "type": ["number", "null"]
                             },
                             "intervalUom": {
                                 "description": "The escalation point interval unit of measure (ESCREFPOINT.INTERVALUOM). Takes the localized synonym domain value of the target Maximo, or the internal value written as !HOURS!.",
-                                "type": "string",
+                                "type": ["string", "null"],
                                 "examples": ["DAYS", "HOURS", "MINUTES", "MONTHS", "SECONDS", "WEEKS"],
                                 "pattern": "^(?!!)|^![^!]+!$",
                                 "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !HOURS!."
@@ -285,6 +895,26 @@
                                 "description": "Whether the escalation point repeats (ESCREFPOINT.REPEAT)",
                                 "type": "boolean",
                                 "default": false
+                            },
+                            "eventCondition": {
+                                "description": "The condition a record must also meet to reach the escalation point (ESCREFPOINT.EVENTCONDITION)",
+                                "type": ["string", "null"]
+                            },
+                            "calcCalendar": {
+                                "description": "The calendar the elapsed interval is calculated with (ESCREFPOINT.CALCCALENDAR)",
+                                "type": ["string", "null"]
+                            },
+                            "calcShift": {
+                                "description": "The shift the elapsed interval is calculated with (ESCREFPOINT.CALCSHIFT)",
+                                "type": ["string", "null"]
+                            },
+                            "calcOrgId": {
+                                "description": "The organization of the calendar the elapsed interval is calculated with (ESCREFPOINT.CALCORGID)",
+                                "type": ["string", "null"]
+                            },
+                            "action": {
+                                "description": "The action the escalation point runs (ESCREFPOINT.ACTION): a GROUP action whose objectName is the escalation's object, since Maximo 9 accepts nothing else. Each escalation point of an escalation needs its own action. It must name an existing action: list it under actions ahead of escalations in the same file, or deploy it first.",
+                                "type": ["string", "null"]
                             },
                             "escNotification": {
                                 "description": "An array of notifications for the escalation point.",
@@ -312,6 +942,35 @@
             "description": "A Maximo Integration Object",
             "type": "object",
             "properties": {
+                "_retain": {
+                    "description": "Names of integration object properties whose existing values in the target system must be preserved when the integration object already exists. Naming a collection, such as maxIntObjDetail, sigOption, osOSLCAction, oslcQuery or queryTemplate, also keeps the rows the customer added to it. Ignored when the integration object is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "authApp",
+                            "autoPagingThreshold",
+                            "defClass",
+                            "description",
+                            "flatSupported",
+                            "loadQueryFromApp",
+                            "maxIntObjDetail",
+                            "module",
+                            "osOSLCAction",
+                            "oslcQuery",
+                            "procClass",
+                            "queryOnly",
+                            "queryTemplate",
+                            "restrictWhere",
+                            "searchAttrs",
+                            "selfReferencing",
+                            "sigOption",
+                            "useOSSecurity",
+                            "useWith"
+                        ]
+                    }
+                },
                 "_delete": {
                     "description": "Flag to indicate that the integration object should be deleted if it exists from the target system.",
                     "type": "boolean",
@@ -391,6 +1050,27 @@
                     "items": {
                         "type": "object",
                         "properties": {
+                            "_retain": {
+                                "description": "Names of object properties whose existing values in the target system must be preserved when an object with this objectName, parentObjName and relation already exists. Naming maxIntObjCols keeps the columns the customer included or excluded, and naming maxIntObjAlias keeps the aliases the customer added. Ignored when the object is added.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "altKey",
+                                        "deleteOnCreate",
+                                        "excludeByDefault",
+                                        "excludeParentKey",
+                                        "fdResource",
+                                        "invokeExecute",
+                                        "maxIntObjAlias",
+                                        "maxIntObjCols",
+                                        "objectOrder",
+                                        "propagateEvent",
+                                        "skipKeyUpdate"
+                                    ]
+                                }
+                            },
                             "objectName": {
                                 "description": "Identifies a Maximo Business Object (MBO).",
                                 "type": "string"
@@ -470,6 +1150,17 @@
                                 "items": {
                                     "type": "object",
                                     "properties": {
+                                        "_retain": {
+                                            "description": "Names of alias properties whose existing values in the target system must be preserved when an alias for this name already exists. Ignored when the alias is added.",
+                                            "type": "array",
+                                            "uniqueItems": true,
+                                            "items": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "aliasName"
+                                                ]
+                                            }
+                                        },
                                         "name": {
                                             "description": "Name of the attribute to alias",
                                             "type": "string"
@@ -488,6 +1179,18 @@
                                 "items": {
                                     "type": "object",
                                     "properties": {
+                                        "_retain": {
+                                            "description": "Names of application authorization properties whose existing values in the target system must be preserved when this context already exists. Ignored when the authorization is added.",
+                                            "type": "array",
+                                            "uniqueItems": true,
+                                            "items": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "authApp",
+                                                    "description"
+                                                ]
+                                            }
+                                        },
                                         "context": {
                                             "description": "Specify the REST API context for the object resource (for example if the object resource URI is /rest/mbo/po, the REST API context for object po is /rest/mbo). The context is case-sensitive.",
                                             "type": "string"
@@ -514,6 +1217,22 @@
                     "items": {
                         "type": "object",
                         "properties": {
+                            "_retain": {
+                                "description": "Names of signature option properties whose existing values in the target system must be preserved when a signature option with this optionName already exists. Ignored when the signature option is added.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "alsoGrants",
+                                        "alsoRevokes",
+                                        "description",
+                                        "esigEnabled",
+                                        "prerequisite",
+                                        "visible"
+                                    ]
+                                }
+                            },
                             "optionName": {
                                 "description": "Signature Option Option Name",
                                 "type": "string"
@@ -554,6 +1273,24 @@
                     "items": {
                         "type": "object",
                         "properties": {
+                            "_retain": {
+                                "description": "Names of action properties whose existing values in the target system must be preserved when an action with this name already exists. Ignored when the action is added.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "collection",
+                                        "description",
+                                        "implType",
+                                        "methodName",
+                                        "optionName",
+                                        "processName",
+                                        "scriptName",
+                                        "systemName"
+                                    ]
+                                }
+                            },
                             "name": {
                                 "description": "Name of the action",
                                 "type": "string"
@@ -588,7 +1325,7 @@
                             },
                             "collection": {
                                 "description": "The collection action",
-                                "type": "string"
+                                "type": "boolean"
                             }
                         },
                         "required": ["name"]
@@ -600,6 +1337,21 @@
                     "items": {
                         "type": "object",
                         "properties": {
+                            "_retain": {
+                                "description": "Names of query properties whose existing values in the target system must be preserved when a query with this queryType, app and clauseName already exists. Ignored when the query is added.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "clause",
+                                        "description",
+                                        "isPublic",
+                                        "method",
+                                        "script"
+                                    ]
+                                }
+                            },
                             "queryType": {
                                 "description": "Query type",
                                 "type": "string",
@@ -648,8 +1400,29 @@
                     "items": {
                         "type": "object",
                         "properties": {
+                            "_retain": {
+                                "description": "Names of query template properties whose existing values in the target system must be preserved when a template with this templateName and owner already exists. Naming queryTemplateAttr keeps the attributes the customer added. Ignored when the template is added.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "description",
+                                        "isPublic",
+                                        "pageSize",
+                                        "queryTemplateAttr",
+                                        "role",
+                                        "searchAttributes",
+                                        "timelineAttributes"
+                                    ]
+                                }
+                            },
                             "templateName": {
                                 "description": "The name of the template",
+                                "type": "string"
+                            },
+                            "owner": {
+                                "description": "The person who owns the template. When omitted, Maximo assigns its default owner, and the existing template is matched as owned by the system user.",
                                 "type": "string"
                             },
                             "description": {
@@ -683,6 +1456,22 @@
                                 "items": {
                                     "type": "object",
                                     "properties": {
+                                        "_retain": {
+                                            "description": "Names of query template attribute properties whose existing values in the target system must be preserved when an attribute with this selectAttrName already exists. Ignored when the attribute is added.",
+                                            "type": "array",
+                                            "uniqueItems": true,
+                                            "items": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "alias",
+                                                    "ascending",
+                                                    "selectOrder",
+                                                    "sortByOn",
+                                                    "sortByOrder",
+                                                    "title"
+                                                ]
+                                            }
+                                        },
                                         "selectAttrName": {
                                             "description": "The attribute name",
                                             "type": "string"
@@ -1135,6 +1924,1038 @@
             },
             "required": ["domainId", "domainType"]
         },
+        "endPoint": {
+            "title": "End Point",
+            "description": "A Maximo integration end point. Its handler defines which properties it has, so a property can only be given a value, never added, removed or renamed.",
+            "type": "object",
+            "required": ["endPointName"],
+            "properties": {
+                "_delete": {
+                    "description": "Flag to indicate that the end point should be deleted if it exists from the target system. Maximo refuses to delete an end point that is still in use.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "_retain": {
+                    "description": "Names of end point properties whose existing values in the target system must be preserved when the end point already exists. Ignored when the end point is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": ["description"]
+                    }
+                },
+                "endPointName": {
+                    "description": "The name of the end point (MAXENDPOINT.ENDPOINTNAME)",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "description": {
+                    "description": "The description of the end point (MAXENDPOINT.DESCRIPTION)",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "handlerName": {
+                    "description": "The name of an existing handler (MAXENDPOINT.HANDLERNAME), for example HTTP. Required to create the end point, and cannot be changed once it exists.",
+                    "type": "string",
+                    "maxLength": 20,
+                    "examples": ["HTTP", "WEBSERVICE", "JMS", "FLATFILE", "XMLFILE", "IFACETABLE", "KAFKA", "REST"]
+                },
+                "properties": {
+                    "description": "Values of the properties the handler defines. Properties not listed, and values a listed property omits, are left unchanged.",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["property"],
+                        "properties": {
+                            "property": {
+                                "description": "The name of a property the handler defines (MAXENDPOINTDTL.PROPERTY)",
+                                "type": "string",
+                                "maxLength": 50
+                            },
+                            "_retain": {
+                                "description": "Names of property values whose existing values in the target system must be preserved when the end point already exists. Ignored when the end point is created, so the values in this file are installed as the product defaults.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["value", "password", "allowOverride"]
+                                }
+                            },
+                            "value": {
+                                "description": "The value of a property that is not encrypted (MAXENDPOINTDTL.VALUE)",
+                                "type": ["string", "null"],
+                                "maxLength": 1000
+                            },
+                            "password": {
+                                "description": "The clear text value of an encrypted property (MAXENDPOINTDTL.PASSWORD). Maximo stores it encrypted, and extraction writes it in clear text.",
+                                "type": ["string", "null"]
+                            },
+                            "allowOverride": {
+                                "description": "Whether the value can be overridden (MAXENDPOINTDTL.ALLOWOVERRIDE)",
+                                "type": "boolean"
+                            }
+                        },
+                        "not": { "required": ["value", "password"] }
+                    }
+                }
+            }
+        },
+        "publishChannel": {
+            "title": "Publish Channel",
+            "description": "A Maximo integration publish channel with its integration controls and processing rules. It is deleted and created again on every deployment, which is refused while an external system uses it.",
+            "type": "object",
+            "required": ["ifaceName"],
+            "if": { "properties": { "_delete": { "const": true } }, "required": ["_delete"] },
+            "then": { "not": { "required": ["intObjectName", "objectStructure"] } },
+            "else": { "oneOf": [{ "required": ["intObjectName"] }, { "required": ["objectStructure"] }] },
+            "properties": {
+                "_delete": {
+                    "description": "Flag to indicate that the publish channel should be deleted if it exists from the target system. Its processing rules are deleted with it. An embedded objectStructure is only unlinked, unless it is marked _delete too, which needs only its intObjectName. A channel an external system uses cannot be deleted.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "_retain": {
+                    "description": "Names of publish channel properties whose existing values in the target system must be preserved when the publish channel already exists. Ignored when the publish channel is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": ["description", "intObjectName", "listener", "publishJson", "retainMbos", "skipDiffObject", "storeMsg", "useTxnTracking", "eventFilterClass", "extMsgIdField", "ifaceExitClass", "ifaceMapName", "ifaceUserExitClass", "ifaceTbName", "searchField", "templateName", "integrationControls", "processingRules"]
+                    }
+                },
+                "ifaceName": {
+                    "description": "The name of the publish channel (MAXIFACEOUT.IFACENAME)",
+                    "type": "string",
+                    "maxLength": 25
+                },
+                "description": {
+                    "description": "The description of the publish channel (MAXIFACEOUT.DESCRIPTION)",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "intObjectName": {
+                    "description": "A reference to the object structure the channel publishes (MAXIFACEOUT.INTOBJECTNAME), which is never changed or deleted. Required unless objectStructure is given.",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "objectStructure": {
+                    "description": "The object structure the channel publishes, embedded instead of an intObjectName reference. Extraction embeds a user defined object structure and references a predefined one by intObjectName. It is deleted and created again with the channel. A predefined object structure is skipped with a warning; reference it by intObjectName instead. An object structure the channel used before under another name is unlinked and kept; delete it on the top level or by embedding it with _delete in a deleted channel.",
+                    "$ref": "#/definitions/integrationObject"
+                },
+                "listener": {
+                    "description": "Whether the event listener is enabled (MAXIFACEOUT.LISTENER)",
+                    "type": "boolean"
+                },
+                "publishJson": {
+                    "description": "Whether the channel publishes JSON (MAXIFACEOUT.PUBLISHJSON)",
+                    "type": "boolean"
+                },
+                "retainMbos": {
+                    "description": "Whether the objects are kept in memory for processing (MAXIFACEOUT.RETAINMBOS)",
+                    "type": "boolean"
+                },
+                "skipDiffObject": {
+                    "description": "Whether a message without changes to the object structure is skipped (MAXIFACEOUT.SKIPDIFFOBJECT)",
+                    "type": "boolean"
+                },
+                "storeMsg": {
+                    "description": "Whether messages are stored in the message tracking table (MAXIFACEOUT.STOREMSG)",
+                    "type": "boolean"
+                },
+                "useTxnTracking": {
+                    "description": "Whether transactions are tracked (MAXIFACEOUT.USETXNTRACKING)",
+                    "type": "boolean"
+                },
+                "eventFilterClass": {
+                    "description": "The Java class that filters events (MAXIFACEOUT.EVENTFILTERCLASS)",
+                    "type": "string",
+                    "maxLength": 256
+                },
+                "extMsgIdField": {
+                    "description": "The field that identifies a stored message (MAXIFACEOUT.EXTMSGIDFIELD)",
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "ifaceExitClass": {
+                    "description": "The Java processing class (MAXIFACEOUT.IFACEEXITCLASS)",
+                    "type": "string",
+                    "maxLength": 256
+                },
+                "ifaceMapName": {
+                    "description": "The XSL map (MAXIFACEOUT.IFACEMAPNAME)",
+                    "type": "string",
+                    "maxLength": 80
+                },
+                "ifaceUserExitClass": {
+                    "description": "The Java user exit class (MAXIFACEOUT.IFACEUSEREXITCLASS)",
+                    "type": "string",
+                    "maxLength": 256
+                },
+                "ifaceTbName": {
+                    "description": "The interface table (MAXIFACEOUT.IFACETBNAME)",
+                    "type": "string",
+                    "maxLength": 30
+                },
+                "searchField": {
+                    "description": "The fields a stored message is searched by (MAXIFACEOUT.SEARCHFIELD)",
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "templateName": {
+                    "description": "The message template (MAXIFACEOUT.TEMPLATENAME)",
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "integrationControls": {
+                    "description": "The integration controls of the channel.",
+                    "type": "array",
+                    "items": { "$ref": "#/definitions/integrationControl" }
+                },
+                "processingRules": {
+                    "description": "The processing rules of the channel, in the order they apply. Rules not listed are deleted.",
+                    "type": "array",
+                    "items": { "$ref": "#/definitions/processingRule" }
+                }
+            }
+        },
+        "integrationControl": {
+            "title": "Integration Control",
+            "description": "An integration control of a publish channel or an enterprise service, deleted and created again with the record that owns it.",
+            "type": "object",
+            "required": ["control"],
+            "properties": {
+                "control": {
+                    "description": "The name of an integration control (MAXIFACECONTROL.IFACECONTROL)",
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "processingRule": {
+            "title": "Processing Rule",
+            "description": "An integration processing rule with its conditions, fields and columns, deleted and created again with the record that owns it.",
+            "type": "object",
+            "required": ["procName", "action"],
+            "properties": {
+                "_retain": {
+                    "description": "Names of processing rule properties whose existing values in the target system must be preserved when the record that owns the rule already exists. Ignored when it is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": ["action", "objectName", "hierarchyPath", "description", "className", "procMessage", "enabled", "applyOnInsert", "applyOnUpdate", "applyOnDelete", "conditions", "fields", "columns"]
+                    }
+                },
+                "procName": {
+                    "description": "The name of the processing rule (MAXIFACEPROC.PROCNAME)",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "action": {
+                    "description": "What the rule does (MAXIFACEPROC.PROCTYPE). Takes the localized synonym domain value of the target Maximo, or the internal value written as !SKIP!.",
+                    "type": "string",
+                    "maxLength": 25,
+                    "examples": ["SKIP", "SKIPRECORD", "SKIPCHILDREN", "STOP", "SET", "REPLACE", "COMBINE", "SPLIT"],
+                    "pattern": "^(?!!)|^![^!]+!$",
+                    "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !SKIP!."
+                },
+                "objectName": {
+                    "description": "The object the rule applies to (MAXIFACEPROC.OBJECTNAME)",
+                    "type": "string",
+                    "maxLength": 30
+                },
+                "hierarchyPath": {
+                    "description": "The path of the object in the object structure (MAXIFACEPROC.HIERARCHYPATH). Defaults to the path of objectName in the object structure.",
+                    "type": "string",
+                    "maxLength": 250
+                },
+                "description": {
+                    "description": "The description of the processing rule (MAXIFACEPROC.DESCRIPTION)",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "className": {
+                    "description": "The Java class of a custom rule (MAXIFACEPROC.CLASSNAME)",
+                    "type": "string",
+                    "maxLength": 256
+                },
+                "procMessage": {
+                    "description": "The message a STOP rule raises (MAXIFACEPROC.PROCMESSAGE)",
+                    "type": "string",
+                    "maxLength": 40
+                },
+                "enabled": {
+                    "description": "Whether the rule is enabled (MAXIFACEPROC.ENABLED)",
+                    "type": "boolean"
+                },
+                "applyOnInsert": {
+                    "description": "Whether the rule applies when a record is added (MAXIFACEPROC.APPLYONINSERT)",
+                    "type": "boolean"
+                },
+                "applyOnUpdate": {
+                    "description": "Whether the rule applies when a record is updated (MAXIFACEPROC.APPLYONUPDATE)",
+                    "type": "boolean"
+                },
+                "applyOnDelete": {
+                    "description": "Whether the rule applies when a record is deleted (MAXIFACEPROC.APPLYONDELETE)",
+                    "type": "boolean"
+                },
+                "conditions": {
+                    "description": "The conditions of the rule. Conditions not listed are deleted.",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "_retain": {
+                                "description": "Names of condition properties whose existing values in the target system must be preserved when the record that owns the rule already exists. Ignored when it is created, so the values in this file are installed as the product defaults.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["details"]
+                                }
+                            },
+                            "condition": {
+                                "description": "The number of the condition (MAXIFACECOND.CONDITION). The conditions of a rule are evaluated with OR, the details of a condition with AND.",
+                                "type": "integer",
+                                "default": 10
+                            },
+                            "details": {
+                                "description": "The details of the condition. Details not listed are deleted.",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "required": ["condType", "evalType"],
+                                    "properties": {
+                                        "_retain": {
+                                            "description": "Names of condition detail properties whose existing values in the target system must be preserved when the record that owns the rule already exists. Ignored when it is created, so the values in this file are installed as the product defaults.",
+                                            "type": "array",
+                                            "uniqueItems": true,
+                                            "items": {
+                                                "type": "string",
+                                                "enum": ["evalType", "changeType", "compareType", "columnName", "mboName", "mboColumnName", "relation", "value", "glOrder"]
+                                            }
+                                        },
+                                        "condSequence": {
+                                            "description": "The sequence of the condition detail (MAXCONDDETAIL.CONDSEQUENCE)",
+                                            "type": "integer",
+                                            "default": 1
+                                        },
+                                        "condType": {
+                                            "description": "The type of the condition detail (MAXCONDDETAIL.CONDTYPE)",
+                                            "type": "string",
+                                            "maxLength": 20,
+                                            "examples": ["FIELD", "MBO", "MBOSET", "MAXVAR", "IFACECONTROL"]
+                                        },
+                                        "evalType": {
+                                            "description": "How the value is evaluated (MAXCONDDETAIL.EVALTYPE). Takes the localized synonym domain value of the target Maximo, or the internal value written as !EQUALS!.",
+                                            "type": "string",
+                                            "maxLength": 50,
+                                            "examples": ["EQUALS", "NOTEQUALS", "EXISTS", "NOTEXISTS", "ISNULL", "ISNOTNULL", "GREATER", "GREATEROREQUAL", "LESS", "LESSOREQUAL", "LIKE", "NOTLIKE", "NONE"],
+                                            "pattern": "^(?!!)|^![^!]+!$",
+                                            "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !EQUALS!."
+                                        },
+                                        "changeType": {
+                                            "description": "Whether the condition applies to any value or only a changed one (MAXCONDDETAIL.CHANGETYPE). Takes the localized synonym domain value of the target Maximo, or the internal value written as !ALWAYS!.",
+                                            "type": "string",
+                                            "maxLength": 50,
+                                            "examples": ["ALWAYS", "CHANGED", "NOTCHANGED"],
+                                            "pattern": "^(?!!)|^![^!]+!$",
+                                            "patternErrorMessage": "A value that starts with ! must be an internal value written as !VALUE!, for example !ALWAYS!."
+                                        },
+                                        "compareType": {
+                                            "description": "What the value is compared with (MAXCONDDETAIL.COMPARETYPE)",
+                                            "type": "string",
+                                            "maxLength": 25,
+                                            "examples": ["VALUE", "IFACECONTROL"]
+                                        },
+                                        "columnName": {
+                                            "description": "The field the condition evaluates (MAXCONDDETAIL.COLUMNNAME)",
+                                            "type": "string",
+                                            "maxLength": 50
+                                        },
+                                        "mboName": {
+                                            "description": "The object the condition evaluates (MAXCONDDETAIL.MBONAME)",
+                                            "type": "string",
+                                            "maxLength": 30
+                                        },
+                                        "mboColumnName": {
+                                            "description": "The field of the object the condition evaluates (MAXCONDDETAIL.MBOCOLUMNNAME)",
+                                            "type": "string",
+                                            "maxLength": 50
+                                        },
+                                        "relation": {
+                                            "description": "The relationship to the object the condition evaluates (MAXCONDDETAIL.RELATION)",
+                                            "type": "string",
+                                            "maxLength": 50
+                                        },
+                                        "value": {
+                                            "description": "The value or integration control compared with (MAXCONDDETAIL.VALUE)",
+                                            "type": "string",
+                                            "maxLength": 25
+                                        },
+                                        "glOrder": {
+                                            "description": "The general ledger component the condition evaluates (MAXCONDDETAIL.GLORDER)",
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "fields": {
+                    "description": "The fields a SET or REPLACE rule sets. Fields not listed are deleted.",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["fieldName", "valueType"],
+                        "properties": {
+                            "_retain": {
+                                "description": "Names of field properties whose existing values in the target system must be preserved when the record that owns the rule already exists. Ignored when it is created, so the values in this file are installed as the product defaults.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["valueType", "value", "mboName", "relation"]
+                                }
+                            },
+                            "fieldName": {
+                                "description": "The field the rule sets (MAXREPLACEPROC.FIELDNAME)",
+                                "type": "string",
+                                "maxLength": 50
+                            },
+                            "replaceNull": {
+                                "description": "Whether the field is set only when it has no value (MAXREPLACEPROC.REPLACENULL)",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "valueType": {
+                                "description": "Where the value comes from (MAXREPLACEPROC.VALUETYPE)",
+                                "type": "string",
+                                "maxLength": 50,
+                                "examples": ["VALUE", "FIELD", "MBOFIELD"]
+                            },
+                            "value": {
+                                "description": "The value, field or field of the related object that sets the field (MAXREPLACEPROC.VALUE)",
+                                "type": "string",
+                                "maxLength": 30
+                            },
+                            "mboName": {
+                                "description": "The object the value comes from (MAXREPLACEPROC.MBONAME)",
+                                "type": "string",
+                                "maxLength": 30
+                            },
+                            "relation": {
+                                "description": "The relationship to the object the value comes from (MAXREPLACEPROC.RELATION)",
+                                "type": "string",
+                                "maxLength": 50
+                            }
+                        }
+                    }
+                },
+                "columns": {
+                    "description": "The fields a COMBINE or SPLIT rule uses. Columns not listed are deleted.",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["fieldName"],
+                        "properties": {
+                            "_retain": {
+                                "description": "Names of column properties whose existing values in the target system must be preserved when the record that owns the rule already exists. Ignored when it is created, so the values in this file are installed as the product defaults.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["ifaceControl"]
+                                }
+                            },
+                            "fieldName": {
+                                "description": "The field the rule combines or splits on (MAXPROCCOLS.FIELDNAME)",
+                                "type": "string",
+                                "maxLength": 50
+                            },
+                            "ifaceControl": {
+                                "description": "The integration control that maps the field (MAXPROCCOLS.IFACECONTROL)",
+                                "type": "string",
+                                "maxLength": 20
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "enterpriseService": {
+            "title": "Enterprise Service",
+            "description": "A Maximo integration enterprise service with its additional object structures, gateway properties, integration controls and processing rules. It is deleted and created again on every deployment, which is refused while an external system uses it.",
+            "type": "object",
+            "required": ["ifaceName"],
+            "if": { "properties": { "_delete": { "const": true } }, "required": ["_delete"] },
+            "then": { "not": { "required": ["intObjectName", "objectStructure"] } },
+            "else": { "oneOf": [{ "required": ["intObjectName"] }, { "required": ["objectStructure"] }] },
+            "properties": {
+                "_delete": {
+                    "description": "Flag to indicate that the enterprise service should be deleted if it exists from the target system. Its processing rules are deleted with it. An embedded objectStructure is only unlinked, unless it is marked _delete too, which needs only its intObjectName. A service an external system uses, or a predefined service, cannot be deleted.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "_retain": {
+                    "description": "Names of enterprise service properties whose existing values in the target system must be preserved when the enterprise service already exists. Ignored when the enterprise service is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": ["description", "intObjectName", "ifaceType", "messageType", "ifaceControl", "ifaceTbName", "useExternalSchema", "splitTag", "schemaLocation", "elementName", "replySchemaLoc", "replyElementName", "ifaceExitClass", "ifaceUserExitClass", "ifaceMapName", "replyExitClass", "replyUserExitClass", "replyMapName", "useTxnTracking", "storeMsg", "extMsgIdField", "searchField", "interpreterClass", "additionalObjectStructures", "gatewayProperties", "integrationControls", "processingRules", "objectProcessingRules"]
+                    }
+                },
+                "ifaceName": {
+                    "description": "The name of the enterprise service (MAXIFACEIN.IFACENAME)",
+                    "type": "string",
+                    "maxLength": 25
+                },
+                "description": {
+                    "description": "The description of the enterprise service (MAXIFACEIN.DESCRIPTION)",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "intObjectName": {
+                    "description": "A reference to the object structure the service receives (MAXIFACEIN.INTOBJECTNAME), which is never changed or deleted. Required unless objectStructure is given.",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "objectStructure": {
+                    "description": "The object structure the service receives, embedded instead of an intObjectName reference. Extraction embeds a user defined object structure and references a predefined one by intObjectName. It is deleted and created again with the service. A predefined object structure is skipped with a warning; reference it by intObjectName instead. An object structure the service used before under another name is unlinked and kept; delete it on the top level or by embedding it with _delete in a deleted service.",
+                    "$ref": "#/definitions/integrationObject"
+                },
+                "ifaceType": {
+                    "description": "The adapter (MAXIFACEIN.IFACETYPE)",
+                    "type": "string",
+                    "default": "MAXIMO",
+                    "maxLength": 10
+                },
+                "messageType": {
+                    "description": "The operation (MAXIFACEIN.MESSAGETYPE)",
+                    "type": "string",
+                    "default": "Sync",
+                    "maxLength": 20
+                },
+                "ifaceControl": {
+                    "description": "The integration control that selects the processing for the service (MAXIFACEIN.IFACECONTROL)",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "ifaceTbName": {
+                    "description": "The interface table (MAXIFACEIN.IFACETBNAME)",
+                    "type": "string",
+                    "maxLength": 30
+                },
+                "useExternalSchema": {
+                    "description": "Whether the service uses an external schema, which makes the schema properties editable (MAXIFACEIN.USEEXTERNALSCHEMA)",
+                    "type": "boolean"
+                },
+                "splitTag": {
+                    "description": "The XML tag that splits an inbound message (MAXIFACEIN.SPLITTAG)",
+                    "type": "string",
+                    "maxLength": 250
+                },
+                "schemaLocation": {
+                    "description": "The external schema file (MAXIFACEIN.SCHEMALOCATION)",
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "elementName": {
+                    "description": "The external schema element (MAXIFACEIN.ELEMENTNAME)",
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "replySchemaLoc": {
+                    "description": "The external reply schema file (MAXIFACEIN.REPLYSCHEMALOC)",
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "replyElementName": {
+                    "description": "The external reply schema element (MAXIFACEIN.REPLYELEMENTNAME)",
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "ifaceExitClass": {
+                    "description": "The Java processing class (MAXIFACEIN.IFACEEXITCLASS)",
+                    "type": "string",
+                    "maxLength": 256
+                },
+                "ifaceUserExitClass": {
+                    "description": "The Java user exit class (MAXIFACEIN.IFACEUSEREXITCLASS)",
+                    "type": "string",
+                    "maxLength": 256
+                },
+                "ifaceMapName": {
+                    "description": "The XSL map (MAXIFACEIN.IFACEMAPNAME)",
+                    "type": "string",
+                    "maxLength": 80
+                },
+                "replyExitClass": {
+                    "description": "The Java reply processing class (MAXIFACEIN.REPLYEXITCLASS)",
+                    "type": "string",
+                    "maxLength": 256
+                },
+                "replyUserExitClass": {
+                    "description": "The Java reply user exit class (MAXIFACEIN.REPLYUSEREXITCLASS)",
+                    "type": "string",
+                    "maxLength": 256
+                },
+                "replyMapName": {
+                    "description": "The reply XSL map (MAXIFACEIN.REPLYMAPNAME)",
+                    "type": "string",
+                    "maxLength": 256
+                },
+                "useTxnTracking": {
+                    "description": "Whether transactions are tracked (MAXIFACEIN.USETXNTRACKING)",
+                    "type": "boolean"
+                },
+                "storeMsg": {
+                    "description": "Whether messages are stored in the message tracking table (MAXIFACEIN.STOREMSG)",
+                    "type": "boolean"
+                },
+                "extMsgIdField": {
+                    "description": "The field that identifies a stored message (MAXIFACEIN.EXTMSGIDFIELD)",
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "searchField": {
+                    "description": "The fields a stored message is searched by (MAXIFACEIN.SEARCHFIELD)",
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "interpreterClass": {
+                    "description": "The class that interprets the inbound message for the gateway (MAXIFACEIN.INTERPRETERCLASS)",
+                    "type": "string",
+                    "maxLength": 256
+                },
+                "additionalObjectStructures": {
+                    "description": "The additional object structures of the service, in the order they apply. Object structures not listed are removed from it.",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["intObjectName"],
+                        "properties": {
+                            "_retain": {
+                                "description": "Names of additional object structure properties whose existing values in the target system must be preserved when the enterprise service already exists. Ignored when the enterprise service is created, so the values in this file are installed as the product defaults.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["ifaceMapOrder", "ifaceExitClass", "ifaceUserExitClass", "ifaceMapName", "ifaceControl"]
+                                }
+                            },
+                            "intObjectName": {
+                                "description": "The name of the additional object structure (MAXIFACEINDETAIL.INTOBJECTNAME)",
+                                "type": "string",
+                                "maxLength": 20
+                            },
+                            "ifaceMapOrder": {
+                                "description": "The order the object structure applies in (MAXIFACEINDETAIL.IFACEMAPORDER)",
+                                "type": "integer"
+                            },
+                            "ifaceExitClass": {
+                                "description": "The Java processing class (MAXIFACEINDETAIL.IFACEEXITCLASS)",
+                                "type": "string",
+                                "maxLength": 256
+                            },
+                            "ifaceUserExitClass": {
+                                "description": "The Java user exit class (MAXIFACEINDETAIL.IFACEUSEREXITCLASS)",
+                                "type": "string",
+                                "maxLength": 256
+                            },
+                            "ifaceMapName": {
+                                "description": "The XSL map (MAXIFACEINDETAIL.IFACEMAPNAME)",
+                                "type": "string",
+                                "maxLength": 256
+                            },
+                            "ifaceControl": {
+                                "description": "The integration control (MAXIFACEINDETAIL.IFACECONTROL)",
+                                "type": "string",
+                                "maxLength": 20
+                            }
+                        }
+                    }
+                },
+                "gatewayProperties": {
+                    "description": "The gateway properties of the service. Properties not listed are removed from it.",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["param"],
+                        "properties": {
+                            "_retain": {
+                                "description": "Names of gateway property properties whose existing values in the target system must be preserved when the enterprise service already exists. Ignored when the enterprise service is created, so the values in this file are installed as the product defaults.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["value", "isXmlTag"]
+                                }
+                            },
+                            "param": {
+                                "description": "The name of the gateway property (MAXIFACETYPEPROP.PARAM)",
+                                "type": "string",
+                                "maxLength": 40
+                            },
+                            "value": {
+                                "description": "The value of the gateway property (MAXIFACETYPEPROP.VALUE)",
+                                "type": "string",
+                                "maxLength": 150
+                            },
+                            "isXmlTag": {
+                                "description": "Whether the value is taken from an XML tag of the message (MAXIFACETYPEPROP.ISXMLTAG)",
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                },
+                "integrationControls": {
+                    "description": "The integration controls of the service.",
+                    "type": "array",
+                    "items": { "$ref": "#/definitions/integrationControl" }
+                },
+                "processingRules": {
+                    "description": "The processing rules of the object structure, in the order they apply. Rules not listed are deleted.",
+                    "type": "array",
+                    "items": { "$ref": "#/definitions/processingRule" }
+                },
+                "objectProcessingRules": {
+                    "description": "The processing rules of the objects in the object structure, in the order they apply. Rules not listed are deleted.",
+                    "type": "array",
+                    "items": { "$ref": "#/definitions/processingRule" }
+                }
+            }
+        },
+        "externalSystem": {
+            "title": "External System",
+            "description": "A Maximo integration external system with its publish channels, enterprise services and integration controls. It is deleted and created again on every deployment, with its links and control values. A publish channel or enterprise service is either referenced by ifaceName or embedded, and an embedded one is deleted and created again with the system.",
+            "type": "object",
+            "required": ["extSysName"],
+            "properties": {
+                "_delete": {
+                    "description": "Deletes the external system, which is disabled first. Embedded publish channels and enterprise services marked _delete are deleted with it, and the others are kept.",
+                    "type": "boolean"
+                },
+                "_retain": {
+                    "description": "Names of external system properties whose existing values in the target system must be preserved when the external system already exists. Ignored when it is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "description",
+                            "endPointName",
+                            "langCode",
+                            "bidiConfig",
+                            "jmsMsgEncoding",
+                            "outSeqQueueName",
+                            "outContQueueName",
+                            "inSeqQueueName",
+                            "inContQueueName",
+                            "enabled",
+                            "publishChannels",
+                            "enterpriseServices",
+                            "integrationControls"
+                        ]
+                    }
+                },
+                "extSysName": {
+                    "description": "The name of the external system (MAXEXTSYSTEM.EXTSYSNAME)",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "description": {
+                    "description": "The description of the external system (MAXEXTSYSTEM.DESCRIPTION)",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "endPointName": {
+                    "description": "The default end point of the external system (MAXEXTSYSTEM.ENDPOINTNAME)",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "langCode": {
+                    "description": "The language of the external system (MAXEXTSYSTEM.LANGCODE). Defaults to the base language.",
+                    "type": "string",
+                    "maxLength": 4
+                },
+                "bidiConfig": {
+                    "description": "The bidirectional text configuration (MAXEXTSYSTEM.BIDICONFIG)",
+                    "type": "string",
+                    "maxLength": 5
+                },
+                "jmsMsgEncoding": {
+                    "description": "The encoding of JMS text messages (MAXEXTSYSTEM.JMSMSGENCODING)",
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "outSeqQueueName": {
+                    "description": "The outbound sequential queue (MAXEXTSYSTEM.OUTSEQQUEUENAME)",
+                    "type": "string",
+                    "maxLength": 250
+                },
+                "outContQueueName": {
+                    "description": "The outbound continuous queue (MAXEXTSYSTEM.OUTCONTQUEUENAME)",
+                    "type": "string",
+                    "maxLength": 250
+                },
+                "inSeqQueueName": {
+                    "description": "The inbound sequential queue (MAXEXTSYSTEM.INSEQQUEUENAME)",
+                    "type": "string",
+                    "maxLength": 250
+                },
+                "inContQueueName": {
+                    "description": "The inbound continuous queue (MAXEXTSYSTEM.INCONTQUEUENAME)",
+                    "type": "string",
+                    "maxLength": 250
+                },
+                "enabled": {
+                    "description": "Whether the external system is enabled (MAXEXTSYSTEM.ENABLED). Set after the links and controls are added.",
+                    "type": "boolean"
+                },
+                "publishChannels": {
+                    "description": "The publish channels of the external system (MAXEXTIFACEOUT).",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/externalSystemPublishChannel"
+                    }
+                },
+                "enterpriseServices": {
+                    "description": "The enterprise services of the external system (MAXEXTIFACEIN).",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/externalSystemEnterpriseService"
+                    }
+                },
+                "integrationControls": {
+                    "description": "The integration control values of the external system (MAXEXTSYSCONTROL). A control that is not listed takes the default value of its definition.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/externalSystemIntegrationControl"
+                    }
+                }
+            }
+        },
+        "externalSystemPublishChannel": {
+            "title": "External System Publish Channel",
+            "description": "A publish channel of an external system, referenced by ifaceName or embedded.",
+            "type": "object",
+            "oneOf": [{ "required": ["ifaceName"] }, { "required": ["publishChannel"] }],
+            "properties": {
+                "_retain": {
+                    "description": "Names of external system publish channel properties whose existing values in the target system must be preserved when the external system already exists. Ignored when it is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "enabled",
+                            "endPointName",
+                            "isContinuousQueue"
+                        ]
+                    }
+                },
+                "ifaceName": {
+                    "description": "The name of a publish channel the system uses, referenced instead of embedded",
+                    "type": "string",
+                    "maxLength": 25
+                },
+                "publishChannel": {
+                    "description": "The publish channel the system uses, embedded instead of an ifaceName reference. Extraction embeds a user defined publish channel that no other external system uses, and references any other by ifaceName. It is deleted and created again with the system, or deleted and unlinked when marked _delete, which is refused while another external system uses it. A predefined publish channel is skipped with a warning; reference it by ifaceName instead.",
+                    "$ref": "#/definitions/publishChannel"
+                },
+                "enabled": {
+                    "description": "Whether the publish channel is enabled for the system",
+                    "type": "boolean"
+                },
+                "endPointName": {
+                    "description": "The end point of the publish channel for the system (MAXEXTIFACEOUT.ENDPOINTNAME). Defaults to the end point of the system.",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "isContinuousQueue": {
+                    "description": "Whether the publish channel uses the continuous queue rather than the sequential one",
+                    "type": "boolean"
+                }
+            }
+        },
+        "externalSystemEnterpriseService": {
+            "title": "External System Enterprise Service",
+            "description": "An enterprise service of an external system, referenced by ifaceName or embedded.",
+            "type": "object",
+            "oneOf": [{ "required": ["ifaceName"] }, { "required": ["enterpriseService"] }],
+            "properties": {
+                "_retain": {
+                    "description": "Names of external system enterprise service properties whose existing values in the target system must be preserved when the external system already exists. Ignored when it is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "enabled",
+                            "isContinuousQueue"
+                        ]
+                    }
+                },
+                "ifaceName": {
+                    "description": "The name of an enterprise service the system uses, referenced instead of embedded",
+                    "type": "string",
+                    "maxLength": 25
+                },
+                "enterpriseService": {
+                    "description": "The enterprise service the system uses, embedded instead of an ifaceName reference. Extraction embeds a user defined enterprise service that no other external system uses, and references any other by ifaceName. It is deleted and created again with the system, or deleted and unlinked when marked _delete, which is refused while another external system uses it. A predefined enterprise service is skipped with a warning; reference it by ifaceName instead.",
+                    "$ref": "#/definitions/enterpriseService"
+                },
+                "enabled": {
+                    "description": "Whether the enterprise service is enabled for the system",
+                    "type": "boolean"
+                },
+                "isContinuousQueue": {
+                    "description": "Whether the enterprise service uses the continuous queue rather than the sequential one",
+                    "type": "boolean"
+                }
+            }
+        },
+        "externalSystemIntegrationControl": {
+            "title": "External System Integration Control",
+            "description": "The values of an integration control for an external system. The control type decides which value applies: value for VALUE, isTrue for BOOLEAN, listValues for LIST and crossReferenceValues for CROSSREFERENCE. Any other is refused.",
+            "type": "object",
+            "required": ["control"],
+            "properties": {
+                "_retain": {
+                    "description": "Names of integration control properties whose existing values in the target system must be preserved when the external system already exists. Ignored when it is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "value",
+                            "isTrue",
+                            "overrides"
+                        ]
+                    }
+                },
+                "control": {
+                    "description": "The name of an integration control (MAXIFACECONTROL.IFACECONTROL)",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "value": {
+                    "description": "The value of a VALUE control (MAXEXTSYSCONTROL.VALUE). A value of a control with a synonym domain takes the localized value of the target Maximo, or the internal value written as !VALUE!.",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "isTrue": {
+                    "description": "The value of a BOOLEAN control (MAXEXTSYSCONTROL.ISTRUE)",
+                    "type": "boolean"
+                },
+                "listValues": {
+                    "description": "The values of a LIST control (MAXEXTLISTVAL). A value of a control with a synonym domain takes the localized value of the target Maximo, or the internal value written as !VALUE!.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/externalSystemIntegrationControlListValue"
+                    }
+                },
+                "crossReferenceValues": {
+                    "description": "The value pairs of a CROSSREFERENCE control (MAXEXTXREFVAL). A value of a control with a synonym domain takes the localized value of the target Maximo, or the internal value written as !VALUE!.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/externalSystemIntegrationControlCrossReferenceValue"
+                    }
+                },
+                "overrides": {
+                    "description": "The organization and site values of the control (MAXEXTCTLVAL, MAXEXTBOOLVAL or MAXEXTOVER).",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/externalSystemIntegrationControlOverride"
+                    }
+                }
+            }
+        },
+        "externalSystemIntegrationControlOverride": {
+            "title": "External System Integration Control Override",
+            "description": "The value of an integration control for an organization or for a site, taking the same value property as the control.",
+            "type": "object",
+            "oneOf": [{ "required": ["orgId"] }, { "required": ["siteId"] }],
+            "properties": {
+                "_retain": {
+                    "description": "Names of integration control override properties whose existing values in the target system must be preserved when the external system already exists. Ignored when it is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "value",
+                            "isTrue"
+                        ]
+                    }
+                },
+                "orgId": {
+                    "description": "The organization of the override. Give either orgId or siteId.",
+                    "type": "string",
+                    "maxLength": 8
+                },
+                "siteId": {
+                    "description": "The site of the override. Give either orgId or siteId.",
+                    "type": "string",
+                    "maxLength": 8
+                },
+                "value": {
+                    "description": "The value of a VALUE control (MAXEXTCTLVAL.VALUE). A value of a control with a synonym domain takes the localized value of the target Maximo, or the internal value written as !VALUE!.",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "isTrue": {
+                    "description": "The value of a BOOLEAN control (MAXEXTBOOLVAL.ISTRUE)",
+                    "type": "boolean"
+                },
+                "listValues": {
+                    "description": "The values of a LIST control (MAXLISTOVERVAL). A value of a control with a synonym domain takes the localized value of the target Maximo, or the internal value written as !VALUE!.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/externalSystemIntegrationControlListValue"
+                    }
+                },
+                "crossReferenceValues": {
+                    "description": "The value pairs of a CROSSREFERENCE control (MAXXREFOVERVAL). A value of a control with a synonym domain takes the localized value of the target Maximo, or the internal value written as !VALUE!.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/externalSystemIntegrationControlCrossReferenceValue"
+                    }
+                }
+            }
+        },
+        "externalSystemIntegrationControlListValue": {
+            "title": "External System Integration Control List Value",
+            "type": "object",
+            "required": ["value"],
+            "properties": {
+                "value": {
+                    "description": "A value of the list (VALUE)",
+                    "type": "string",
+                    "maxLength": 100
+                }
+            }
+        },
+        "externalSystemIntegrationControlCrossReferenceValue": {
+            "title": "External System Integration Control Cross Reference Value",
+            "type": "object",
+            "properties": {
+                "value": {
+                    "description": "The Maximo value (VALUE)",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "newValue": {
+                    "description": "The external value (NEWVALUE)",
+                    "type": "string",
+                    "maxLength": 100
+                }
+            }
+        },
         "cronTask": {
             "title": "Cron Task",
             "description": "A Maximo Cron Task",
@@ -1266,6 +3087,15 @@
                     "type": "boolean",
                     "default": false
                 },
+                "_retain": {
+                    "description": "Names of logger attributes whose existing values in the target system must be preserved when the logger already exists. Ignored when the logger is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": ["active", "appenders", "logLevel"]
+                    }
+                },
                 "logger": {
                     "description": "The base logger name for the Maximo logger (MAXLOGGER.LOGGER)",
                     "type": "string"
@@ -1275,7 +3105,7 @@
                     "type": "string"
                 },
                 "logKey": {
-                    "description": "The log key for the logger, if not provided defaults to log4j.logger.maximo. plus the logger name (MAXLOGGER.LOGKEY)",
+                    "description": "The log key for the logger, if not provided defaults to log4j.logger.maximo. plus the logger name (MAXLOGGER.LOGKEY). A logger without a parent is found by this key when it is given, otherwise by its name, which must then belong to one logger only.",
                     "type": "string",
                     "default": "log4j.logger.maximo. + logKey"
                 },
@@ -1310,6 +3140,26 @@
                     "description": "Flag to indicate that the message should be deleted if it exists from the target system.",
                     "type": "boolean",
                     "default": false
+                },
+                "_retain": {
+                    "description": "Names of message properties whose existing values in the target system must be preserved when the message already exists. Ignored when the message is created, so the values in this file are installed as the product defaults.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "adminResponse",
+                            "displayMethod",
+                            "explanation",
+                            "msgId",
+                            "operatorResponse",
+                            "options",
+                            "prefix",
+                            "suffix",
+                            "systemAction",
+                            "value"
+                        ]
+                    }
                 },
                 "msgId": {
                     "description": "The full message ID for the Maximo message (MAXMESSAGES.MSGID)",
@@ -1374,7 +3224,7 @@
             },
             "required": ["msgGroup", "msgKey", "value"]
         },
-        "maximo_properties": {
+        "maximoProperty": {
             "title": "Property",
             "description": "A Maximo property",
             "type": "object",
@@ -1383,6 +3233,30 @@
                     "description": "Flag to indicate that the property should be deleted if it exists from the target system.",
                     "type": "boolean",
                     "default": false
+                },
+                "_retain": {
+                    "description": "Names of property attributes whose existing values in the target system must be preserved when the property already exists. Ignored when the property is created, so the values in this file are installed as the product defaults. Naming maxPropInstance also keeps the instances added in the target system.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "description",
+                            "domainId",
+                            "encrypted",
+                            "globalOnly",
+                            "instanceOnly",
+                            "liveRefresh",
+                            "masked",
+                            "maxPropInstance",
+                            "maximoDefault",
+                            "maxType",
+                            "nullsAllowed",
+                            "onlineChanges",
+                            "propValue",
+                            "secureLevel"
+                        ]
+                    }
                 },
                 "propName": {
                     "description": "The name for the Maximo property (MAXPROP.PROPNAME)",
@@ -1458,6 +3332,15 @@
                     "items": {
                         "type": "object",
                         "properties": {
+                            "_retain": {
+                                "description": "Names of property instance attributes whose existing values in the target system must be preserved when the instance already exists. Ignored when the instance is created.",
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "enum": ["propValue"]
+                                }
+                            },
                             "serverName": {
                                 "description": "The name of the Maximo server for the property instance (MAXPROPINSTANCE.SERVERNAME)",
                                 "type": "string"
@@ -1477,6 +3360,113 @@
             },
 
             "required": ["propName"]
+        },
+        "presentation": {
+            "title": "Maximo Presentation Changes",
+            "description": "Ordered changes to one existing presentation. Every change of the payload is resolved before anything is written, and MAXLABELS is synchronised with the result.",
+            "type": "object",
+            "properties": {
+                "app": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The application, or the system presentation such as LIBRARY, whose presentation is changed."
+                },
+                "changes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": { "$ref": "#/definitions/presentationChange" },
+                    "description": "The changes, applied in order, so a change may refer to a control an earlier one added."
+                }
+            },
+            "required": ["app", "changes"],
+            "additionalProperties": false
+        },
+        "presentationChange": {
+            "title": "Presentation Change",
+            "description": "One add, modify, move or remove.",
+            "type": "object",
+            "oneOf": [
+                {
+                    "title": "Add",
+                    "properties": {
+                        "add": { "$ref": "#/definitions/presentationElement" },
+                        "before": { "$ref": "#/definitions/presentationReference" },
+                        "after": { "$ref": "#/definitions/presentationReference" },
+                        "into": { "$ref": "#/definitions/presentationReference" }
+                    },
+                    "required": ["add"],
+                    "maxProperties": 2,
+                    "additionalProperties": false
+                },
+                {
+                    "title": "Modify",
+                    "properties": {
+                        "modify": { "$ref": "#/definitions/presentationReference" },
+                        "set": {
+                            "type": "object",
+                            "description": "Attributes to set, by name.",
+                            "propertyNames": { "not": { "enum": ["name", "id", "children"] } },
+                            "additionalProperties": { "type": "string" }
+                        },
+                        "unset": {
+                            "type": "array",
+                            "description": "Attributes to remove, by name.",
+                            "items": { "type": "string", "minLength": 1, "not": { "enum": ["name", "id", "children"] } }
+                        }
+                    },
+                    "required": ["modify"],
+                    "anyOf": [{ "required": ["set"] }, { "required": ["unset"] }],
+                    "additionalProperties": false
+                },
+                {
+                    "title": "Move",
+                    "properties": {
+                        "move": { "$ref": "#/definitions/presentationReference" },
+                        "before": { "$ref": "#/definitions/presentationReference" },
+                        "after": { "$ref": "#/definitions/presentationReference" },
+                        "into": { "$ref": "#/definitions/presentationReference" }
+                    },
+                    "required": ["move"],
+                    "minProperties": 2,
+                    "maxProperties": 2,
+                    "additionalProperties": false
+                },
+                {
+                    "title": "Remove",
+                    "properties": {
+                        "remove": { "$ref": "#/definitions/presentationReference" }
+                    },
+                    "required": ["remove"],
+                    "additionalProperties": false
+                }
+            ]
+        },
+        "presentationElement": {
+            "title": "Presentation Element",
+            "description": "A control to add, with its attributes as string properties. If a control with the id exists it is replaced in place.",
+            "type": "object",
+            "properties": {
+                "name": { "type": "string", "minLength": 1, "description": "The element name, for example section or pushbutton." },
+                "id": { "type": "string", "minLength": 1, "description": "The control id, unique in the presentation." },
+                "children": {
+                    "type": "array",
+                    "items": { "$ref": "#/definitions/presentationElement" },
+                    "description": "The child controls, in order."
+                }
+            },
+            "required": ["name", "id"],
+            "additionalProperties": { "type": "string" }
+        },
+        "presentationReference": {
+            "title": "Presentation Reference",
+            "description": "An existing control, identified by its id, with its element name as a check.",
+            "type": "object",
+            "properties": {
+                "name": { "type": "string", "minLength": 1, "description": "The element name, for example tab." },
+                "id": { "type": "string", "minLength": 1, "description": "The control id." }
+            },
+            "required": ["name", "id"],
+            "additionalProperties": false
         }
     }
 }

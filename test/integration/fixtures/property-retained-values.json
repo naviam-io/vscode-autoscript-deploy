@@ -1,0 +1,89 @@
+{
+    "productV1": {
+        "properties": [
+            {
+                "propName": "TEST_retainprop",
+                "description": "Retained values test, release 1",
+                "propValue": "release 1 value",
+                "maximoDefault": "release 1 default",
+                "onlineChanges": true,
+                "_retain": ["propValue", "onlineChanges", "maxPropInstance"],
+                "maxPropInstance": [
+                    {
+                        "serverName": "TESTSERVER",
+                        "serverHost": "localhost",
+                        "propValue": "release 1 instance value",
+                        "_retain": ["propValue"]
+                    }
+                ]
+            }
+        ]
+    },
+    "customerEdit": {
+        "properties": [
+            {
+                "propName": "TEST_retainprop",
+                "description": "Retained values test, release 1",
+                "propValue": "value set by the customer",
+                "maximoDefault": "release 1 default",
+                "onlineChanges": false,
+                "maxPropInstance": [
+                    {
+                        "serverName": "TESTSERVER",
+                        "serverHost": "localhost",
+                        "propValue": "instance value set by the customer"
+                    },
+                    {
+                        "serverName": "CUSTOMERSERVER",
+                        "serverHost": "customerhost",
+                        "propValue": "instance added by the customer"
+                    }
+                ]
+            }
+        ]
+    },
+    "customerEditCleared": {
+        "properties": [
+            {
+                "propName": "TEST_retainprop",
+                "description": "Retained values test, release 1",
+                "propValue": "",
+                "maximoDefault": "release 1 default",
+                "onlineChanges": true,
+                "maxPropInstance": [
+                    {
+                        "serverName": "TESTSERVER",
+                        "serverHost": "localhost",
+                        "propValue": "second instance value set by the customer"
+                    }
+                ]
+            }
+        ]
+    },
+    "productV2": {
+        "properties": [
+            {
+                "propName": "TEST_retainprop",
+                "description": "Retained values test, release 2",
+                "propValue": "release 2 value",
+                "maximoDefault": "release 2 default",
+                "onlineChanges": true,
+                "_retain": ["propValue", "onlineChanges", "maxPropInstance"],
+                "maxPropInstance": [
+                    {
+                        "serverName": "TESTSERVER",
+                        "serverHost": "localhost",
+                        "propValue": "release 2 instance value",
+                        "_retain": ["propValue"]
+                    },
+                    {
+                        "serverName": "TESTSERVER2",
+                        "serverHost": "localhost",
+                        "propValue": "release 2 new instance value",
+                        "_retain": ["propValue"]
+                    }
+                ]
+            }
+        ]
+    }
+}

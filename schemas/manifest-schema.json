@@ -76,9 +76,23 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Set to true to skip this entry. A disabled entry is not validated and nothing is deployed for it, which is how part of a deployment is turned off temporarily without deleting it."
+                },
+                "createOnly": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Set to true to deploy the item only when it does not exist in Maximo yet. When it exists it is left unchanged, so a deployment does not overwrite an item that was deployed earlier and may have been modified since. Only automationScript, inspectionForm, screen and report entries accept it."
                 }
             },
             "allOf": [
+                {
+                    "if": {
+                        "properties": { "kind": { "enum": ["configuration", "deployScript", "manifest"] } },
+                        "required": ["kind"]
+                    },
+                    "then": {
+                        "properties": { "createOnly": { "const": false } }
+                    }
+                },
                 {
                     "if": {
                         "properties": { "kind": { "enum": ["configuration", "inspectionForm", "manifest"] } },

@@ -2,6 +2,7 @@
     "actions": [
         {
             "action": "TESTSETPRIORITY",
+            "_retain": ["value", "memo"],
             "description": "Complete manifest test action",
             "type": "!SETVALUE!",
             "useWith": "!ALL!",

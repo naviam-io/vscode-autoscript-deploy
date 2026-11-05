@@ -1,0 +1,149 @@
+{
+    "productV1": {
+        "actions": [
+            {
+                "action": "NVTEST_RETAIN_SET",
+                "description": "Retained values test, release 1",
+                "type": "!SETVALUE!",
+                "useWith": "!ALL!",
+                "objectName": "WORKORDER",
+                "parameter": "WOPRIORITY",
+                "value": "1",
+                "_retain": ["value"]
+            },
+            {
+                "action": "NVTEST_RETAIN_APPR",
+                "description": "Retained values test, release 1",
+                "type": "!CHANGESTATUS!",
+                "useWith": "!ALL!",
+                "objectName": "WORKORDER",
+                "value": "APPR",
+                "memo": "Release 1 memo",
+                "_retain": ["memo"]
+            },
+            {
+                "action": "NVTEST_RETAIN_GROUP",
+                "description": "Retained values test, release 1",
+                "type": "!GROUP!",
+                "useWith": "!ALL!",
+                "_retain": ["useWith", "actionGroup"],
+                "actionGroup": [
+                    { "member": "NVTEST_RETAIN_SET", "sequence": 1 },
+                    { "member": "NVTEST_RETAIN_APPR", "sequence": 2 }
+                ]
+            }
+        ]
+    },
+    "customerEdit": {
+        "actions": [
+            {
+                "action": "NVTEST_RETAIN_SET",
+                "description": "Description written by the customer",
+                "type": "!SETVALUE!",
+                "useWith": "!ALL!",
+                "objectName": "WORKORDER",
+                "parameter": "WOPRIORITY",
+                "value": "5"
+            },
+            {
+                "action": "NVTEST_RETAIN_APPR",
+                "description": "Retained values test, release 1",
+                "type": "!CHANGESTATUS!",
+                "useWith": "!ALL!",
+                "objectName": "WORKORDER",
+                "value": "APPR",
+                "memo": "Memo written by the customer"
+            },
+            {
+                "action": "NVTEST_RETAIN_CUSTOMER",
+                "description": "Action added by the customer",
+                "type": "!SETVALUE!",
+                "useWith": "!ALL!",
+                "objectName": "WORKORDER",
+                "parameter": "WOPRIORITY",
+                "value": "9"
+            },
+            {
+                "action": "NVTEST_RETAIN_GROUP",
+                "description": "Retained values test, release 1",
+                "type": "!GROUP!",
+                "useWith": "!ESCALATION!",
+                "actionGroup": [
+                    { "member": "NVTEST_RETAIN_SET", "sequence": 1 },
+                    { "member": "NVTEST_RETAIN_APPR", "sequence": 2 },
+                    { "member": "NVTEST_RETAIN_CUSTOMER", "sequence": 7 },
+                    { "member": "NVTEST_RETAIN_SET", "sequence": 8 }
+                ]
+            }
+        ]
+    },
+    "customerEditCleared": {
+        "actions": [
+            {
+                "action": "NVTEST_RETAIN_SET",
+                "description": "Description written by the customer",
+                "type": "!SETVALUE!",
+                "useWith": "!ALL!",
+                "objectName": "WORKORDER",
+                "parameter": "WOPRIORITY",
+                "value": "6"
+            },
+            {
+                "action": "NVTEST_RETAIN_APPR",
+                "description": "Retained values test, release 1",
+                "type": "!CHANGESTATUS!",
+                "useWith": "!ALL!",
+                "objectName": "WORKORDER",
+                "value": "APPR",
+                "memo": null
+            },
+            {
+                "action": "NVTEST_RETAIN_GROUP",
+                "description": "Retained values test, release 1",
+                "type": "!GROUP!",
+                "useWith": "!ESCALATION!",
+                "actionGroup": [
+                    { "member": "NVTEST_RETAIN_SET", "sequence": 1 },
+                    { "member": "NVTEST_RETAIN_CUSTOMER", "sequence": 2 },
+                    { "member": "NVTEST_RETAIN_CUSTOMER", "sequence": 7 },
+                    { "member": "NVTEST_RETAIN_SET", "sequence": 8 }
+                ]
+            }
+        ]
+    },
+    "productV2": {
+        "actions": [
+            {
+                "action": "NVTEST_RETAIN_SET",
+                "description": "Retained values test, release 2",
+                "type": "!SETVALUE!",
+                "useWith": "!ALL!",
+                "objectName": "WORKORDER",
+                "parameter": "WOPRIORITY",
+                "value": "2",
+                "_retain": ["value"]
+            },
+            {
+                "action": "NVTEST_RETAIN_APPR",
+                "description": "Retained values test, release 2",
+                "type": "!CHANGESTATUS!",
+                "useWith": "!ALL!",
+                "objectName": "WORKORDER",
+                "value": "APPR",
+                "memo": "Release 2 memo",
+                "_retain": ["memo"]
+            },
+            {
+                "action": "NVTEST_RETAIN_GROUP",
+                "description": "Retained values test, release 2",
+                "type": "!GROUP!",
+                "useWith": "!ALL!",
+                "_retain": ["useWith", "actionGroup"],
+                "actionGroup": [
+                    { "member": "NVTEST_RETAIN_SET", "sequence": 1 },
+                    { "member": "NVTEST_RETAIN_APPR", "sequence": 2 }
+                ]
+            }
+        ]
+    }
+}

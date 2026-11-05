@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
-const { roundTrip } = require('../round-trip');
+import { roundTrip } from '../round-trip.js';
 
-module.exports = {
+export default {
     name: 'cron-tasks',
     run: async (client) => {
         await roundTrip(client, {

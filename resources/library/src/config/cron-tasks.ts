@@ -1,7 +1,7 @@
 /// <reference path="../../globals.d.ts" />
 /// <reference path="../../manage-facade.d.ts" />
 
-import { close, setValue, toExternalSynonymValue, updateProgress, valueOrDefault } from '../core/util';
+import { close, requireKeys, setValue, toExternalSynonymValue, updateProgress, valueOrDefault } from '../core/util';
 import { applyRetainedValues, hasRetainDeclarations, retainIdentityOf } from '../core/retained-values';
 import { deleteSnapshot, readSnapshot, snapshotKey, writeSnapshot } from '../core/snapshot-store';
 import { captureExistingState } from '../core/capture';
@@ -263,6 +263,7 @@ export class MaximoCronTask {
     _retain: any = [];
 
     constructor(input: MaximoCronTaskInput) {
+        requireKeys(MaximoCronTask, input, 'cron task');
         this.cronTaskName = input.cronTaskName;
         this.className = input.className;
 

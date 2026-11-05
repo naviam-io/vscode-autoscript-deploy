@@ -82,8 +82,14 @@ function main() {
                 return;
             } else if (httpMethod.toLowerCase() === 'post' && typeof requestBody !== 'undefined') {
                 var reportData = JSON.parse(requestBody);
+                var reportExisted = reportExists(reportData.reportName, reportData.appName);
 
-                importReport(reportData);
+                if (isCreateOnlyRequest() && reportExisted) {
+                    response.outcome = 'skipped';
+                } else {
+                    importReport(reportData);
+                    response.outcome = reportExisted ? 'updated' : 'created';
+                }
 
                 response.status = 'success';
                 responseBody = JSON.stringify(response);
@@ -128,7 +134,28 @@ function main() {
     }
 }
 
+/** Whether the request asks to leave an existing item unchanged: see docs/flows/deploy.md. */
+function isCreateOnlyRequest() {
+    return typeof request !== 'undefined' && request !== null && String(request.getQueryParam('createOnly')) === 'true';
+}
+
+/** Whether the report is registered for the application. */
+function reportExists(reportName, appName) {
+    var reportSet;
+    try {
+        reportSet = MXServer.getMXServer().getMboSet('REPORT', userInfo);
+        var sqlf = new SqlFormat('reportname = :1 and appname = :2');
+        sqlf.setObject(1, 'REPORT', 'REPORTNAME', reportName);
+        sqlf.setObject(2, 'REPORT', 'APPNAME', appName);
+        reportSet.setWhere(sqlf.format());
+        return !reportSet.isEmpty();
+    } finally {
+        _close(reportSet);
+    }
+}
+
 function importReport(report) {
+    Java.type('com.ibm.tivoli.maximo.report.birt.engine.MXReportEngine').getReportEngine();
     var reportService = MXServer.getMXServer().lookup('BIRTREPORT');
     var reportInfo = new ReportImportInfo();
 

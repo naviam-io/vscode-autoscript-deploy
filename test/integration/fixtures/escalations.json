@@ -1,4 +1,28 @@
 {
+    "actions": [
+        {
+            "action": "TEST_REPORTJOB_HOST",
+            "description": "Set the report job host name",
+            "type": "!SETVALUE!",
+            "useWith": "!ALL!",
+            "objectName": "REPORTJOB",
+            "parameter": "HOSTNAME",
+            "value": "TESTHOST"
+        },
+        {
+            "action": "TEST_REPORTJOB_GRP",
+            "description": "Escalation actions for long running reports",
+            "type": "!GROUP!",
+            "useWith": "!ESCALATION!",
+            "objectName": "REPORTJOB",
+            "actionGroup": [
+                {
+                    "member": "TEST_REPORTJOB_HOST",
+                    "sequence": 1
+                }
+            ]
+        }
+    ],
     "escalations": [
         {
             "escalation": "TEST_REPORTLONG",
@@ -16,7 +40,14 @@
                     "eventAttribute": "STARTTIME",
                     "elapsedInterval": 10,
                     "intervalUom": "!MINUTES!",
-                    "repeat": false
+                    "repeat": false,
+                    "eventCondition": "reportname is not null",
+                    "action": "TEST_REPORTJOB_GRP",
+                    "escNotification": [
+                        {
+                            "templateId": "NVTESTESCBASIC"
+                        }
+                    ]
                 },
                 {
                     "refPointNum": 2,

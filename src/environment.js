@@ -26,14 +26,17 @@ function findSelectedEnvironment(list) {
     return null;
 }
 
+const NO_SETTINGS = { get: () => undefined };
+
 /**
- * Merges the selected environment with the naviam.* settings. See docs/modules/extension-src.md.
+ * Merges the selected environment with the naviam.* settings, or with none when settings is
+ * omitted. See docs/modules/extension-src.md.
  *
  * @param {Object|null} selected
- * @param {{ get: (key: string) => any }} settings
+ * @param {{ get: (key: string) => any }} [settings]
  * @returns {Object}
  */
-function resolveEnvironment(selected, settings) {
+function resolveEnvironment(selected, settings = NO_SETTINGS) {
     const env = selected || {};
     const useSSL = typeof env.useSSL !== 'undefined' ? env.useSSL : (settings.get('maximo.useSSL') ?? true);
 
@@ -49,8 +52,8 @@ function resolveEnvironment(selected, settings) {
         apiKey: typeof env.password !== 'undefined' ? env.apiKey : (env.apiKey ?? settings.get('maximo.apiKey')),
         maxauthOnly: typeof env.maxauthOnly !== 'undefined' ? env.maxauthOnly : (settings.get('maximo.maxauthOnly') ?? false),
         allowUntrustedCerts: typeof env.allowUntrustedCerts !== 'undefined' ? env.allowUntrustedCerts : settings.get('maximo.allowUntrustedCerts'),
-        timeout: env.timeout ?? settings.get('maximo.timeout'),
-        configurationTimeout: env.configurationTimeout ?? settings.get('maximo.configurationTimeout'),
+        timeout: env.timeout ?? settings.get('maximo.timeout') ?? 30,
+        configurationTimeout: env.configurationTimeout ?? settings.get('maximo.configurationTimeout') ?? 5,
         ca: env.ca ?? settings.get('maximo.customCA'),
         extractLocation: env.extractLocation ?? settings.get('maximo.extractLocation'),
         extractLocationScreens: env.extractLocationScreens ?? settings.get('maximo.extractScreenLocation'),

@@ -2,21 +2,39 @@
 /// <reference path="../manage-facade.d.ts" />
 /// <reference path="../manage.d.ts" />
 
-import { configureSse, toExternalSynonymValue, toInternalSynonymValue, updateError } from './core/util';
+import { applyOptionalValues, applyValues, configureSse, toExternalSynonymValue, toInternalSynonymValue, updateError } from './core/util';
 import { hasRetainDeclarations, retainIdentityOf } from './core/retained-values';
 import { deleteSnapshot, describeSnapshot, isSnapshotKey, snapshotKey } from './core/snapshot-store';
-import { MaximoProperty, process as processProperty } from './config/properties';
-import { MaximoMessage, process as processMessage } from './config/messages';
-import { MaximoLogger, process as processLogger } from './config/loggers';
+import { MaximoProperty, process as processProperty, SNAPSHOT_OBJECT as PROPERTY_SNAPSHOT_OBJECT } from './config/properties';
+import { MaximoMessage, process as processMessage, SNAPSHOT_OBJECT as MESSAGE_SNAPSHOT_OBJECT } from './config/messages';
+import { MaximoLogger, process as processLogger, SNAPSHOT_OBJECT as LOGGER_SNAPSHOT_OBJECT } from './config/loggers';
 import { MaximoDomain, process as processDomain, SNAPSHOT_OBJECT as DOMAIN_SNAPSHOT_OBJECT } from './config/domains';
 import { MaximoCronTask, process as processCronTask, SNAPSHOT_OBJECT as CRON_TASK_SNAPSHOT_OBJECT } from './config/cron-tasks';
-import { MaximoIntegrationObject, process as processIntegrationObject } from './config/integration-objects';
-import { MaximoAction, process as processAction } from './config/actions';
-import { MaximoEscalation, process as processEscalation } from './config/escalations';
-import { MaximoQuery, process as processQuery } from './config/queries';
-import { MaximoObject, process as processObject } from './config/objects';
+import {
+    MaximoIntegrationObject,
+    process as processIntegrationObject,
+    SNAPSHOT_OBJECT as INTEGRATION_OBJECT_SNAPSHOT_OBJECT
+} from './config/integration-objects';
+import { MaximoAction, process as processAction, SNAPSHOT_OBJECT as ACTION_SNAPSHOT_OBJECT } from './config/actions';
+import { MaximoEscalation, process as processEscalation, SNAPSHOT_OBJECT as ESCALATION_SNAPSHOT_OBJECT } from './config/escalations';
+import { MaximoQuery, process as processQuery, SNAPSHOT_OBJECT as QUERY_SNAPSHOT_OBJECT } from './config/queries';
+import { MaximoEndPoint, process as processEndPoint, SNAPSHOT_OBJECT as END_POINT_SNAPSHOT_OBJECT } from './config/end-points';
+import { MaximoPublishChannel, process as processPublishChannel, SNAPSHOT_OBJECT as PUBLISH_CHANNEL_SNAPSHOT_OBJECT } from './config/publish-channels';
+import {
+    MaximoEnterpriseService,
+    process as processEnterpriseService,
+    SNAPSHOT_OBJECT as ENTERPRISE_SERVICE_SNAPSHOT_OBJECT
+} from './config/enterprise-services';
+import { MaximoExternalSystem, process as processExternalSystem, SNAPSHOT_OBJECT as EXTERNAL_SYSTEM_SNAPSHOT_OBJECT } from './config/external-systems';
+import { MaximoObject, process as processObject, SNAPSHOT_OBJECT as OBJECT_SNAPSHOT_OBJECT } from './config/objects';
+import { MaximoPresentation, preparePresentations, processPresentation } from './config/presentations';
+import { deployPresentationXml } from './core/presentation-writer';
 
-type Handler = (item: any) => void;
+/**
+ * A payload type: the model whose constructor validates an entry, what checks all of its entries
+ * before any entry of the payload is applied, and what applies an entry to Maximo.
+ */
+type Handler = { model: new (input: any) => any; process: (record: any) => void; prepare?: (records: any[]) => void };
 type HandlerRegistry = Record<string, Handler>;
 type RequestPayload = Record<string, unknown>;
 
@@ -49,7 +67,7 @@ function deployConfig(config?: RequestPayload, requestContext?: any): void {
     registerHandlers();
 
     try {
-        processPayload(config);
+        processPayload(config, handlers);
     } catch (error) {
         const message = getErrorMessage(error);
         updateError(message);
@@ -61,59 +79,47 @@ function deployConfig(config?: RequestPayload, requestContext?: any): void {
 }
 
 function registerHandlers(): void {
-    registerHandler('properties', function (item: any): void {
-        processProperty(new MaximoProperty(item));
-    });
-
-    registerHandler('messages', function (item: any): void {
-        processMessage(new MaximoMessage(item));
-    });
-
-    registerHandler('loggers', function (item: any): void {
-        processLogger(new MaximoLogger(item));
-    });
-
-    registerHandler('domains', function (item: any): void {
-        processDomain(new MaximoDomain(item));
-    });
-
-    registerHandler('cronTasks', function (item: any): void {
-        processCronTask(new MaximoCronTask(item));
-    });
-
-    registerHandler('integrationObjects', function (item: any): void {
-        processIntegrationObject(new MaximoIntegrationObject(item));
-    });
-
-    registerHandler('actions', function (item: any): void {
-        processAction(new MaximoAction(item));
-    });
-
-    registerHandler('escalations', function (item: any): void {
-        processEscalation(new MaximoEscalation(item));
-    });
-
-    registerHandler('queries', function (item: any): void {
-        processQuery(new MaximoQuery(item));
-    });
-
-    registerHandler('objects', function (item: any): void {
-        processObject(new MaximoObject(item));
-    });
+    registerHandler('properties', MaximoProperty, processProperty);
+    registerHandler('messages', MaximoMessage, processMessage);
+    registerHandler('loggers', MaximoLogger, processLogger);
+    registerHandler('domains', MaximoDomain, processDomain);
+    registerHandler('cronTasks', MaximoCronTask, processCronTask);
+    registerHandler('integrationObjects', MaximoIntegrationObject, processIntegrationObject);
+    registerHandler('actions', MaximoAction, processAction);
+    registerHandler('escalations', MaximoEscalation, processEscalation);
+    registerHandler('queries', MaximoQuery, processQuery);
+    registerHandler('endPoints', MaximoEndPoint, processEndPoint);
+    registerHandler('publishChannels', MaximoPublishChannel, processPublishChannel);
+    registerHandler('enterpriseServices', MaximoEnterpriseService, processEnterpriseService);
+    registerHandler('externalSystems', MaximoExternalSystem, processExternalSystem);
+    registerHandler('objects', MaximoObject, processObject);
+    registerHandler('presentations', MaximoPresentation, processPresentation, preparePresentations);
 }
 
 /** Only the snapshot pre-flight needs these, so a deployment does not pay for them. */
 function registerSnapshotProbes(): void {
     registerSnapshotProbe('domains', DOMAIN_SNAPSHOT_OBJECT, MaximoDomain);
     registerSnapshotProbe('cronTasks', CRON_TASK_SNAPSHOT_OBJECT, MaximoCronTask);
+    registerSnapshotProbe('queries', QUERY_SNAPSHOT_OBJECT, MaximoQuery);
+    registerSnapshotProbe('messages', MESSAGE_SNAPSHOT_OBJECT, MaximoMessage);
+    registerSnapshotProbe('properties', PROPERTY_SNAPSHOT_OBJECT, MaximoProperty);
+    registerSnapshotProbe('loggers', LOGGER_SNAPSHOT_OBJECT, MaximoLogger);
+    registerSnapshotProbe('actions', ACTION_SNAPSHOT_OBJECT, MaximoAction);
+    registerSnapshotProbe('escalations', ESCALATION_SNAPSHOT_OBJECT, MaximoEscalation);
+    registerSnapshotProbe('objects', OBJECT_SNAPSHOT_OBJECT, MaximoObject);
+    registerSnapshotProbe('integrationObjects', INTEGRATION_OBJECT_SNAPSHOT_OBJECT, MaximoIntegrationObject);
+    registerSnapshotProbe('endPoints', END_POINT_SNAPSHOT_OBJECT, MaximoEndPoint);
+    registerSnapshotProbe('publishChannels', PUBLISH_CHANNEL_SNAPSHOT_OBJECT, MaximoPublishChannel);
+    registerSnapshotProbe('enterpriseServices', ENTERPRISE_SERVICE_SNAPSHOT_OBJECT, MaximoEnterpriseService);
+    registerSnapshotProbe('externalSystems', EXTERNAL_SYSTEM_SNAPSHOT_OBJECT, MaximoExternalSystem);
 }
 
 function isJsonPayload(value: string): boolean {
     return value.charAt(0) === '{' || value.charAt(0) === '[';
 }
 
-function registerHandler(type: string, handler: Handler): void {
-    handlers[type] = handler;
+function registerHandler(type: string, model: new (input: any) => any, process: (record: any) => void, prepare?: (records: any[]) => void): void {
+    handlers[type] = { model: model, process: process, prepare: prepare };
 }
 
 function registerSnapshotProbe(type: string, objectName: string, model: new (input: any) => any): void {
@@ -143,7 +149,13 @@ function listLeftoverSnapshots(payload: RequestPayload): any[] {
                 return;
             }
 
-            const record = new probe.model(item);
+            let record: any;
+            try {
+                record = new probe.model(item);
+            } catch (error) {
+                // The deployment itself reports the invalid entry.
+                return;
+            }
             if (!hasRetainDeclarations(record)) {
                 return;
             }
@@ -212,9 +224,14 @@ function isJavaException(error: any): boolean {
     return error instanceof Java.type('java.lang.Exception');
 }
 
-function processPayload(payload: RequestPayload): void {
+/**
+ * Builds every entry, then prepares every type, before applying any, so an entry its model or its
+ * type's prepare rejects fails the deployment before Maximo is changed. See docs/modules/nashorn-library.md.
+ */
+function processPayload(payload: RequestPayload, registry: HandlerRegistry): void {
+    const built: { handler: Handler; records: any[] }[] = [];
     Object.keys(payload).forEach(function (type: string): void {
-        const handler = handlers[type];
+        const handler = registry[type];
         if (!handler) {
             return;
         }
@@ -224,9 +241,22 @@ function processPayload(payload: RequestPayload): void {
             throw Error('The request body type "' + type + '" must be an array.');
         }
 
-        items.forEach(function (item: any): void {
-            handler(item);
+        built.push({
+            handler: handler,
+            records: items.map(function (item: any): any {
+                return new handler.model(item);
+            })
         });
+    });
+
+    built.forEach(function (entry): void {
+        if (entry.handler.prepare) {
+            entry.handler.prepare(entry.records);
+        }
+    });
+
+    built.forEach(function (entry): void {
+        entry.records.forEach(entry.handler.process);
     });
 }
 
@@ -242,6 +272,9 @@ runFromRequestBody();
 
 /** Shared with the other Naviam scripts, which read it from the NaviamAutoscriptLibrary global after running this script. */
 export default {
+    applyOptionalValues: applyOptionalValues,
+    applyValues: applyValues,
+    deployPresentationXml: deployPresentationXml,
     handleSnapshotRequest: handleSnapshotRequest,
     toExternalSynonymValue: toExternalSynonymValue,
     toInternalSynonymValue: toInternalSynonymValue

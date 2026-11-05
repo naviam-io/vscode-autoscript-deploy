@@ -1,13 +1,13 @@
 {
 	"compilerOptions": {
-		"module": "commonjs",
+		"module": "nodenext",
 		"target": "ES2022",
-		"checkJs": true,  /* Typecheck .js files. */
-		"lib": [
-			"ES2022"
-		]
+		"lib": ["ES2022"],
+		"types": ["node"],
+		"checkJs": true,
+		"maxNodeModuleJsDepth": 0,
+		"strict": false
 	},
-	"exclude": [
-		"node_modules"
-	]
+	"include": ["*.js", "src", "cli"],
+	"exclude": ["**/node_modules", "cli/dist"]
 }

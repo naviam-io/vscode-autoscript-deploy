@@ -5,13 +5,69 @@ export function close(mboSet: any): void {
         try {
             mboSet.cleanup();
             mboSet.close();
-        } catch (ignored) {
-        }
+        } catch (ignored) {}
     }
 }
 
-export function valueOrDefault<T>(value: T | undefined, defaultValue: T): T {
-    return typeof value === 'undefined' ? defaultValue : value;
+/** A missing or null value takes the default; an empty string is kept, since it clears the attribute in Maximo. */
+export function valueOrDefault<T>(value: T | null | undefined, defaultValue: T): T {
+    return typeof value === 'undefined' || value === null ? defaultValue : value;
+}
+
+export function booleanOrDefault(value: any, defaultValue: boolean): boolean {
+    return typeof value === 'undefined' ? defaultValue : value == true;
+}
+
+export function arrayOrEmpty<T>(value: T[] | null | undefined): T[] {
+    return Array.isArray(value) ? value : [];
+}
+
+/** Throws when any of the model's `_keys` is missing or blank on the input, naming the keys present. */
+export function requireKeys(model: any, input: any, label: string): void {
+    const missing: string[] = [];
+    const present: string[] = [];
+
+    (model._keys as string[]).forEach(function (key: string): void {
+        const value = input ? input[key] : null;
+        if (value === undefined || value === null || String(value).trim() === '') {
+            missing.push('"' + key + '"');
+        } else {
+            present.push(key + ': ' + value);
+        }
+    });
+
+    if (missing.length > 0) {
+        throw new Error(
+            'The ' +
+                label +
+                ' is missing ' +
+                (missing.length > 1 ? 'keys ' : 'key ') +
+                missing.join(', ') +
+                (present.length > 0 ? ' (' + present.join(', ') + ')' : '') +
+                '.'
+        );
+    }
+}
+
+/**
+ * Throws when two rows share the same values for the keys. Maximo refuses a duplicate row only when it
+ * is added, which for a recreated record is after the existing one is deleted and saved.
+ */
+export function rejectDuplicates(owner: string, label: string, rows: any[], keys: string[]): void {
+    const seen: Record<string, boolean> = {};
+    rows.forEach(function (row: any): void {
+        const parts = keys.map(function (key: string): string {
+            return row[key] === undefined || row[key] === null ? '' : String(row[key]);
+        });
+        const id = parts.join('\u0000');
+        if (seen[id]) {
+            const value = parts.filter(function (part: string): boolean {
+                return part !== '';
+            });
+            throw new Error(owner + ' lists the ' + label + ' ' + value.join(' ') + ' more than once.');
+        }
+        seen[id] = true;
+    });
 }
 
 let sseOutput: any = null;
@@ -104,9 +160,10 @@ export function setValue(mbo: psdi.mbo.MboRemote, field: string, value: any, acc
     }
 }
 
-export function applyValues(mbo: psdi.mbo.MboRemote, updates: Array<[string, any]>): void {
+/** Sets each [field, value, accessModifier?] entry, a null value clearing the field. */
+export function applyValues(mbo: psdi.mbo.MboRemote, updates: Array<[string, any, any?]>): void {
     updates.forEach(function (update) {
-        setValue(mbo, update[0], update[1]);
+        setValue(mbo, update[0], update[1], update[2]);
     });
 }
 
@@ -126,10 +183,11 @@ export function applyOptionalWritableValues(mbo: psdi.mbo.MboRemote, updates: Ar
     });
 }
 
-export function applyOptionalValues(mbo: psdi.mbo.MboRemote, updates: Array<[string, any]>): void {
+/** Sets each [field, value, accessModifier?] entry whose value is not null or undefined. */
+export function applyOptionalValues(mbo: psdi.mbo.MboRemote, updates: Array<[string, any, any?]>): void {
     updates.forEach(function (update) {
         if (update[1] !== null) {
-            setValue(mbo, update[0], update[1]);
+            setValue(mbo, update[0], update[1], update[2]);
         }
     });
 }
@@ -149,7 +207,9 @@ export function parseInternalValue(value: any): string | null {
 
     const match = /^!([^!]+)!$/.exec(value);
     if (!match) {
-        throw new Error('The value "' + value + '" is not valid. A value that starts with ! must be an internal value written as !VALUE!, for example !MAXTABLE!.');
+        throw new Error(
+            'The value "' + value + '" is not valid. A value that starts with ! must be an internal value written as !VALUE!, for example !MAXTABLE!.'
+        );
     }
 
     return match[1];

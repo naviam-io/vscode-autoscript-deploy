@@ -3,42 +3,22 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 
 import { ProgressLocation, window, Uri, workspace, commands } from 'vscode';
 import { getMaximoConfig } from '../extension';
 import Logger from '../logger';
+import vscodeUi from '../vscode-ui.js';
+import { DBC_TYPES, extractDbc, sanitizeFileName } from '../core/extract/extract-dbc.js';
+import { prepareExtractFolder } from '../core/extract/extract-support.js';
 
 const LOG_SOURCE = 'ExtractDBCCommand';
 
 export default async function extractDBCCommand(client) {
     Logger.info('Extract DBC command requested.', LOG_SOURCE);
-    let extractLoc = (await getMaximoConfig()).extractLocationDBC;
-    // if the extract location has not been specified use the workspace folder.
-    if (typeof extractLoc === 'undefined' || !extractLoc) {
-        if (workspace.workspaceFolders !== undefined) {
-            extractLoc = workspace.workspaceFolders[0].uri.fsPath;
-        } else {
-            Logger.error('Extract DBC command failed because no working folder or extract folder is configured.', null, LOG_SOURCE);
-            window.showErrorMessage('A working folder must be selected or an export folder configured before exporting reports.', {
-                modal: true,
-            });
-            return;
-        }
+    const extractLoc = prepareExtractFolder(vscodeUi, (await getMaximoConfig()).extractLocationDBC, workspace.workspaceFolders?.[0]?.uri.fsPath, 'DBC files', LOG_SOURCE);
+    if (!extractLoc) {
+        return;
     }
-
-    if (extractLoc.startsWith('~')) {
-        extractLoc = path.join(os.homedir(), extractLoc.slice(1));
-    } else if ((extractLoc.startsWith('./') || extractLoc.startsWith('.\\')) && workspace.workspaceFolders !== undefined) {
-        extractLoc = path.join(workspace.workspaceFolders[0].uri.fsPath, extractLoc.slice(2));
-    } else if (!path.isAbsolute(extractLoc) && workspace.workspaceFolders !== undefined) {
-        extractLoc = path.join(workspace.workspaceFolders[0].uri.fsPath, extractLoc);
-    }
-
-    if (!fs.existsSync(extractLoc)) {
-        fs.mkdirSync(extractLoc, { recursive: true });
-    }
-    Logger.info(`Extracting DBC files to ${extractLoc}.`, LOG_SOURCE);
 
     const quickPick = window.createQuickPick();
     quickPick.step = 1;
@@ -46,83 +26,7 @@ export default async function extractDBCCommand(client) {
     quickPick.title = 'Step 1: Select the type to extract';
     quickPick.placeholder = 'Select the type to extract';
 
-    const items = [
-        {
-            label: 'Object Structure',
-            group: 'os',
-            plural: 'Object Structures',
-        },
-        {
-            label: 'Table Data',
-            group: 'table',
-            plural: 'Tables',
-        },
-        {
-            label: 'Publish Channel',
-            group: 'pc',
-            plural: 'Publish Channels',
-        },
-        {
-            label: 'Enterprise Service',
-            group: 'es',
-            plural: 'Enterprise Services',
-        },
-        {
-            label: 'Invocation Channel',
-            group: 'ic',
-            plural: 'Invocation Channels',
-        },
-        {
-            label: 'Web Service',
-            group: 'ws',
-            plural: 'Web Services',
-        },
-        {
-            label: 'End Point',
-            group: 'ep',
-            plural: 'End Points',
-        },
-        {
-            label: 'External System',
-            group: 'ex',
-            plural: 'External Systems',
-        },
-        {
-            label: 'Interaction',
-            group: 'int',
-            plural: 'Interactions',
-        },
-        {
-            label: 'Automation Script',
-            group: 'script',
-            plural: 'Automation Scripts',
-        },
-        {
-            label: 'Records by Object Structure',
-            group: 'byos',
-            plural: 'Records by Object Structures',
-        },
-        {
-            label: 'Property',
-            group: 'prop',
-            plural: 'Properties',
-        },
-        {
-            label: 'Message',
-            group: 'msg',
-            plural: 'Messages',
-        },
-        {
-            label: 'Object',
-            group: 'object',
-            plural: 'Objects',
-        },
-        {
-            label: 'Attribute',
-            group: 'attribute',
-            plural: 'Attributes',
-        },
-    ];
+    const items = DBC_TYPES.map((type) => ({ ...type }));
 
     items.sort((a, b) => a.label.localeCompare(b.label));
     quickPick.items = items;
@@ -175,57 +79,39 @@ export default async function extractDBCCommand(client) {
                         title: `Extracting ${selection.plural.toLowerCase()} to ${fileName}\u2026`,
                     },
                     async () => {
-                        let objectList = selectedObjects.map((obj) => obj.label).join(',');
-                        let objectListDisplay = selectedObjects.map((obj) => obj.label).join(', ');
-
-                        if (selection.group === 'msg' || selection.group === 'attribute') {
-                            where = selectedObjects.map((obj) => obj.id).join(',');
-                        }
                         try {
-                            var result = await client.getDBCObject(
-                                selection.group,
-                                objectList,
-                                fileName,
-                                where,
-                                `Create ${selectedObjects.length > 1 ? selection.plural : selection.label} ${objectListDisplay}`
+                            const filePath = await extractDbc(
+                                client,
+                                { group: selection.group, objects: selectedObjects, fileName, where, label: selection.label, plural: selection.plural },
+                                extractLoc
                             );
-                            if (result && result.status === 'error') {
-                                Logger.error(`Error extracting DBC: ${result.message}`, null, LOG_SOURCE);
-                                window.showErrorMessage('Error extracting DBC:\n' + result.message, { modal: true });
-                            } else {
-                                const filePath = path.join(extractLoc, fileName);
 
-                                // Write content to file
-                                fs.writeFileSync(filePath, result, 'utf8');
-                                Logger.info(`DBC extract written to ${filePath}.`, LOG_SOURCE);
-
-                                // Close any existing editor for this file
-                                const openEditors = window.visibleTextEditors;
-                                for (const editor of openEditors) {
-                                    if (editor.document.fileName === filePath) {
-                                        await window.showTextDocument(editor.document);
-                                        await commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
-                                        break;
-                                    }
+                            // Close any existing editor for this file
+                            const openEditors = window.visibleTextEditors;
+                            for (const editor of openEditors) {
+                                if (editor.document.fileName === filePath) {
+                                    await window.showTextDocument(editor.document);
+                                    await commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+                                    break;
                                 }
-
-                                // Open the file fresh from disk
-                                const uri = Uri.file(filePath);
-
-                                workspace.openTextDocument(uri).then((doc) => {
-                                    window.showTextDocument(doc, { preview: false, preserveFocus: false }).then(() => {
-                                        const editor = window.activeTextEditor;
-                                        if (editor) {
-                                            commands.executeCommand('editor.action.formatDocument').then(() => {
-                                                editor.document.save();
-                                            });
-                                        }
-                                    });
-                                });
                             }
+
+                            // Open the file fresh from disk
+                            const uri = Uri.file(filePath);
+
+                            workspace.openTextDocument(uri).then((doc) => {
+                                window.showTextDocument(doc, { preview: false, preserveFocus: false }).then(() => {
+                                    const editor = window.activeTextEditor;
+                                    if (editor) {
+                                        commands.executeCommand('editor.action.formatDocument').then(() => {
+                                            editor.document.save();
+                                        });
+                                    }
+                                });
+                            });
                         } catch (error) {
                             Logger.error(`Error extracting DBC to ${fileName}.`, error, LOG_SOURCE);
-                            window.showErrorMessage('Error extracting DBC:\n' + error.message, { modal: true });
+                            window.showErrorMessage(error.message.startsWith('Error extracting DBC:') ? error.message : 'Error extracting DBC:\n' + error.message, { modal: true });
                         }
                     }
                 );
@@ -354,20 +240,6 @@ async function getFileName(fileType, totalSteps = 3) {
             quickPick.dispose();
         });
     });
-}
-
-function sanitizeFileName(fileName) {
-    // Remove invalid characters
-    return (
-        fileName
-            // eslint-disable-next-line no-useless-escape
-            .replace(/[<>:"|?*\\\/]/g, '_')
-            // eslint-disable-next-line no-control-regex
-            .replace(/[\x00-\x1f\x80-\x9f]/g, '_') // Control characters
-            .replace(/^\.+$/, '_') // Don't allow only dots
-            .replace(/\.$/, '_') // Don't end with period
-            .trim()
-    ); // Remove leading/trailing spaces
 }
 
 async function displayAttributeList(client, objectName) {

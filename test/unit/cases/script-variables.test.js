@@ -2,9 +2,9 @@
  * Unit tests for applyScriptVariables in resources/naviam.autoscript.deploy.js, which creates the
  * script variables a scriptConfig declares (GitHub issue #36).
  */
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
-const { loadScriptFunctions } = require('../harness');
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import { loadScriptFunctions } from '../harness.js';
 
 function ScriptError(reason, message) {
     this.reason = reason;

@@ -3,6 +3,7 @@
         {
             "msgGroup": "TESTCOMPLETE",
             "msgKey": "TESTMESSAGE",
+            "_retain": ["value", "explanation"],
             "value": "Complete manifest test message {0}",
             "msgId": "BMXZZ0101E",
             "displayMethod": "MSGBOX",

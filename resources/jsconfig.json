@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "target": "ES2015",
+        "lib": ["ES5"],
+        "types": [],
+        "checkJs": true,
+        "strict": false,
+        "moduleDetection": "force"
+    },
+    "files": ["library/nashorn.d.ts", "library/globals.d.ts", "library/manage-declarations.d.ts"],
+    "include": ["naviam.autoscript.*.js"],
+    "exclude": ["naviam.autoscript.library.js"]
+}

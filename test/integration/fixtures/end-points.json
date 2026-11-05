@@ -1,0 +1,15 @@
+{
+    "endPoints": [
+        {
+            "endPointName": "NVTEST_EP_HTTP",
+            "description": "Test HTTP end point",
+            "handlerName": "HTTP",
+            "properties": [
+                { "property": "URL", "value": "https://example.com/nvtest", "allowOverride": true },
+                { "property": "HTTPMETHOD", "value": "POST" },
+                { "property": "USERNAME", "value": "nvtest" },
+                { "property": "PASSWORD", "password": "NvTestSecret1" }
+            ]
+        }
+    ]
+}

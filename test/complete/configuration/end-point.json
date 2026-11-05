@@ -1,0 +1,14 @@
+{
+    "endPoints": [
+        {
+            "endPointName": "TESTCOMPLETEHTTP",
+            "_retain": ["description"],
+            "description": "Complete manifest test end point",
+            "handlerName": "HTTP",
+            "properties": [
+                { "property": "URL", "_retain": ["value"], "value": "https://example.com/testcomplete", "allowOverride": true },
+                { "property": "HTTPMETHOD", "value": "POST" }
+            ]
+        }
+    ]
+}

@@ -8,12 +8,12 @@
  * planner, the executor, the deployscript action added to naviam.autoscript.deploy.js, and the
  * shape of the requests themselves.
  */
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { assertEquals, assertNotNull } = require('../harness');
-const { planManifest } = require('../../../src/deploy/manifest-planner');
-const { executePlan } = require('../../../src/deploy/manifest-executor');
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { assertEquals, assertNotNull } from '../harness.js';
+import { planManifest } from '../../../src/core/deploy/manifest-planner.js';
+import { executePlan } from '../../../src/core/deploy/manifest-executor.js';
 
 const SCRIPT_NAME = 'NVTEST.MANIFEST.SCRIPT';
 const DEPLOY_SCRIPT_NAME = 'NVTEST.MANIFEST.DEPLOYSCRIPT';
@@ -95,7 +95,7 @@ function handlers(client, record) {
         automationScript: async (step) => {
             record.sidecars = step.sidecars;
 
-            // Mirrors what deploy-script-command.js does with the flag: an entry that keeps its
+            // Mirrors what src/core/deploy/deploy-script.js does with the flag: an entry that keeps its
             // sidecars applies the predeploy configuration beside the script before deploying it.
             const predeploy = step.path.replace(/\.[^.]+$/, '.predeploy.json');
             if (step.sidecars && fs.existsSync(predeploy)) {
@@ -133,7 +133,7 @@ async function deleteProperty(client, name) {
     }
 }
 
-module.exports = {
+export default {
     name: 'manifest',
     run: async (client) => {
         const root = createProject();

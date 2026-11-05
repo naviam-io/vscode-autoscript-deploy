@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
-const { roundTrip } = require('../round-trip');
+import { roundTrip } from '../round-trip.js';
 
-module.exports = {
+export default {
     name: 'messages',
     run: async (client) => {
         await roundTrip(client, {

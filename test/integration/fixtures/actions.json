@@ -23,6 +23,7 @@
             "description": "Set priority, then approve",
             "type": "!GROUP!",
             "useWith": "!ALL!",
+            "objectName": "WORKORDER",
             "actionGroup": [
                 { "member": "TEST_SET_WOPRIORITY", "sequence": 1 },
                 { "member": "TEST_WO_APPR", "sequence": 2 }

@@ -1,0 +1,40 @@
+{
+    "externalSystems": [
+        {
+            "extSysName": "NVTEST_XS",
+            "description": "Test external system",
+            "endPointName": "MXXMLFILE",
+            "enabled": true,
+            "publishChannels": [
+                {
+                    "publishChannel": { "ifaceName": "NVTEST_XS_PC", "description": "Embedded channel", "intObjectName": "MXASSET" },
+                    "enabled": true,
+                    "endPointName": "MXXMLFILE",
+                    "isContinuousQueue": false
+                },
+                { "ifaceName": "MXASSETInterface", "enabled": true }
+            ],
+            "enterpriseServices": [
+                {
+                    "enterpriseService": { "ifaceName": "NVTEST_XS_ES", "description": "Embedded service", "intObjectName": "MXASSET" },
+                    "enabled": true,
+                    "isContinuousQueue": true
+                }
+            ],
+            "integrationControls": [
+                { "control": "NVTEST_XS_VAL", "value": "SYSTEM", "overrides": [{ "orgId": "{ORG}", "value": "ORG" }] },
+                { "control": "NVTEST_XS_BOOL", "isTrue": true, "overrides": [{ "siteId": "{SITE}", "isTrue": false }] },
+                {
+                    "control": "NVTEST_XS_LIST",
+                    "listValues": [{ "value": "A" }, { "value": "B" }],
+                    "overrides": [{ "orgId": "{ORG}", "listValues": [{ "value": "C" }] }]
+                },
+                {
+                    "control": "NVTEST_XS_XREF",
+                    "crossReferenceValues": [{ "value": "A", "newValue": "1" }],
+                    "overrides": [{ "siteId": "{SITE}", "crossReferenceValues": [{ "value": "B", "newValue": "2" }] }]
+                }
+            ]
+        }
+    ]
+}

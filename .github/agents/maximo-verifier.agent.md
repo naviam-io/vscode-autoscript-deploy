@@ -31,10 +31,10 @@ All of these are local and need no Maximo server or credentials:
 
 You need these or you will report pre-existing conditions as regressions:
 
-- `npx eslint .` reports no errors on a clean tree, including the `resources/` submodule, so any
+- `npx eslint .` reports no errors on a clean tree, including `resources/`, so any
   error belongs to the change under review.
-- `.eslintignore` excludes build output. If lint reports tens of thousands of errors, the
-  ignore file is missing or was bypassed; say so rather than reporting the count.
+- The `ignores` in `eslint.config.js` exclude build output. If lint reports tens of thousands of errors,
+  they are missing or were bypassed; say so rather than reporting the count.
 - CI runs neither lint nor tests. A green pipeline means "it packaged", nothing more.
 - There is no VS Code extension-host test suite. `test/unit/` covers only pure logic.
 

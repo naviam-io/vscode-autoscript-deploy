@@ -1,5 +1,5 @@
 // @ts-nocheck
-const { Buffer } = require('buffer');
+const crypto = require('crypto');
 
 /**
  * Builds the scheme, host and port portion of a Maximo URL, omitting the port when it is the
@@ -17,45 +17,15 @@ function getBaseUrl(env) {
 }
 
 /**
- * Constructs the URL for the Naviam MCP server on the given Maximo environment.
- * The /api/script/${scriptName} route handles both API key and maxauth authentication,
- * and cleanly handles GET requests with 405 Method Not Allowed (unlike /oslc/).
+ * Whether the environment has a usable stored API key or password, so connecting needs no prompt.
+ * A value that failed to decrypt keeps its {encrypted} prefix and does not count.
  *
  * @param {Object} env
- * @param {string} [scriptName]
- * @returns {string}
+ * @returns {boolean}
  */
-function getScriptUrl(env, scriptName) {
-    const context = (env.context || 'maximo').replace(/^\/+|\/+$/g, '');
-    const script = (scriptName || 'naviam.mcp').trim();
-    return `${getBaseUrl(env)}/${context}/api/script/${script}`;
-}
-
-/**
- * Formats the authentication headers for the MCP server definition.
- * Returns null if no valid credentials can be constructed.
- * Validates that credentials are not still in their {encrypted} state.
- *
- * @param {Object} env
- * @param {string} [promptedPassword]
- * @returns {Record<string, string>|null}
- */
-function formatMcpHeaders(env, promptedPassword) {
-    const validApiKey = env.apiKey && !env.apiKey.startsWith('{encrypted}') ? env.apiKey : null;
-    const rawPassword = env.password && !env.password.startsWith('{encrypted}') ? env.password : null;
-    const password = rawPassword || (promptedPassword && !promptedPassword.startsWith('{encrypted}') ? promptedPassword : null);
-
-    if (validApiKey && !env.maxauthOnly) {
-        return { apikey: validApiKey };
-    }
-    if (env.username && password) {
-        const auth = Buffer.from(`${env.username}:${password}`).toString('base64');
-        return { maxauth: auth };
-    }
-    if (validApiKey) {
-        return { apikey: validApiKey };
-    }
-    return null;
+function hasStoredCredentials(env) {
+    const usable = (value) => typeof value === 'string' && value !== '' && !value.startsWith('{encrypted}');
+    return usable(env.apiKey) || Boolean(env.username && usable(env.password));
 }
 
 /**
@@ -83,6 +53,33 @@ function getScriptCheckKey(env, scriptName) {
 }
 
 /**
+ * Identifies the Maximo session the relay can reuse: the same target, user, stored credentials and
+ * connection options. The credentials and CA are hashed so the key never holds them in clear.
+ *
+ * @param {Object} env
+ * @returns {string}
+ */
+function getConnectionKey(env) {
+    const secret = crypto
+        .createHash('sha256')
+        .update(JSON.stringify([env.apiKey || '', env.password || '', env.proxyPassword || '', env.ca || '']))
+        .digest('hex');
+    return JSON.stringify([
+        env.host,
+        env.port,
+        env.useSSL,
+        env.context,
+        env.username,
+        Boolean(env.allowUntrustedCerts),
+        Boolean(env.maxauthOnly),
+        env.proxyHost || '',
+        env.proxyPort || '',
+        env.proxyUsername || '',
+        secret
+    ]);
+}
+
+/**
  * Explains why the MCP server cannot be used for a script lookup result, or returns null when the
  * script is installed and active.
  *
@@ -102,11 +99,58 @@ function describeScriptStatus(status, scriptName, environmentLabel) {
     return null;
 }
 
+/**
+ * Whether Maximo turned a relayed request away because its session is no longer valid: a 401, or a
+ * redirect to the login page.
+ *
+ * @param {number} status
+ * @returns {boolean}
+ */
+function isSessionRejected(status) {
+    return status === 401 || (status >= 300 && status < 400);
+}
+
+/**
+ * Logs clients in again when Maximo rejects their session, once per session. A request notes the
+ * session it was sent on with session(); renew() then shares a login already in progress, and
+ * skips the login when another request has already replaced that session.
+ *
+ * @returns {{session: (client: Object) => number, renew: (client: Object, session: number, login: () => Promise<*>) => Promise<void>}}
+ */
+function createSessionRenewer() {
+    const sessions = new WeakMap();
+    const renewing = new WeakMap();
+    const session = (client) => sessions.get(client) || 0;
+
+    return {
+        session,
+        renew(client, sent, login) {
+            const pending = renewing.get(client);
+            if (pending) {
+                return pending;
+            }
+            if (session(client) !== sent) {
+                return Promise.resolve();
+            }
+            const renewal = Promise.resolve()
+                .then(login)
+                .then(() => {
+                    sessions.set(client, sent + 1);
+                })
+                .finally(() => renewing.delete(client));
+            renewing.set(client, renewal);
+            return renewal;
+        }
+    };
+}
+
 module.exports = {
     getBaseUrl,
-    getScriptUrl,
-    formatMcpHeaders,
+    hasStoredCredentials,
     getMcpScriptName,
     getScriptCheckKey,
-    describeScriptStatus
+    getConnectionKey,
+    describeScriptStatus,
+    isSessionRejected,
+    createSessionRenewer
 };

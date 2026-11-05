@@ -1,0 +1,53 @@
+{
+    "productV1": {
+        "endPoints": [
+            {
+                "endPointName": "NVTEST_EP_RETAIN",
+                "description": "Retained values test, release 1",
+                "handlerName": "HTTP",
+                "properties": [
+                    { "property": "URL", "value": "https://example.com/release1", "_retain": ["value"] },
+                    { "property": "PASSWORD", "password": "Release1Secret", "_retain": ["password"] },
+                    { "property": "HTTPMETHOD", "value": "POST" }
+                ]
+            }
+        ]
+    },
+    "customerEdit": {
+        "endPoints": [
+            {
+                "endPointName": "NVTEST_EP_RETAIN",
+                "properties": [
+                    { "property": "URL", "value": "https://customer.example.com/api" },
+                    { "property": "PASSWORD", "password": "CustomerSecret1" },
+                    { "property": "HTTPMETHOD", "value": "PUT" }
+                ]
+            }
+        ]
+    },
+    "customerEditCleared": {
+        "endPoints": [
+            {
+                "endPointName": "NVTEST_EP_RETAIN",
+                "properties": [
+                    { "property": "URL", "value": "https://customer.example.com/v2" },
+                    { "property": "PASSWORD", "password": null }
+                ]
+            }
+        ]
+    },
+    "productV2": {
+        "endPoints": [
+            {
+                "endPointName": "NVTEST_EP_RETAIN",
+                "description": "Retained values test, release 2",
+                "handlerName": "HTTP",
+                "properties": [
+                    { "property": "URL", "value": "https://example.com/release2", "_retain": ["value"] },
+                    { "property": "PASSWORD", "password": "Release2Secret", "_retain": ["password"] },
+                    { "property": "HTTPMETHOD", "value": "GET" }
+                ]
+            }
+        ]
+    }
+}

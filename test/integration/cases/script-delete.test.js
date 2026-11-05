@@ -9,7 +9,7 @@
  * whether or not the earlier steps got far enough, and a second run of the same deletion all ask
  * to delete something that has already gone.
  */
-const { assertEquals, assertNotNull } = require('../harness');
+import { assertEquals, assertNotNull } from '../harness.js';
 
 const SCRIPT_NAME = 'NVTEST.DELETE.SCRIPT';
 
@@ -30,7 +30,7 @@ function scriptSource(name) {
     ].join('\n');
 }
 
-module.exports = {
+export default {
     name: 'script-delete',
     run: async (client) => {
         try {

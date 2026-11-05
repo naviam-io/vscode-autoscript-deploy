@@ -1,0 +1,34 @@
+{
+    "externalSystems": [
+        {
+            "extSysName": "TESTCOMPLETEXS",
+            "_retain": ["description", "enabled"],
+            "description": "Complete manifest test external system",
+            "endPointName": "TESTCOMPLETEHTTP",
+            "enabled": false,
+            "publishChannels": [
+                {
+                    "publishChannel": {
+                        "ifaceName": "TESTXSPERSONPC",
+                        "description": "Complete manifest test external system channel",
+                        "intObjectName": "MXPERSON"
+                    },
+                    "_retain": ["enabled"],
+                    "enabled": false,
+                    "endPointName": "TESTCOMPLETEHTTP"
+                }
+            ],
+            "enterpriseServices": [
+                {
+                    "enterpriseService": {
+                        "ifaceName": "TESTXSPERSONES",
+                        "description": "Complete manifest test external system service",
+                        "intObjectName": "MXPERSON"
+                    },
+                    "enabled": true
+                }
+            ],
+            "integrationControls": [{ "control": "WOSTART", "listValues": [{ "value": "!APPR!" }] }]
+        }
+    ]
+}

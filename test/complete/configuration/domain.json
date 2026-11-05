@@ -2,6 +2,7 @@
     "domains": [
         {
             "domainId": "TESTABCTYPE",
+            "_retain": ["alnDomain"],
             "domainType": "!ALN!",
             "description": "Complete manifest test ALN domain",
             "maxType": "UPPER",
@@ -10,12 +11,14 @@
             "alnDomain": [
                 {
                     "value": "A",
+                    "_retain": ["description"],
                     "description": "Type A"
                 }
             ]
         },
         {
             "domainId": "TESTNUMDOM",
+            "_retain": ["numericDomain"],
             "domainType": "!NUMERIC!",
             "description": "Complete manifest test numeric domain",
             "maxType": "INTEGER",
@@ -24,12 +27,14 @@
             "numericDomain": [
                 {
                     "value": "1",
+                    "_retain": ["description"],
                     "description": "One"
                 }
             ]
         },
         {
             "domainId": "TESTRANGEDOM",
+            "_retain": ["numRangeDomain"],
             "domainType": "!NUMRANGE!",
             "description": "Complete manifest test numeric range domain",
             "maxType": "INTEGER",
@@ -38,6 +43,7 @@
             "numRangeDomain": [
                 {
                     "rangeSegment": "1",
+                    "_retain": ["rangeMaximum"],
                     "rangeMinimum": 1000,
                     "rangeMaximum": 50000,
                     "rangeInterval": 1000
@@ -46,11 +52,13 @@
         },
         {
             "domainId": "TESTTABLEDOM",
+            "_retain": ["tableDomain"],
             "domainType": "!MAXTABLE!",
             "description": "Complete manifest test table domain",
             "tableDomain": [
                 {
                     "objectName": "MAXUSER",
+                    "_retain": ["listWhereClause"],
                     "validtnWhereClause": "userid = :userid",
                     "listWhereClause": "status = 'ACTIVE'",
                     "errorResourceBundle": "system",
@@ -60,11 +68,13 @@
         },
         {
             "domainId": "TESTXOVERDOM",
+            "_retain": ["crossoverDomain"],
             "domainType": "!CROSSOVER!",
             "description": "Complete manifest test crossover domain",
             "crossoverDomain": [
                 {
                     "objectName": "MAXUSER",
+                    "_retain": ["listWhereClause", "crossoverFields"],
                     "validtnWhereClause": "userid = :userid",
                     "listWhereClause": "status = 'ACTIVE'",
                     "errorResourceBundle": "system",
@@ -73,6 +83,7 @@
                         {
                             "sourceField": "DEFSITE",
                             "destField": "SITEID",
+                            "_retain": ["copyOnlyIfDestNull"],
                             "copyEvenIfSrcNull": true,
                             "copyOnlyIfDestNull": true,
                             "sequence": 1

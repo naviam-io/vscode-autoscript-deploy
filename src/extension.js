@@ -2,8 +2,9 @@
 // @ts-nocheck
 import { window, commands, workspace, ProgressLocation, Uri, StatusBarAlignment, TextEditorRevealType, Range, Position, debug, Disposable } from 'vscode';
 
-import MaximoConfig from './maximo/maximo-config';
-import MaximoClient from './maximo/maximo-client';
+import MaximoConfig from './core/maximo/maximo-config.js';
+import MaximoClient from './core/maximo/maximo-client.js';
+import { isLoginRejection } from './core/maximo/errors.js';
 import ServerSourceProvider from './maximo/provider';
 
 import deployCommand from './commands/deploy-command';
@@ -19,7 +20,7 @@ import selectEnvironment from './commands/select-environment';
 import extractObjectCommand from './commands/extract-objects-command';
 import initTsTemplateCommand from './commands/init-ts-template-command';
 import * as schemaSupport from './schemas/schema-support';
-import { validateSettings } from './settings';
+import { validateSettings, findSettingsProblem } from './settings';
 import {
     AutoScriptDebugConfigurationProvider,
     AutoScriptDebugAdapterDescriptorFactory,
@@ -30,21 +31,19 @@ import {
 import * as path from 'path';
 import * as fs from 'fs';
 
-import * as temp from 'temp';
+import * as os from 'os';
 import { TextDecoder, TextEncoder } from 'text-encoding';
 import Logger from './logger';
+import { setLogger as setCoreLogger } from './core/log.js';
 
 import LocalConfiguration from './config';
 import { registerMcpProvider, notifyMcpEnvironmentChanged } from './mcp-provider';
 import { findSelectedEnvironment, resolveEnvironment } from './environment';
+import { createPasswordCache } from './password-cache';
 
-temp.track();
+setCoreLogger(Logger);
 
-var password;
-var lastUser;
-var lastHost;
-var lastPort;
-var lastContext;
+const passwords = createPasswordCache();
 var logState = false;
 var currentLogPath;
 var currentWindow;
@@ -100,7 +99,7 @@ export function activate(context) {
     context.subscriptions.push(selectedEnvironment);
 
     setupEnvironmentSelection();
-    registerMcpProvider(context, { checkScript: checkMcpScript, getLocalConfig });
+    registerMcpProvider(context, { connect: connectMcpClient, getLocalConfig });
 
     watchLocalConfiguration();
 
@@ -252,7 +251,7 @@ export function activate(context) {
                     }
                 } catch (error) {
                     if (error && typeof error.reasonCode !== 'undefined' && error.reasonCode === 'BMXAA0021E') {
-                        password = undefined;
+                        passwords.clear();
                         window.showErrorMessage(error.message, { modal: true });
                     } else if (error && typeof error.message !== 'undefined') {
                         window.showErrorMessage(error.message, { modal: true });
@@ -272,7 +271,7 @@ export function activate(context) {
     });
 
     context.subscriptions.push(
-        commands.registerCommand('maximo-script-deploy.refreshMcpServer', () => notifyMcpEnvironmentChanged())
+        commands.registerCommand('maximo-script-deploy.refreshMcpServer', () => notifyMcpEnvironmentChanged({ interactive: true }))
     );
 
     context.subscriptions.push(
@@ -372,7 +371,7 @@ async function toggleLog() {
             }
 
             if (error && typeof error.reasonCode !== 'undefined' && error.reasonCode === 'BMXAA0021E') {
-                password = undefined;
+                passwords.clear();
                 window.showErrorMessage(error.message, { modal: true });
             } else if (error && typeof error.message !== 'undefined') {
                 window.showErrorMessage(error.message, { modal: true });
@@ -419,11 +418,7 @@ function startLogging(config, server) {
             }
         }
     } else {
-        // @ts-ignore
-        logFilePath = temp.path({
-            suffix: '.log',
-            defaultPrefix: 'maximo'
-        });
+        logFilePath = path.join(os.tmpdir(), `maximo-${Date.now()}-${process.pid}.log`);
     }
 
     // eslint-disable-next-line no-undef
@@ -580,33 +575,50 @@ function watchLocalConfiguration() {
 }
 
 /**
- * Looks up the MCP automation script on the selected environment. Connects directly rather than
- * through login(), which would also run the Naviam script install and upgrade checks.
+ * Connects a client to the selected environment for the MCP relay.
+ * Connects directly rather than through login(), which would also run the Naviam script install
+ * and upgrade checks. Only an interactive connection may prompt or show a dialog; otherwise a
+ * missing setting or password is thrown as an error for the relay to report.
+ *
+ * @param {{interactive?: boolean}} [options]
  */
-async function checkMcpScript(scriptName, credentials) {
-    const config = await getMaximoConfig({ ...credentials, prompt: false });
+async function connectMcpClient(options = {}) {
+    const interactive = Boolean(options.interactive);
+    const config = await getMaximoConfig({ interactive });
     if (!config) {
-        throw new Error('no password or API key is available for the environment');
+        throw new Error(
+            interactive
+                ? 'no password or API key is available for the environment'
+                : 'no password or API key is available for the environment; run "Refresh Maximo MCP Server" to sign in'
+        );
     }
 
     const client = new MaximoClient(config);
     try {
         await client.connect();
-        return await client.scriptStatus(scriptName);
-    } finally {
-        await client.disconnect();
+    } catch (error) {
+        if (isLoginRejection(error)) {
+            passwords.clear();
+        }
+        throw error;
     }
+    return client;
 }
 
 /**
- * Resolves the connection configuration for the selected environment.
+ * Resolves the connection configuration for the selected environment. A password entered or read
+ * for one environment is kept only for that host, port, context and user.
  *
- * @param {{password?: string, apiKey?: string, prompt?: boolean}} [options] credentials already
- * obtained elsewhere, used when none is stored, and whether to prompt for a missing password.
+ * @param {{password?: string, apiKey?: string, interactive?: boolean}} [options] credentials
+ * already obtained elsewhere, used when none is stored, and whether a missing setting or password
+ * may be asked for, which defaults to true, and otherwise is thrown as an error.
  */
 export async function getMaximoConfig(options = {}) {
+    const interactive = options.interactive !== false;
     try {
-        const env = resolveEnvironment(findSelectedEnvironment(await (await getLocalConfig()).config), workspace.getConfiguration('naviam'));
+        const selected = findSelectedEnvironment(await (await getLocalConfig()).config);
+        const env = resolveEnvironment(selected, workspace.getConfiguration('naviam'));
+        const label = env.name || env.host;
 
         let apiKey = env.apiKey;
 
@@ -615,52 +627,34 @@ export async function getMaximoConfig(options = {}) {
         );
 
         // make sure we have all the settings.
-        if (
-            !validateSettings({
-                host: env.host,
-                username: env.username,
-                port: env.port,
-                apiKey: apiKey
-            })
-        ) {
+        const settings = { host: env.host, username: env.username, port: env.port, apiKey: apiKey };
+        if (!interactive) {
+            const problem = findSettingsProblem(settings);
+            if (problem) {
+                throw new Error(`${problem.message} for ${label || 'the selected environment'}`);
+            }
+        } else if (!validateSettings(settings)) {
             Logger.debug('Config validation failed; at least one required setting is missing.');
             return;
         }
 
-        // if the last user doesn't match the current user then request the password.
-        if (lastUser && lastUser !== env.username) {
-            password = null;
-        }
-
-        if (lastHost && lastHost !== env.host) {
-            password = null;
-        }
-
-        if (lastPort && lastPort !== env.port) {
-            password = null;
-        }
-
-        if (lastContext && lastContext !== env.context) {
-            password = null;
-        }
-
         if (typeof env.password !== 'undefined') {
-            password = env.password;
+            passwords.set(env, env.password);
         }
 
         if (options.apiKey) {
             apiKey = options.apiKey;
         }
 
-        let configPassword = password || options.password;
+        let configPassword = passwords.get(env) || options.password;
 
         if (!apiKey) {
             if (!configPassword) {
-                if (options.prompt === false) {
+                if (!interactive) {
                     return undefined;
                 }
-                configPassword = password = await window.showInputBox({
-                    prompt: `Enter ${env.username}'s password`,
+                configPassword = await window.showInputBox({
+                    prompt: `Enter ${env.username}'s password for ${label}`,
                     password: true,
                     validateInput: (text) => {
                         if (!text || text.trim() === '') {
@@ -668,6 +662,7 @@ export async function getMaximoConfig(options = {}) {
                         }
                     }
                 });
+                passwords.set(env, configPassword);
             }
 
             // if the password has not been set then just return.
@@ -682,15 +677,16 @@ export async function getMaximoConfig(options = {}) {
             apiKey: apiKey,
             connectTimeout: env.timeout * 1000,
             responseTimeout: env.timeout * 1000,
-            configurationTimeout: env.configurationTimeout * 60000
+            configurationTimeout: env.configurationTimeout * 60000,
+            resourcesDir: path.resolve(__dirname, '../resources')
         });
     } catch (error) {
-        if (error.reason == 'WRONG_FINAL_BLOCK_LENGTH') {
-            window.showErrorMessage('An error occurred decrypting the password or API Key from the .devtools-config.json file.', { modal: true });
-        } else {
-            window.showErrorMessage(error.message, { modal: true });
+        const message =
+            error.reason == 'WRONG_FINAL_BLOCK_LENGTH' ? 'An error occurred decrypting the password or API Key from the .devtools-config.json file.' : error.message;
+        if (!interactive) {
+            throw new Error(message);
         }
-
+        window.showErrorMessage(message, { modal: true });
         return;
     }
 }
@@ -776,17 +772,10 @@ function getLoggingConfig() {
 export async function login(client) {
     Logger.debug(`Connecting to Maximo at ${client.config.host}:${client.config.port} (useSSL=${client.config.useSSL}).`);
     let logInSuccessful = await client.connect().then(
-        () => {
-            lastUser = client.config.userName;
-            lastHost = client.config.host;
-            lastPort = client.config.port;
-            lastContext = client.config.maximoContext;
-            return true;
-        },
+        () => true,
         (error) => {
             // clear the password on error
-            password = undefined;
-            lastUser = undefined;
+            passwords.clear();
             // show the error message to the user.
             if (error.message.includes('ENOTFOUND')) {
                 window.showErrorMessage('The host name "' + client.config.host + '" cannot be found.', { modal: true });
@@ -909,12 +898,6 @@ async function upgraded(client) {
     } else {
         Logger.debug('Scripts are already up to date; no upgrade needed.');
         return true;
-    }
-}
-
-export async function asyncForEach(array, callback) {
-    for (let index = 0; index < array.length; index++) {
-        await callback(array[index], index, array);
     }
 }
 

@@ -1,0 +1,44 @@
+{
+    "publishChannels": [
+        {
+            "ifaceName": "TESTPERSONPC",
+            "_retain": ["description", "storeMsg"],
+            "description": "Complete manifest test publish channel",
+            "objectStructure": {
+                "intObjectName": "TESTPCPERSON",
+                "description": "Complete manifest test embedded object structure",
+                "maxIntObjDetail": [{ "objectName": "PERSON" }]
+            },
+            "publishJson": true,
+            "storeMsg": false,
+            "processingRules": [
+                {
+                    "procName": "TESTSKIPINACT",
+                    "_retain": ["enabled"],
+                    "action": "!SKIP!",
+                    "objectName": "PERSON",
+                    "description": "Skip inactive people",
+                    "enabled": true,
+                    "applyOnInsert": true,
+                    "applyOnUpdate": true,
+                    "conditions": [
+                        {
+                            "condition": 10,
+                            "details": [
+                                {
+                                    "condSequence": 1,
+                                    "condType": "FIELD",
+                                    "evalType": "!EQUALS!",
+                                    "changeType": "!ALWAYS!",
+                                    "compareType": "VALUE",
+                                    "columnName": "STATUS",
+                                    "value": "INACTIVE"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

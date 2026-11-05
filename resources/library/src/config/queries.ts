@@ -1,14 +1,21 @@
 /// <reference path="../../globals.d.ts" />
 /// <reference path="../../manage-facade.d.ts" />
 
-import { applyValues, close, setValue, updateProgress, valueOrDefault } from '../core/util';
+import { applyValues, close, requireKeys, setValue, updateProgress, valueOrDefault } from '../core/util';
+import { applyRetainedValues, hasRetainDeclarations, retainIdentityOf } from '../core/retained-values';
+import { deleteSnapshot, readSnapshot, snapshotKey, writeSnapshot } from '../core/snapshot-store';
+import { captureExistingState } from '../core/capture';
 
 var MXServer = Java.type('psdi.server.MXServer');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
 var MboConstants = Java.type('psdi.mbo.MboConstants');
 
+/** The Maximo object a query snapshot is keyed by. */
+export const SNAPSHOT_OBJECT = 'QUERY';
+
 export function process(query: MaximoQuery): void {
     const maximo: psdi.server.MXServer = MXServer.getMXServer();
+    const key = snapshotKey(SNAPSHOT_OBJECT, retainIdentityOf(query));
     let mboSet: psdi.mbo.MboSetRemote | null = null;
     try {
         mboSet = maximo.getMboSet('QUERY', maximo.getSystemUserInfo());
@@ -17,10 +24,12 @@ export function process(query: MaximoQuery): void {
         if (query._delete) {
             updateProgress('Deleting query ' + queryName);
             deleteQuery(mboSet, query);
+            deleteSnapshot(key);
             updateProgress('Deleted query ' + queryName);
         } else {
             updateProgress('Adding/Updating query ' + queryName);
-            addOrUpdateQuery(mboSet, query);
+            addOrUpdateQuery(mboSet, query, key);
+            deleteSnapshot(key);
             updateProgress('Added/Updated query ' + queryName);
         }
     } finally {
@@ -38,12 +47,27 @@ function deleteQuery(mboSet: psdi.mbo.MboSetRemote, query: MaximoQuery): void {
     mboSet.save();
 }
 
-function addOrUpdateQuery(mboSet: psdi.mbo.MboSetRemote, query: MaximoQuery): void {
-    let mbo = findQuery(mboSet, query);
-    if (!mbo) {
-        mbo = mboSet.add();
+function addOrUpdateQuery(mboSet: psdi.mbo.MboSetRemote, query: MaximoQuery, key: string): void {
+    const existing = findQuery(mboSet, query);
+
+    if (hasRetainDeclarations(query)) {
+        let snapshot = readSnapshot(key);
+        if (!snapshot && existing) {
+            snapshot = captureExistingState('queries', existing.getUniqueIDValue());
+            if (!snapshot) {
+                throw Error(
+                    'Query ' +
+                        retainIdentityOf(query) +
+                        ' has an existing record whose state could not be captured, so its retained values cannot be preserved.'
+                );
+            }
+            writeSnapshot(key, snapshot);
+        }
+
+        query = applyRetainedValues(query, snapshot ? new MaximoQuery(snapshot) : null);
     }
 
+    const mbo = existing || mboSet.add();
     applyQueryValues(mbo, query);
     mboSet.save();
 }
@@ -88,9 +112,12 @@ export interface MaximoQueryInput {
     intObjectName?: string | null;
     notes?: string | null;
     priority?: number | null;
+    _retain?: any;
 }
 
 export class MaximoQuery {
+    static _keys = ['app', 'clauseName', 'owner'];
+
     _delete = false;
     app: string;
     clauseName: string;
@@ -102,8 +129,10 @@ export class MaximoQuery {
     notes?: string | null;
     owner: string;
     priority?: number | null;
+    _retain: any = [];
 
     constructor(input: MaximoQueryInput) {
+        requireKeys(MaximoQuery, input, 'query');
         this.app = input.app;
         this.clauseName = input.clauseName;
         this.owner = input.owner;
@@ -116,5 +145,6 @@ export class MaximoQuery {
         this.intObjectName = input.intObjectName;
         this.notes = input.notes;
         this.priority = input.priority;
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }

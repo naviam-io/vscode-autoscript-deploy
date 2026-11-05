@@ -1,0 +1,95 @@
+{
+    "productV1": {
+        "publishChannels": [
+            {
+                "ifaceName": "NVTEST_PC_RETAIN",
+                "description": "Retained values test, release 1",
+                "intObjectName": "MXASSET",
+                "storeMsg": false,
+                "integrationControls": [{ "control": "WOSTART" }],
+                "processingRules": [
+                    {
+                        "procName": "NVSKIP",
+                        "action": "!SKIP!",
+                        "objectName": "ASSET",
+                        "description": "Release 1",
+                        "enabled": true,
+                        "applyOnInsert": true,
+                        "conditions": [
+                            {
+                                "condition": 10,
+                                "details": [{ "condType": "FIELD", "evalType": "!EQUALS!", "changeType": "!ALWAYS!", "compareType": "VALUE", "columnName": "STATUS", "value": "BROKEN" }]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "customerEdit": {
+        "publishChannels": [
+            {
+                "ifaceName": "NVTEST_PC_RETAIN",
+                "description": "Customer description",
+                "intObjectName": "MXASSET",
+                "storeMsg": true,
+                "integrationControls": [{ "control": "WOSTART" }, { "control": "POSEND" }],
+                "processingRules": [
+                    {
+                        "procName": "NVSKIP",
+                        "action": "!SKIP!",
+                        "objectName": "ASSET",
+                        "description": "Customer rule",
+                        "enabled": false,
+                        "applyOnInsert": true,
+                        "conditions": [
+                            {
+                                "condition": 10,
+                                "details": [{ "condType": "FIELD", "evalType": "!EQUALS!", "changeType": "!ALWAYS!", "compareType": "VALUE", "columnName": "STATUS", "value": "MISSING" }]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "productV2": {
+        "publishChannels": [
+            {
+                "ifaceName": "NVTEST_PC_RETAIN",
+                "_retain": ["description", "integrationControls"],
+                "description": "Retained values test, release 2",
+                "intObjectName": "MXASSET",
+                "storeMsg": false,
+                "integrationControls": [{ "control": "WOSTART" }],
+                "processingRules": [
+                    {
+                        "procName": "NVSKIP",
+                        "_retain": ["enabled"],
+                        "action": "!SKIP!",
+                        "objectName": "ASSET",
+                        "description": "Release 2",
+                        "enabled": true,
+                        "applyOnInsert": true,
+                        "conditions": [
+                            {
+                                "condition": 10,
+                                "details": [
+                                    {
+                                        "_retain": ["value"],
+                                        "condType": "FIELD",
+                                        "evalType": "!EQUALS!",
+                                        "changeType": "!ALWAYS!",
+                                        "compareType": "VALUE",
+                                        "columnName": "STATUS",
+                                        "value": "BROKEN"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

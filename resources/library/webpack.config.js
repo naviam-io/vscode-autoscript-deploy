@@ -1,4 +1,5 @@
 /* eslint-disable no-undef */
+const fs = require('fs');
 const path = require('path');
 const webpack = require('webpack');
 const TerserPlugin = require('terser-webpack-plugin');
@@ -81,7 +82,9 @@ module.exports = (env, argv) => {
         optimization: {
             // Set this to false to disable minification during the build and make debugging easier
             minimize: isProduction,
-            minimizer: [terserMinimizer]
+            minimizer: [terserMinimizer],
+            // Nothing in the bundle references scriptConfig, so webpack would replace it with null
+            innerGraph: false
         },
         module: {
             rules: [
@@ -153,6 +156,27 @@ var window = this;
     };
 };
 
+// TypeScript emits an ES5 class as `var Name = (function () { function Name() {} return Name; })()`.
+// keep_fnames keeps the inner name only, so the outer binding is reserved to keep it readable.
+function collectClassNames(dir) {
+    return fs.readdirSync(dir, { withFileTypes: true }).reduce((names, entry) => {
+        const file = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            return names.concat(collectClassNames(file));
+        }
+        if (!entry.name.endsWith('.ts')) {
+            return names;
+        }
+        const pattern = /^\s*(?:export\s+)?(?:default\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/gm;
+        const source = fs.readFileSync(file, 'utf8');
+        let match;
+        while ((match = pattern.exec(source))) {
+            names.push(match[1]);
+        }
+        return names;
+    }, []);
+}
+
 const terserMinimizer = new TerserPlugin({
     terserOptions: {
         ecma: 5,
@@ -214,7 +238,7 @@ const terserMinimizer = new TerserPlugin({
                 'user',
                 'userInfo',
                 'wfinstance'
-            ],
+            ].concat(collectClassNames(path.resolve(__dirname, 'src'))),
             keep_fnames: true,
             toplevel: false
             // Don't mangle top-level variables

@@ -7,10 +7,10 @@
  * particular an Identifier key (carrying "name") for an unquoted property key and a Literal key
  * (carrying "value") for a quoted one. That distinction is the subject of bug #150202.
  */
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
-const acorn = require('acorn');
-const { loadScriptFunctions } = require('../harness');
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import * as acorn from 'acorn';
+import { loadScriptFunctions } from '../harness.js';
 
 const { astToJavaScript } = loadScriptFunctions('resources/naviam.autoscript.deploy.js', ['astToJavaScript', 'astPropertyKeyName'], {});
 

@@ -1,6 +1,6 @@
 # Introduction
 
-These scripts are common between the VS Code Maximo Developer Tools extension and the NPM Maximo Developer Command Line Tools. The two projects reference them via a sub-repository.
+These scripts run inside Maximo and are installed by both the VS Code Maximo Developer Tools extension and the NPM Maximo Developer Command Line Tools. They were previously kept in the separate `maximo-dev-tools-common` repository and referenced as a submodule; that repository is now read-only and these scripts are maintained here.
 
 # Scripts
 

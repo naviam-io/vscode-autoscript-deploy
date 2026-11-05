@@ -202,7 +202,9 @@ module.exports = (env, argv) => {
             // Set this to false to disable minification during the build and make debugging easier
             minimize: isProduction,
             // Removed late injection call
-            minimizer: [terserMinimizer]
+            minimizer: [terserMinimizer],
+            // Nothing in the bundle references scriptConfig, so webpack would replace it with null
+            innerGraph: false
         },
         module: {
             rules: [

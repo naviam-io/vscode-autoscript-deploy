@@ -1,0 +1,11 @@
+{
+    "messages": [
+        {
+            "msgGroup": "NVTESTCLI",
+            "msgKey": "SMOKE",
+            "value": "CLI test message",
+            "displayMethod": "MSGBOX",
+            "options": ["ok"]
+        }
+    ]
+}

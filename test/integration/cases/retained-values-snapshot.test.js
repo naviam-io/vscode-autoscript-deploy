@@ -11,8 +11,8 @@
  * The prompt itself is VS Code UI and is not covered here; what is covered is everything it depends
  * on being true.
  */
-const { assertEquals, assertNotNull } = require('../harness');
-const { loadFixture } = require('../round-trip');
+import { assertEquals, assertNotNull } from '../harness.js';
+import { loadFixture } from '../round-trip.js';
 
 const CRON_TASK_NAME = 'TEST_SNAPSHOT';
 
@@ -26,7 +26,7 @@ async function expectDeployToFail(client, config, because) {
     throw new Error('The deployment was expected to fail, ' + because + ', but it succeeded.');
 }
 
-module.exports = {
+export default {
     name: 'retained-values-snapshot',
     run: async (client) => {
         const fixture = loadFixture('retained-values-snapshot');

@@ -1,4 +1,15 @@
 {
+    "externalSystems": [
+        {
+            "extSysName": "TESTCOMPLETEXS",
+            "publishChannels": [{ "publishChannel": { "ifaceName": "TESTXSPERSONPC", "_delete": true } }],
+            "enterpriseServices": [{ "enterpriseService": { "ifaceName": "TESTXSPERSONES", "_delete": true } }],
+            "_delete": true
+        }
+    ],
+    "enterpriseServices": [{ "ifaceName": "TESTPERSONES", "objectStructure": { "intObjectName": "TESTESPERSON", "_delete": true }, "_delete": true }],
+    "publishChannels": [{ "ifaceName": "TESTPERSONPC", "objectStructure": { "intObjectName": "TESTPCPERSON", "_delete": true }, "_delete": true }],
+    "endPoints": [{ "endPointName": "TESTCOMPLETEHTTP", "_delete": true }],
     "integrationObjects": [{ "intObjectName": "TESTPERSONAPI", "_delete": true }],
     "queries": [{ "app": "AUTOSCRIPT", "clauseName": "TESTCOMPLETE", "owner": "MAXADMIN", "_delete": true }],
     "escalations": [{ "escalation": "TESTREPORTLONG", "_delete": true }],

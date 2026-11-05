@@ -22,6 +22,7 @@ The extension allows developers to describe the automation script through the us
       - [JSON Pre-deploy File](#json-pre-deploy-file)
       - [Example Deploy JSON](#example-deploy-json)
       - [Retaining Customer Values](#retaining-customer-values)
+      - [Presentation Changes](#presentation-changes)
       - [Deploying Maximo Objects](#deploying-maximo-objects)
     - [Prettier Compatibility](#prettier-compatibility)
     - [JavaScript / Nashorn Example](#javascript--nashorn-example)
@@ -37,6 +38,7 @@ The extension allows developers to describe the automation script through the us
     - [Deployment Manifest](#deployment-manifest)
       - [Entry Kinds](#entry-kinds)
       - [Disabling an Entry](#disabling-an-entry)
+      - [Keeping Changes Made in Maximo](#keeping-changes-made-in-maximo)
       - [Example Manifest](#example-manifest)
   - [Extract Automation Scripts](#extract-automation-scripts)
   - [Extract Screen Definitions](#extract-screen-definitions)
@@ -230,7 +232,7 @@ When using a script for deploy actions, that script file may be named the same a
 
 As of version `1.13.0` a JSON document can be used to define select objects to deploy along with the script. Providing a JSON file with the same name as the primary script, with a `.json` file extension will cause the tooling to deploy the objects defined in the JSON document along with the script.
 
-Currently Actions, Cron Tasks, Domains, Escalations, Integration Objects, Loggers, Maximo Objects, Messages, Properties and Queries are available. The JSON schemas for these objects are provided in the project under the `.vscode` directory and your `.vscode/settings.json` will be updated to provide intellisense support in configuration json files.
+Currently Actions, Cron Tasks, Domains, End Points, Enterprise Services, Escalations, Integration Objects, Loggers, Maximo Objects, Messages, Presentation Changes, Properties, Publish Channels and Queries are available. The JSON schemas for these objects are provided in the project under the `.vscode` directory and your `.vscode/settings.json` will be updated to provide intellisense support in configuration json files.
 
 A JSON deploy file can also be deployed on its own by opening it and selecting `Deploy to Maximo`. Attributes that the target Maximo version does not have are skipped and noted in the log.
 
@@ -258,6 +260,8 @@ A value that starts with `!` must be an internal value written as `!VALUE!`. An 
 As of version `1.14.0` there is support for a JSON deploy file that is applied prior to deploying the automation script. To have the JSON deploy file applied prior to deploying the automation script, name the file the same as the primary script with `.predeploy.json` as the suffix. The extension will automatically find the file and apply it before deploying the automation script.
 
 As of version `1.23.0` support was added for deploy and predeploy file validation.
+
+The pre-deploy file is a legacy format that only declares Maximo objects. Maximo objects now belong in the JSON deploy file under `objects`, which also supports `_retain`, see [Deploying Maximo Objects](#deploying-maximo-objects). The pre-deploy file and its schema keep working unchanged.
 
 For example if a script is contained in a file named `example.js` the pre-deploy JSON file will be named `example.predeploy.json`.
 
@@ -296,7 +300,7 @@ Below is an example deploy JSON that will create or update two messages and a pr
 
 #### Retaining Customer Values
 
-A product usually ships the same deploy file for the first installation and for every upgrade. Without further markers, an upgrade overwrites every value the customer changed after installation. The `_retain` property lists the values that the customer owns once the record exists in Maximo. It is currently supported for cron tasks and domains.
+A product usually ships the same deploy file for the first installation and for every upgrade. Without further markers, an upgrade overwrites every value the customer changed after installation. The `_retain` property lists the values that the customer owns once the record exists in Maximo. It is currently supported for actions, cron tasks, domains, end points, enterprise services, escalations, external systems, integration objects, loggers, Maximo objects, messages, properties, publish channels and queries.
 
 ```json
 {
@@ -325,9 +329,73 @@ On the first installation the values from the file are applied as defaults. On l
 
 The JSON schema offers only the properties that can be retained. If a deployment that uses `_retain` fails, the customer values saved during it are kept in the `DOCINFO` database table. The next deployment asks whether to restore them or discard them, and cancelling the prompt cancels the deployment before anything is changed.
 
+#### Presentation Changes
+
+`presentations` changes part of an existing application or system presentation, such as `LIBRARY`, instead of deploying the whole screen. Each entry names the `app` and lists `changes`, applied in order:
+
+```json
+{
+    "presentations": [
+        {
+            "app": "MASTERPM",
+            "changes": [
+                {
+                    "add": {
+                        "name": "tab",
+                        "id": "example_tab",
+                        "label": "Example",
+                        "children": [{ "name": "section", "id": "example_section", "label": "Details" }]
+                    },
+                    "after": { "name": "tab", "id": "main" }
+                },
+                { "modify": { "name": "tab", "id": "jobplanseq" }, "set": { "label": "Sequence" }, "unset": ["sigoption"] },
+                { "move": { "name": "section", "id": "qbe_grid3" }, "into": { "name": "tab", "id": "example_tab" } },
+                { "remove": { "name": "pushbutton", "id": "obsolete_btn" } }
+            ]
+        }
+    ]
+}
+```
+
+| Operation | Control exists                                                         | Control missing                  |
+| :-------- | :--------------------------------------------------------------------- | :------------------------------- |
+| `add`     | Replaced in place with the new content, the placement is ignored       | Inserted at the placement        |
+| `modify`  | The attributes in `set` are set and the attributes in `unset` removed  | Fails                            |
+| `move`    | Moved, with its content, to the placement, which is required           | Fails                            |
+| `remove`  | Removed with its content                                               | Reported, nothing is changed     |
+
+- A control is referenced as `{ "name", "id" }`: it is found by `id` anywhere in the presentation, and a different element name fails the deployment.
+- An added control is `{ "name", "id", ...attributes, "children": [...] }`. Every element needs an `id`, and attribute values are strings.
+- The placement is one of `before` or `after` a control, or `into` a container as its last child. Without one, `add` appends to the root.
+- Because an existing control is replaced, deploying the same file again gives the same result. Several files can change the same application without undoing each other's work if each adds its content under a control of its own, such as its own tab: deploying one file again replaces only that control.
+- A `sigoption` attribute in an application presentation must name an existing signature option of the application. Signature options are not created here; create them in an earlier deployment, such as an earlier manifest entry.
+- The labels Maximo keeps in `MAXLABELS` follow the result, as for a whole screen deploy.
+- Every change in the file is resolved before anything is written: an unknown control or signature option fails the deployment and nothing in the file is applied. A whole screen deploy of the same application later replaces these changes.
+
 #### Deploying Maximo Objects
 
-When deploying a Maximo Object, by default Maximo will be placed in Admin Mode if required and a database configuration performed. The top level boolean properties `noAdminMode` and `noDBConfig` can be set to not perform a configuration if it requires Admin Mode or skip the database configuration completely.
+Maximo objects, with their attributes, relationships and indexes, are declared under `objects` in a JSON deploy file. When the file is deployed, by default Maximo will be placed in Admin Mode if required and a database configuration performed. The top level boolean properties `noAdminMode` and `noDBConfig` can be set to not perform a configuration if it requires Admin Mode or skip the database configuration completely. A file deployed as a `configuration` entry of a deployment manifest leaves the database configuration to a `databaseConfiguration` entry.
+
+```json
+{
+    "noAdminMode": true,
+    "objects": [
+        {
+            "object": "EXAMPLE",
+            "description": "Example table",
+            "_retain": ["description"],
+            "attributes": [
+                { "attribute": "NOTE", "description": "Note", "title": "Note", "type": "ALN", "length": 50, "_retain": ["length", "title"] }
+            ],
+            "relationships": [
+                { "relationship": "EXAMPLEWO", "child": "WORKORDER", "whereClause": "wonum = :wonum", "_retain": ["whereClause"] }
+            ]
+        }
+    ]
+}
+```
+
+An object, attribute or relationship takes its own `_retain`. The values only set when the object is created, such as `persistent` or `uniqueColumn`, cannot be retained, and neither can indexes.
 
 > Note: When deploying a Maximo Object with Admin Mode and Database Configuration, the user must have Maximo permissions to place Maximo in Admin Mode and run Database Configuration.
 
@@ -519,6 +587,14 @@ Any entry may set `"disabled": true` to skip it without removing it from the man
 { "kind": "automationScript", "path": "scripts/matcher.js", "disabled": true }
 ```
 
+#### Keeping Changes Made in Maximo
+
+Set `"createOnly": true` on an entry when you do not want a deployment to overwrite an item that was deployed earlier and may have been modified since. The item is deployed when it does not exist in Maximo yet; when it exists, it is left unchanged. `automationScript`, `inspectionForm`, `screen` and `report` entries accept it. The notification shown when the deployment finishes says how many entries were left unchanged.
+
+```json
+{ "kind": "automationScript", "path": "scripts/example.config.js", "createOnly": true }
+```
+
 #### Example Manifest
 
 ```json
@@ -574,17 +650,22 @@ Reports are saved to the directory specified in the `Extract Reports Location` s
 
 To extract JSON deploy files from Maximo, bring up the Visual Studio Code Command Palette (`View > Command Palette...` or `⌘ + shift + p` or `ctrl + shift + p`) and select `Extract Maximo JSON`. A list of available object types to extract will be displayed. The list includes object types found in the table below.
 
-| Type                | Description                                          |
-| :------------------ | :--------------------------------------------------- |
-| Actions             | Maximo actions                                       |
-| Cron Tasks          | Maximo cron tasks, including instances and parameter |
-| Domains             | Domains and the domain values                        |
-| Escalations         | Maximo escalations                                   |
-| Integration Objects | Maximo integration object structures                 |
-| Loggers             | Maximo logger definitions                            |
-| Messages            | Maximo messages                                      |
-| Properties          | Maximo system properties                             |
-| Queries             | Maximo queries                                       |
+| Type                | Description                                                            |
+| :------------------ | :--------------------------------------------------------------------- |
+| Actions             | Maximo actions                                                         |
+| Cron Tasks          | Maximo cron tasks, including instances and parameter                   |
+| Domains             | Domains and the domain values                                          |
+| End Points          | Maximo integration end points and their property values                |
+| Enterprise Services | Enterprise services, with their nested objects and processing rules    |
+| Escalations         | Maximo escalations                                                     |
+| External Systems    | External systems, with their channels, services and controls           |
+| Integration Objects | Maximo integration object structures                                   |
+| Loggers             | Maximo logger definitions                                              |
+| Messages            | Maximo messages                                                        |
+| Objects             | Maximo objects, including attributes, relationships and indexes        |
+| Properties          | Maximo system properties                                               |
+| Publish Channels    | Publish channels, with their integration controls and processing rules |
+| Queries             | Maximo queries                                                         |
 
 Once the type has been selected a list of available objects will be displayed and the list desired objects can be selected. Once the list of objects is selected click the `OK` button to extract the configurations. If a script file is open, the results are added to the script's `.json` deploy file, which is created if it does not exist. If a JSON deploy file is open, the results are added to that file. Otherwise, including when the open file is a deployment manifest or an inspection form, the results are copied to the clipboard and can be pasted into a JSON deploy file later.
 

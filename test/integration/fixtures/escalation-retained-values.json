@@ -1,0 +1,290 @@
+{
+    "productV1": {
+        "actions": [
+            {
+                "action": "NVTEST_ESC_PRODHOST",
+                "description": "Retained values test, product host",
+                "type": "!SETVALUE!",
+                "useWith": "!ALL!",
+                "objectName": "REPORTJOB",
+                "parameter": "HOSTNAME",
+                "value": "PRODUCT"
+            },
+            {
+                "action": "NVTEST_ESC_PRODUCT",
+                "description": "Retained values test, product actions",
+                "type": "!GROUP!",
+                "useWith": "!ESCALATION!",
+                "objectName": "REPORTJOB",
+                "actionGroup": [
+                    {
+                        "member": "NVTEST_ESC_PRODHOST",
+                        "sequence": 1
+                    }
+                ]
+            }
+        ],
+        "escalations": [
+            {
+                "escalation": "NVTEST_RETAINESC",
+                "description": "Retained values test, release 1",
+                "objectName": "REPORTJOB",
+                "condition": "1=0",
+                "active": false,
+                "schedule": "1h,*,0,*,*,*,*,*,*,*",
+                "instanceName": "NVTEST_RETAINESC",
+                "_retain": ["active", "schedule", "escRefPoint"],
+                "escRefPoint": [
+                    {
+                        "refPointNum": 1,
+                        "_retain": ["elapsedInterval", "action", "eventCondition", "escNotification"],
+                        "eventAttribute": "STARTTIME",
+                        "elapsedInterval": 10,
+                        "intervalUom": "!MINUTES!",
+                        "eventCondition": "reportname = 'RELEASE1'",
+                        "action": "NVTEST_ESC_PRODUCT",
+                        "escNotification": [
+                            {
+                                "templateId": "NVTESTESCPROD"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "customerEdit": {
+        "actions": [
+            {
+                "action": "NVTEST_ESC_CUSTHOST",
+                "description": "Host set by the customer",
+                "type": "!SETVALUE!",
+                "useWith": "!ALL!",
+                "objectName": "REPORTJOB",
+                "parameter": "HOSTNAME",
+                "value": "CUSTOMER"
+            },
+            {
+                "action": "NVTEST_ESC_CUSTOMER",
+                "description": "Actions added by the customer",
+                "type": "!GROUP!",
+                "useWith": "!ESCALATION!",
+                "objectName": "REPORTJOB",
+                "actionGroup": [
+                    {
+                        "member": "NVTEST_ESC_CUSTHOST",
+                        "sequence": 1
+                    }
+                ]
+            }
+        ],
+        "escalations": [
+            {
+                "escalation": "NVTEST_RETAINESC",
+                "description": "Description written by the customer",
+                "objectName": "REPORTJOB",
+                "condition": "1=0",
+                "active": true,
+                "schedule": "30m,*,*,*,*,*,*,*,*,*",
+                "instanceName": "NVTEST_RETAINESC",
+                "escRefPoint": [
+                    {
+                        "refPointNum": 1,
+                        "eventAttribute": "STARTTIME",
+                        "elapsedInterval": 30,
+                        "intervalUom": "!MINUTES!",
+                        "eventCondition": "",
+                        "action": "NVTEST_ESC_CUSTOMER",
+                        "escNotification": [
+                            {
+                                "templateId": "NVTESTESCPROD"
+                            },
+                            {
+                                "templateId": "NVTESTESCCUST"
+                            }
+                        ]
+                    },
+                    {
+                        "refPointNum": 2,
+                        "eventAttribute": "LASTACTIVETIME",
+                        "elapsedInterval": 5,
+                        "intervalUom": "!HOURS!",
+                        "eventCondition": "",
+                        "action": ""
+                    }
+                ]
+            }
+        ]
+    },
+    "productV2": {
+        "actions": [
+            {
+                "action": "NVTEST_ESC_PRODHOST",
+                "description": "Retained values test, product host",
+                "type": "!SETVALUE!",
+                "useWith": "!ALL!",
+                "objectName": "REPORTJOB",
+                "parameter": "HOSTNAME",
+                "value": "PRODUCT"
+            },
+            {
+                "action": "NVTEST_ESC_PRODUCT",
+                "description": "Retained values test, product actions",
+                "type": "!GROUP!",
+                "useWith": "!ESCALATION!",
+                "objectName": "REPORTJOB",
+                "actionGroup": [
+                    {
+                        "member": "NVTEST_ESC_PRODHOST",
+                        "sequence": 1
+                    }
+                ]
+            }
+        ],
+        "escalations": [
+            {
+                "escalation": "NVTEST_RETAINESC",
+                "description": "Retained values test, release 2",
+                "objectName": "REPORTJOB",
+                "condition": "1=0",
+                "active": false,
+                "schedule": "1h,*,0,*,*,*,*,*,*,*",
+                "instanceName": "NVTEST_RETAINESC",
+                "_retain": ["active", "schedule", "escRefPoint"],
+                "escRefPoint": [
+                    {
+                        "refPointNum": 1,
+                        "_retain": ["elapsedInterval", "action", "eventCondition", "escNotification"],
+                        "eventAttribute": "STARTTIME",
+                        "elapsedInterval": 15,
+                        "intervalUom": "!MINUTES!",
+                        "eventCondition": "reportname = 'RELEASE2'",
+                        "action": "NVTEST_ESC_PRODUCT",
+                        "escNotification": [
+                            {
+                                "templateId": "NVTESTESCPROD"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "customerEditAgain": {
+        "actions": [
+            {
+                "action": "NVTEST_ESC_CUSTHOST",
+                "description": "Host set by the customer",
+                "type": "!SETVALUE!",
+                "useWith": "!ALL!",
+                "objectName": "REPORTJOB",
+                "parameter": "HOSTNAME",
+                "value": "CUSTOMER"
+            },
+            {
+                "action": "NVTEST_ESC_CUSTOMER",
+                "description": "Actions added by the customer",
+                "type": "!GROUP!",
+                "useWith": "!ESCALATION!",
+                "objectName": "REPORTJOB",
+                "actionGroup": [
+                    {
+                        "member": "NVTEST_ESC_CUSTHOST",
+                        "sequence": 1
+                    }
+                ]
+            }
+        ],
+        "escalations": [
+            {
+                "escalation": "NVTEST_RETAINESC",
+                "description": "Description written by the customer",
+                "objectName": "REPORTJOB",
+                "condition": "1=0",
+                "active": true,
+                "schedule": "30m,*,*,*,*,*,*,*,*,*",
+                "instanceName": "NVTEST_RETAINESC",
+                "escRefPoint": [
+                    {
+                        "refPointNum": 1,
+                        "eventAttribute": "STARTTIME",
+                        "elapsedInterval": 45,
+                        "intervalUom": "!MINUTES!",
+                        "eventCondition": "",
+                        "action": "NVTEST_ESC_CUSTOMER",
+                        "escNotification": [
+                            {
+                                "templateId": "NVTESTESCPROD"
+                            },
+                            {
+                                "templateId": "NVTESTESCCUST"
+                            }
+                        ]
+                    },
+                    {
+                        "refPointNum": 2,
+                        "eventAttribute": "LASTACTIVETIME",
+                        "elapsedInterval": 5,
+                        "intervalUom": "!HOURS!",
+                        "eventCondition": "",
+                        "action": ""
+                    }
+                ]
+            }
+        ]
+    },
+    "productV2NoCollectionRetain": {
+        "actions": [
+            {
+                "action": "NVTEST_ESC_PRODHOST",
+                "description": "Retained values test, product host",
+                "type": "!SETVALUE!",
+                "useWith": "!ALL!",
+                "objectName": "REPORTJOB",
+                "parameter": "HOSTNAME",
+                "value": "PRODUCT"
+            },
+            {
+                "action": "NVTEST_ESC_PRODUCT",
+                "description": "Retained values test, product actions",
+                "type": "!GROUP!",
+                "useWith": "!ESCALATION!",
+                "objectName": "REPORTJOB",
+                "actionGroup": [
+                    {
+                        "member": "NVTEST_ESC_PRODHOST",
+                        "sequence": 1
+                    }
+                ]
+            }
+        ],
+        "escalations": [
+            {
+                "escalation": "NVTEST_RETAINESC",
+                "description": "Retained values test, release 2",
+                "objectName": "REPORTJOB",
+                "condition": "1=0",
+                "active": false,
+                "schedule": "1h,*,0,*,*,*,*,*,*,*",
+                "instanceName": "NVTEST_RETAINESC",
+                "_retain": ["active", "schedule"],
+                "escRefPoint": [
+                    {
+                        "refPointNum": 1,
+                        "_retain": ["elapsedInterval", "action", "eventCondition", "escNotification"],
+                        "eventAttribute": "STARTTIME",
+                        "elapsedInterval": 15,
+                        "intervalUom": "!MINUTES!",
+                        "eventCondition": "reportname = 'RELEASE2'",
+                        "action": "NVTEST_ESC_PRODUCT",
+                        "escNotification": [
+                            {
+                                "templateId": "NVTESTESCPROD"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

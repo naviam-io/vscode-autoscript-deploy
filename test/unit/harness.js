@@ -7,12 +7,12 @@
  * function wrapper, which exercises the real code without a Maximo server and without leaking
  * globals.
  */
-const fs = require('fs');
-const path = require('path');
-const vm = require('vm');
-const acorn = require('acorn');
+import fs from 'fs';
+import path from 'path';
+import vm from 'vm';
+import * as acorn from 'acorn';
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
+const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
 function walk(node, visit) {
     if (!node || typeof node !== 'object') {
@@ -117,4 +117,4 @@ function loadScriptFunctions(relativeScriptPath, names, stubs) {
     return vm.runInThisContext(wrapper, { filename: relativeScriptPath })(...stubNames.map((name) => stubs[name]));
 }
 
-module.exports = { REPO_ROOT, collectFunctionDeclarations, extractFunctionSources, extractStaticAssignments, loadScriptFunctions };
+export { REPO_ROOT, collectFunctionDeclarations, extractFunctionSources, extractStaticAssignments, loadScriptFunctions };

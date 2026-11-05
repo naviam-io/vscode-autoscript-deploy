@@ -29,7 +29,8 @@ const config = {
         mainFields: ['module', 'main'], // look for `browser` entry point in imported node modules
         extensions: ['.js'],
         alias: {
-            // provides alternate implementation for node module and source files
+            // Optional dependency of debug (via axios); without it debug just logs without colours.
+            'supports-color': false
         },
         fallback: {
             // Webpack 5 no longer polyfills Node.js core modules automatically.

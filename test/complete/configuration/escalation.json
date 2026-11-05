@@ -2,6 +2,7 @@
     "escalations": [
         {
             "escalation": "TESTREPORTLONG",
+            "_retain": ["schedule", "escRefPoint"],
             "description": "Complete manifest test escalation",
             "objectName": "REPORTJOB",
             "condition": "",
@@ -13,10 +14,12 @@
             "escRefPoint": [
                 {
                     "refPointNum": 1,
+                    "_retain": ["elapsedInterval", "escNotification"],
                     "eventAttribute": "STARTTIME",
                     "elapsedInterval": 10,
                     "intervalUom": "!MINUTES!",
-                    "repeat": false
+                    "repeat": false,
+                    "escNotification": [{ "templateId": "TESTCOMPLETE" }]
                 }
             ]
         }

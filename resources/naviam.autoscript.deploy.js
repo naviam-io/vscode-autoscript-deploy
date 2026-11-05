@@ -149,7 +149,7 @@ function main() {
         // if the script source is available then call the deploy script.
         // This allows the deployScript function to be called from the context directly if the script it loaded from another script.
         if (scriptSource) {
-            var response = deployScript(scriptSource, action);
+            var response = deployScript(scriptSource, action, isCreateOnlyRequest());
             responseBody = JSON.stringify(response);
         }
     } catch (error) {
@@ -303,6 +303,11 @@ function deleteAutoScript(scriptName, withUserInfo) {
     }
 }
 
+/** Whether the request asks to leave an existing item unchanged: see docs/flows/deploy.md. */
+function isCreateOnlyRequest() {
+    return typeof request !== 'undefined' && request !== null && String(request.getQueryParam('createOnly')) === 'true';
+}
+
 /**
  * An AUTOSCRIPT set narrowed to a single script by name.
  *
@@ -347,13 +352,14 @@ function runAutoScript(scriptName, ctx) {
  *
  * @param {string} scriptSource the source of the script to deploy
  * @param {string} [language] the script language; javascript when not given
+ * @param {boolean} [createOnly] leave an existing script unchanged
  * @returns {object} the result of the deployment
  */
-function deployScript(scriptSource, language) {
+function deployScript(scriptSource, language, createOnly) {
     var scriptConfig = getConfigFromScript(scriptSource, language);
     validateScriptConfig(scriptConfig);
 
-    return deployParsedScript(scriptConfig, scriptSource, language);
+    return deployParsedScript(scriptConfig, scriptSource, language, createOnly);
 }
 
 /**
@@ -365,9 +371,10 @@ function deployScript(scriptSource, language) {
  * @param {object} scriptConfig the configuration declared by the script
  * @param {string} scriptSource the source of the script to deploy
  * @param {string} [language] the script language; javascript when not given
+ * @param {boolean} [createOnly] leave an existing script unchanged
  * @returns {object} the result of the deployment
  */
-function deployParsedScript(scriptConfig, scriptSource, language) {
+function deployParsedScript(scriptConfig, scriptSource, language, createOnly) {
     var result = { scriptName: scriptConfig.autoscript };
     var autoScriptSet;
 
@@ -386,10 +393,19 @@ function deployParsedScript(scriptConfig, scriptSource, language) {
 
             result.deploying = false;
             result.deleted = true;
+            result.outcome = 'deleted';
             result.status = 'success';
             return result;
         }
 
+        if (createOnly && !autoScriptSet.isEmpty()) {
+            result.deploying = false;
+            result.outcome = 'skipped';
+            result.status = 'success';
+            return result;
+        }
+
+        var outcome = autoScriptSet.isEmpty() ? 'created' : 'updated';
         var autoscript;
         var warnings = [];
 
@@ -419,9 +435,11 @@ function deployParsedScript(scriptConfig, scriptSource, language) {
 
         if (backgroundResult) {
             backgroundResult.warnings = warnings;
+            backgroundResult.outcome = outcome;
             return backgroundResult;
         }
         result.warnings = warnings;
+        result.outcome = outcome;
     } finally {
         _close(autoScriptSet);
     }

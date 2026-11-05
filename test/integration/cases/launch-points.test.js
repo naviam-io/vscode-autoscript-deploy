@@ -12,7 +12,7 @@
  * recreated on every deployment rather than merged, so a launch point dropped from the
  * configuration has to disappear from Maximo.
  */
-const { assertEquals, assertNotNull } = require('../harness');
+import { assertEquals, assertNotNull } from '../harness.js';
 
 const SCRIPT_NAME = 'NVTEST.LAUNCHPOINTS';
 const ACTION_NAME = 'NVTEST_LP_ACTION';
@@ -95,7 +95,7 @@ async function deleteScript(client, name) {
     });
 }
 
-module.exports = {
+export default {
     name: 'launch-points',
     run: async (client) => {
         try {

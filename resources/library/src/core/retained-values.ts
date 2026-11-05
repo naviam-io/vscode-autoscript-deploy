@@ -23,13 +23,20 @@ function retainKeysOf(rows: any[]): string[] {
     return Array.isArray(keys) ? keys : [];
 }
 
+/** Maximo stores an empty value as null, so a blank key matches whichever blank the other side holds. */
+function retainSameKeyValue(left: any, right: any): boolean {
+    const leftBlank = left === null || typeof left === 'undefined' || left === '';
+    const rightBlank = right === null || typeof right === 'undefined' || right === '';
+    return leftBlank || rightBlank ? leftBlank && rightBlank : left === right;
+}
+
 function retainSameRow(left: any, right: any, keys: string[]): boolean {
     if (!left || !right || keys.length === 0) {
         return false;
     }
 
     for (let index = 0; index < keys.length; index++) {
-        if (left[keys[index]] !== right[keys[index]]) {
+        if (!retainSameKeyValue(left[keys[index]], right[keys[index]])) {
             return false;
         }
     }

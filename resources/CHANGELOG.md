@@ -1,4 +1,7 @@
 # Release Notes
+
+> **Frozen.** This file records the releases of the former `maximo-dev-tools-common` repository, up to 1.6.0. It is no longer updated: changes to these scripts are recorded in the root [`CHANGELOG.md`](../CHANGELOG.md).
+
 ## 1.6.0
 - Script variables are now named with `varName`, consistent with launch point variables. `varname` is still accepted but returns a deprecation warning to the client, a variable without a name fails the deployment instead of being skipped, and extraction writes `varName`.
 - Value list fields of the JSON configuration take the localized value of the target Maximo again, and extraction writes the stored localized value, reverting the internal values introduced in 1.5.0. A field also accepts an internal value written as `!VALUE!`, for example `!MAXTABLE!`, which deploys to the target's default localized value, and an unknown internal value fails the deployment with a message naming the value and the synonym domain.

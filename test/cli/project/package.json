@@ -1,0 +1,7 @@
+{
+    "name": "nvtest-cli-project",
+    "private": true,
+    "devDependencies": {
+        "webpack": "*"
+    }
+}

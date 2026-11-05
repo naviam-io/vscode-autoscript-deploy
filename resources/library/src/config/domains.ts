@@ -1,7 +1,7 @@
 /// <reference path="../../globals.d.ts" />
 /// <reference path="../../manage-facade.d.ts" />
 
-import { close, setValue, toExternalSynonymValue, toInternalSynonymValue, updateProgress, valueOrDefault } from '../core/util';
+import { close, requireKeys, setValue, toExternalSynonymValue, toInternalSynonymValue, updateProgress, valueOrDefault } from '../core/util';
 import { applyRetainedValues, hasRetainDeclarations, retainIdentityOf } from '../core/retained-values';
 import { deleteSnapshot, readSnapshot, snapshotKey, writeSnapshot } from '../core/snapshot-store';
 import { captureExistingState } from '../core/capture';
@@ -361,7 +361,7 @@ export class MaximoDomainValueCondition {
     constructor(input: MaximoDomainValueConditionInput) {
         this.conditionNum = input.conditionNum;
         this.objectName = valueOrDefault(input.objectName, this.objectName);
-        this._retain = typeof input._retain === 'undefined' || input._retain === null ? this._retain : input._retain;
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -390,7 +390,7 @@ export class MaximoDiscreteDomainValue {
         this.orgId = valueOrDefault(input.orgId, this.orgId);
         this.siteId = valueOrDefault(input.siteId, this.siteId);
         this.maxDomValCond = (input.maxDomValCond || []).map((condition) => new MaximoDomainValueCondition(condition));
-        this._retain = typeof input._retain === 'undefined' || input._retain === null ? this._retain : input._retain;
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -426,7 +426,7 @@ export class MaximoNumRangeDomainValue {
         this.rangeInterval = valueOrDefault(input.rangeInterval, this.rangeInterval);
         this.orgId = valueOrDefault(input.orgId, this.orgId);
         this.siteId = valueOrDefault(input.siteId, this.siteId);
-        this._retain = typeof input._retain === 'undefined' || input._retain === null ? this._retain : input._retain;
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -461,7 +461,7 @@ export class MaximoSynonymDomainValue {
         this.siteId = valueOrDefault(input.siteId, this.siteId);
         this.defaults = valueOrDefault(input.defaults, this.defaults);
         this.maxDomValCond = (input.maxDomValCond || []).map((condition) => new MaximoDomainValueCondition(condition));
-        this._retain = typeof input._retain === 'undefined' || input._retain === null ? this._retain : input._retain;
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -496,7 +496,7 @@ export class MaximoTableDomainValue {
         this.errorAccessKey = valueOrDefault(input.errorAccessKey, this.errorAccessKey);
         this.orgId = valueOrDefault(input.orgId, this.orgId);
         this.siteId = valueOrDefault(input.siteId, this.siteId);
-        this._retain = typeof input._retain === 'undefined' || input._retain === null ? this._retain : input._retain;
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -531,7 +531,7 @@ export class MaximoCrossoverField {
         this.sourceCondition = valueOrDefault(input.sourceCondition, this.sourceCondition);
         this.destCondition = valueOrDefault(input.destCondition, this.destCondition);
         this.sequence = valueOrDefault(input.sequence, this.sequence);
-        this._retain = typeof input._retain === 'undefined' || input._retain === null ? this._retain : input._retain;
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -561,7 +561,7 @@ export class MaximoCrossoverDomainValue {
         this.orgId = valueOrDefault(input.orgId, this.orgId);
         this.siteId = valueOrDefault(input.siteId, this.siteId);
         this.crossoverFields = (input.crossoverFields || []).map((field) => new MaximoCrossoverField(field));
-        this._retain = typeof input._retain === 'undefined' || input._retain === null ? this._retain : input._retain;
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -601,6 +601,7 @@ export class MaximoDomain {
     _retain: any = [];
 
     constructor(input: MaximoDomainInput) {
+        requireKeys(MaximoDomain, input, 'domain');
         this.domainId = input.domainId;
         this.domainType = input.domainType;
 
@@ -615,6 +616,6 @@ export class MaximoDomain {
         this.synonymDomain = (input.synonymDomain || []).map((value) => new MaximoSynonymDomainValue(value));
         this.tableDomain = (input.tableDomain || []).map((value) => new MaximoTableDomainValue(value));
         this.crossoverDomain = (input.crossoverDomain || []).map((value) => new MaximoCrossoverDomainValue(value));
-        this._retain = typeof input._retain === 'undefined' || input._retain === null ? this._retain : input._retain;
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }

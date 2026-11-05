@@ -7,11 +7,11 @@
  * is what makes a retried deployment idempotent: a snapshot that already exists can only have been
  * left behind by a run that never completed.
  */
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
-const crypto = require('node:crypto');
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import crypto from 'node:crypto';
 
-const { loadScriptFunctions } = require('../harness');
+import { loadScriptFunctions } from '../harness.js';
 
 // Nashorn's java.security.MessageDigest and node:crypto produce identical SHA-256 bytes, so the
 // stub exercises the real digest rather than a placeholder.

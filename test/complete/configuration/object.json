@@ -2,6 +2,7 @@
     "objects": [
         {
             "object": "TESTOBJ",
+            "_retain": ["description"],
             "description": "Complete manifest test object",
             "service": "ASSET",
             "entity": "TESTOBJ",
@@ -20,6 +21,7 @@
             "attributes": [
                 {
                     "attribute": "TESTOBJID",
+                    "_retain": ["title"],
                     "description": "Unique identifier",
                     "title": "Identifier",
                     "type": "BIGINT",
@@ -30,6 +32,7 @@
                 },
                 {
                     "attribute": "TESTTYPE",
+                    "_retain": ["title"],
                     "description": "Type, validated by the TESTABCTYPE domain",
                     "title": "Type",
                     "type": "UPPER",
@@ -47,6 +50,7 @@
             "relationships": [
                 {
                     "relationship": "TESTASSET",
+                    "_retain": ["whereClause"],
                     "child": "ASSET",
                     "remarks": "Complete manifest test relationship to ASSET",
                     "whereClause": "1=1",

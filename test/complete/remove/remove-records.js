@@ -10,6 +10,7 @@
  */
 var MXServer = Java.type('psdi.server.MXServer');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
+var MboConstants = Java.type('psdi.mbo.MboConstants');
 
 var APP = 'TESTACTION';
 
@@ -46,14 +47,30 @@ function deleteWhere(objectName, attribute, value, optional) {
         return;
     }
 
-    var set = MXServer.getMXServer().getMboSet(objectName, MXServer.getMXServer().getSystemUserInfo());
+    var ownedGroups = objectName === 'CTRLGROUP';
+    var set = MXServer.getMXServer().getMboSet(ownedGroups ? 'SIGOPTION' : objectName, MXServer.getMXServer().getSystemUserInfo());
     try {
         var sqlf = new SqlFormat(attribute + ' = :1');
         sqlf.setObject(1, objectName, attribute.toUpperCase(), value);
         set.setWhere(sqlf.format());
 
-        if (!set.isEmpty()) {
-            set.deleteAll();
+        if (ownedGroups) {
+            // Delete conditional UI through its signature option, as Application Designer does. A
+            // customized CTRLGROUP set reads its owner and current record after the save, which
+            // fails when the records are deleted as a standalone set.
+            for (var option = set.moveFirst(); option; option = set.moveNext()) {
+                var groups = option.getMboSet('CTRLGROUP');
+                if (groups.moveFirst()) {
+                    groups.deleteAll();
+                }
+            }
+            set.save();
+        } else if (!set.isEmpty()) {
+            if (objectName === 'INSPECTIONFORM') {
+                set.deleteAll(MboConstants.NOACCESSCHECK);
+            } else {
+                set.deleteAll();
+            }
             set.save();
         }
     } finally {

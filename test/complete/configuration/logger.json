@@ -2,6 +2,7 @@
     "loggers": [
         {
             "logger": "testcomplete",
+            "_retain": ["logLevel", "appenders"],
             "logKey": "log4j.logger.maximo.testcomplete",
             "logLevel": "INFO",
             "active": true,

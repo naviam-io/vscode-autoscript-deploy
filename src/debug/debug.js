@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import { login, getMaximoConfig } from '../extension';
-import MaximoClient from '../maximo/maximo-client';
+import MaximoClient from '../core/maximo/maximo-client.js';
 import Logger from '../logger';
 
 function getDebugVersion(context) {

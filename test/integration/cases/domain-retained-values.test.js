@@ -7,8 +7,8 @@
  * install release 1, let the customer edit and extend the values they own, then deploy release 2
  * with _retain and check that the customer's values survived while everything else moved on.
  */
-const { assertEquals } = require('../harness');
-const { loadFixture } = require('../round-trip');
+import { assertEquals } from '../harness.js';
+import { loadFixture } from '../round-trip.js';
 
 const DOMAIN_ID = 'TEST_RETAIN_DOM';
 
@@ -32,7 +32,7 @@ function valueNamed(extracted, value) {
     return found;
 }
 
-module.exports = {
+export default {
     name: 'domain-retained-values',
     run: async (client) => {
         const fixture = loadFixture('domain-retained-values');

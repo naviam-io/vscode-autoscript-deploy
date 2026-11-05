@@ -3,6 +3,7 @@
         {
             "app": "AUTOSCRIPT",
             "clauseName": "TESTCOMPLETE",
+            "_retain": ["clause", "notes", "priority"],
             "owner": "MAXADMIN",
             "clause": "autoscript like 'TEST.%'",
             "description": "Complete manifest test query",

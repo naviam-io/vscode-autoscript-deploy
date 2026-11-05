@@ -20,8 +20,8 @@ description: Work on the webpack-built TypeScript deployment library under resou
 - The JSON contract for these types is in `schemas/` (root), e.g. `deploy-schema.json`.
 
 **Never hand-edit the generated `resources/naviam.autoscript.library.js`.** Edit the TypeScript and
-rebuild. `resources` is a nested repo/submodule; run `git -C resources status --short` before editing
-and never revert pre-existing or staged user changes there.
+rebuild. Run `git status --short -- resources` before editing and never revert pre-existing or
+staged user changes there.
 
 ## When to use this skill
 
@@ -36,12 +36,13 @@ Use it for **any** work on `resources/library/src/*.ts` or on the behavior of th
 ## Sources of truth: reconcile all three, do not blindly mirror the old JS
 
 1. **Legacy JavaScript implementation**: the pre-TypeScript monolith `naviam.autoscript.library.js`.
-   It was deleted from the `resources` submodule when the library moved to TypeScript, so read the
-   committed original **from git history** (there is no `library_old.js` to rely on):
-   `git -C resources show 100ad7c^:naviam.autoscript.library.js > /tmp/library-legacy.js`
+   It was deleted when the library moved to TypeScript, so read the committed original **from git
+   history** (there is no `library_old.js` to rely on). That history predates the subtree import of
+   the former `maximo-dev-tools-common` repository into `resources/`, so the path has no prefix:
+   `git show 100ad7c^:naviam.autoscript.library.js > /tmp/library-legacy.js`
    (commit `100ad7c` "Initial configuration of library to typescript" removed it; parent `100ad7c^`
    still has it). If that SHA is ever unavailable, rediscover the deleting commit with
-   `git -C resources log --diff-filter=D -- naviam.autoscript.library.js`. Also consult
+   `git log --full-history --diff-filter=D -- naviam.autoscript.library.js`. Also consult
    `resources/naviam.autoscript.objects.js` for extraction round-trip behavior.
    - Treat the legacy code as a **behavioral reference, not a gold standard.** It contains
      inconsistencies and bugs. **Challenge it:** flag missing null handling, copy-paste errors,
@@ -115,7 +116,7 @@ should be optional or null-capable.
 ## Verify
 
 - `cd resources/library && npm install && npm run lint && npm run package` (webpack production;
-  regenerates `resources/naviam.autoscript.library.js`). Node 22 / TypeScript 5.9.
+  regenerates `resources/naviam.autoscript.library.js`). Node 22 / TypeScript 6.
 - When extension JavaScript wiring changed, run targeted lint on the touched files and the root
   `npm run package`.
 - Parse changed JSON schemas and run `diff --check` on touched files in both the root repo and the

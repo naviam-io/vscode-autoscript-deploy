@@ -1,0 +1,6 @@
+{
+    "host": "localhost",
+    "username": "nvtest",
+    "password": "nvtest-secret",
+    "apikey": "nvtest-apikey"
+}

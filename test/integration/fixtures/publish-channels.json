@@ -1,0 +1,62 @@
+{
+    "publishChannels": [
+        {
+            "ifaceName": "NVTEST_PC_ASSET",
+            "description": "Test publish channel",
+            "intObjectName": "MXASSET",
+            "publishJson": true,
+            "storeMsg": true,
+            "skipDiffObject": true,
+            "searchField": "ASSETNUM",
+            "integrationControls": [{ "control": "WOSTART" }, { "control": "POSEND" }],
+            "processingRules": [
+                {
+                    "procName": "NVSKIP",
+                    "action": "!SKIP!",
+                    "objectName": "ASSET",
+                    "description": "Skip decommissioned assets",
+                    "enabled": true,
+                    "applyOnInsert": true,
+                    "applyOnUpdate": true,
+                    "applyOnDelete": false,
+                    "conditions": [
+                        {
+                            "condition": 10,
+                            "details": [
+                                {
+                                    "condSequence": 1,
+                                    "condType": "FIELD",
+                                    "evalType": "!EQUALS!",
+                                    "changeType": "!ALWAYS!",
+                                    "compareType": "VALUE",
+                                    "columnName": "STATUS",
+                                    "value": "DECOMMISSIONED"
+                                }
+                            ]
+                        },
+                        {
+                            "condition": 20,
+                            "details": [{ "condSequence": 1, "condType": "FIELD", "evalType": "!ISNULL!", "changeType": "!CHANGED!", "columnName": "DESCRIPTION" }]
+                        }
+                    ]
+                },
+                {
+                    "procName": "NVSET",
+                    "action": "!SET!",
+                    "objectName": "ASSET",
+                    "enabled": true,
+                    "applyOnInsert": true,
+                    "applyOnUpdate": true,
+                    "fields": [{ "fieldName": "DESCRIPTION", "replaceNull": true, "valueType": "VALUE", "value": "Published by NV test" }]
+                },
+                {
+                    "procName": "NVSPLIT",
+                    "action": "!SPLIT!",
+                    "objectName": "ASSET",
+                    "enabled": false,
+                    "columns": [{ "fieldName": "ASSETNUM" }]
+                }
+            ]
+        }
+    ]
+}

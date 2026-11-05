@@ -1,0 +1,44 @@
+{
+    "productV1": {
+        "externalSystems": [
+            {
+                "extSysName": "NVTEST_XSR",
+                "description": "Retained values test, release 1",
+                "endPointName": "MXXMLFILE",
+                "enabled": false,
+                "publishChannels": [{ "ifaceName": "MXASSETInterface", "enabled": false }],
+                "integrationControls": [{ "control": "NVTEST_XSR_VAL", "value": "RELEASE1", "overrides": [{ "orgId": "{ORG}", "value": "RELEASE1" }] }]
+            }
+        ]
+    },
+    "customerEdit": {
+        "externalSystems": [
+            {
+                "extSysName": "NVTEST_XSR",
+                "description": "Customer description",
+                "endPointName": "MXXMLFILE",
+                "enabled": true,
+                "publishChannels": [{ "ifaceName": "MXASSETInterface", "enabled": true }],
+                "integrationControls": [
+                    { "control": "NVTEST_XSR_VAL", "value": "CUSTOMER", "overrides": [{ "orgId": "{ORG}", "value": "CUSTOMER" }] },
+                    { "control": "NVTEST_XSR_BOOL", "isTrue": true }
+                ]
+            }
+        ]
+    },
+    "productV2": {
+        "externalSystems": [
+            {
+                "extSysName": "NVTEST_XSR",
+                "_retain": ["description", "enabled", "integrationControls"],
+                "description": "Retained values test, release 2",
+                "endPointName": "MXXMLFILE",
+                "enabled": false,
+                "publishChannels": [{ "ifaceName": "MXASSETInterface", "_retain": ["enabled"], "enabled": false }],
+                "integrationControls": [
+                    { "control": "NVTEST_XSR_VAL", "_retain": ["value"], "value": "RELEASE2", "overrides": [{ "orgId": "{ORG}", "value": "RELEASE2" }] }
+                ]
+            }
+        ]
+    }
+}

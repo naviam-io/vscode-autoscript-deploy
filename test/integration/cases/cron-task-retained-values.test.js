@@ -6,8 +6,8 @@
  * values they own, then deploy release 2 with _retain and check that the customer's values survived
  * while everything else moved to the new release.
  */
-const { assertEquals } = require('../harness');
-const { loadFixture } = require('../round-trip');
+import { assertEquals } from '../harness.js';
+import { loadFixture } from '../round-trip.js';
 
 const CRON_TASK_NAME = 'TEST_RETAIN';
 
@@ -42,7 +42,7 @@ function paramNamed(instance, parameter) {
     throw new Error('Extracted instance ' + instance.instanceName + ' has no parameter named ' + parameter);
 }
 
-module.exports = {
+export default {
     name: 'cron-task-retained-values',
     run: async (client) => {
         const fixture = loadFixture('cron-task-retained-values');

@@ -1,15 +1,22 @@
 /// <reference path="../../globals.d.ts" />
 /// <reference path="../../manage-facade.d.ts" />
 
-import { applyValues, applyWritableValues, close, toExternalSynonymValue, updateProgress, valueOrDefault } from '../core/util';
+import { applyValues, applyWritableValues, arrayOrEmpty, booleanOrDefault, close, requireKeys, toExternalSynonymValue, updateProgress, valueOrDefault } from '../core/util';
+import { applyRetainedValues, hasRetainDeclarations, retainIdentityOf } from '../core/retained-values';
+import { deleteSnapshot, readSnapshot, snapshotKey, writeSnapshot } from '../core/snapshot-store';
+import { captureExistingState } from '../core/capture';
 
 var MXServer = Java.type('psdi.server.MXServer');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
 var MboConstants = Java.type('psdi.mbo.MboConstants');
 export type MaximoPropertyType = 'ALN' | 'INTEGER' | 'YORN';
 
+/** The Maximo object a property snapshot is keyed by. */
+export const SNAPSHOT_OBJECT = 'MAXPROP';
+
 export function process(property: MaximoProperty): void {
     const maximo: psdi.server.MXServer = MXServer.getMXServer();
+    const key = snapshotKey(SNAPSHOT_OBJECT, retainIdentityOf(property));
     let mboSet: psdi.mbo.MboSetRemote | null = null;
     try {
         mboSet = maximo.getMboSet('MAXPROP', maximo.getSystemUserInfo());
@@ -17,10 +24,12 @@ export function process(property: MaximoProperty): void {
         if (property._delete) {
             updateProgress('Deleting property ' + property.propName);
             deleteProperty(mboSet, property);
+            deleteSnapshot(key);
             updateProgress('Deleted property ' + property.propName);
         } else {
             updateProgress('Adding/Updating property ' + property.propName);
-            addOrUpdateProperty(mboSet, property);
+            addOrUpdateProperty(mboSet, property, key);
+            deleteSnapshot(key);
             updateProgress('Added/Updated property ' + property.propName);
         }
     } finally {
@@ -36,10 +45,27 @@ function deleteProperty(mboSet: psdi.mbo.MboSetRemote, property: MaximoProperty)
     }
 }
 
-function addOrUpdateProperty(mboSet: psdi.mbo.MboSetRemote, property: MaximoProperty): void {
+function addOrUpdateProperty(mboSet: psdi.mbo.MboSetRemote, property: MaximoProperty, key: string): void {
     const maximo: psdi.server.MXServer = MXServer.getMXServer();
 
-    const mbo = findProperty(mboSet, property.propName) || mboSet.add();
+    const existing = findProperty(mboSet, property.propName);
+
+    if (hasRetainDeclarations(property)) {
+        let snapshot = readSnapshot(key);
+        if (!snapshot && existing) {
+            snapshot = captureExistingState('properties', existing.getUniqueIDValue());
+            if (!snapshot) {
+                throw Error(
+                    'Property ' + property.propName + ' has an existing record whose state could not be captured, so its retained values cannot be preserved.'
+                );
+            }
+            writeSnapshot(key, snapshot);
+        }
+
+        property = applyRetainedValues(property, snapshot ? new MaximoProperty(snapshot) : null);
+    }
+
+    const mbo = existing || mboSet.add();
     applyPropertyValues(mbo, property);
     applyPropertyInstances(mbo, property);
 
@@ -71,7 +97,7 @@ function applySystemPropertyValues(mbo: psdi.mbo.MboRemote, property: MaximoProp
         ['DESCRIPTION', property.description],
         ['ENCRYPTED', property.encrypted],
         ['MASKED', property.masked],
-        ['DISPPROPVALUE', property.propValue]
+        ['DISPPROPVALUE', property.propValue, MboConstants.NOACCESSCHECK]
     ]);
 }
 
@@ -100,7 +126,8 @@ function applyCustomPropertyValues(mbo: psdi.mbo.MboRemote, property: MaximoProp
     mbo.setValue('INSTANCEONLY', property.instanceOnly, MboConstants.NOACCESSCHECK);
 
     if (!property.instanceOnly) {
-        applyValues(mbo, [['DISPPROPVALUE', property.propValue]]);
+        // ONLINECHANGES only stops changes in the System Properties application, not a deployment.
+        applyValues(mbo, [['DISPPROPVALUE', property.propValue, MboConstants.NOACCESSCHECK]]);
     }
 }
 
@@ -121,20 +148,20 @@ function applyPropertyInstances(mbo: psdi.mbo.MboRemote, property: MaximoPropert
     });
 }
 
-function booleanOrDefault(value: any, defaultValue: boolean): boolean {
-    return typeof value === 'undefined' ? defaultValue : value == true;
-}
-
 export interface MaximoPropertyInstanceInput {
     serverName: string;
     propValue?: string | null;
     serverHost?: string | null;
+    _retain?: any;
 }
 
 export class MaximoPropertyInstance {
+    static _keys = ['serverName', 'serverHost'];
+
     serverName: string;
     propValue: string | null = '';
     serverHost: string | null = '';
+    _retain: any = [];
 
     constructor(input: MaximoPropertyInstanceInput, propName: string) {
         if (typeof input.serverName === 'undefined' || !input.serverName) {
@@ -152,6 +179,7 @@ export class MaximoPropertyInstance {
         this.serverName = input.serverName;
         this.propValue = valueOrDefault(input.propValue, this.propValue);
         this.serverHost = valueOrDefault(input.serverHost, this.serverHost);
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -172,9 +200,12 @@ export interface MaximoPropertyInput {
     propValue?: string | null;
     maximoDefault?: string | null;
     maxPropInstance?: MaximoPropertyInstanceInput[] | null;
+    _retain?: any;
 }
 
 export class MaximoProperty {
+    static _keys = ['propName'];
+
     _delete = false;
     propName: string;
     description: string | null = '';
@@ -191,14 +222,11 @@ export class MaximoProperty {
     propValue: string | null = '';
     maximoDefault: string | null = '';
     maxPropInstance: MaximoPropertyInstance[] = [];
+    _retain: any = [];
 
     constructor(input: MaximoPropertyInput) {
+        requireKeys(MaximoProperty, input, 'property');
         this._delete = valueOrDefault(input._delete, this._delete);
-
-        if (!this._delete && typeof input.propName === 'undefined') {
-            throw new Error('The propName property is required and must be a Maximo Property Name field value.');
-        }
-
         this.propName = input.propName;
 
         this.description = valueOrDefault(input.description, this.description);
@@ -214,8 +242,7 @@ export class MaximoProperty {
         this.secureLevel = valueOrDefault(input.secureLevel, this.secureLevel);
         this.propValue = valueOrDefault(input.propValue, this.propValue);
         this.maximoDefault = valueOrDefault(input.maximoDefault, this.maximoDefault);
-        this.maxPropInstance = Array.isArray(input.maxPropInstance)
-            ? input.maxPropInstance.map((instance) => new MaximoPropertyInstance(instance, this.propName))
-            : [];
+        this.maxPropInstance = arrayOrEmpty(input.maxPropInstance).map((instance) => new MaximoPropertyInstance(instance, this.propName));
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }

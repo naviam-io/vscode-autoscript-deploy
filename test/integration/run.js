@@ -5,24 +5,28 @@
  *   MAXIMO_APIKEY=<key> npm run test:integration
  *   MAXIMO_APIKEY=<key> npm run test:integration -- --env "Local AQF" --case cron-tasks
  *
- * By default the Maximo side scripts from the working tree (naviam.autoscript.library.js and
- * naviam.autoscript.objects.js) are uploaded before the tests run, so the tests always verify the
- * local code. Pass --no-install to skip that step.
+ * By default the Maximo side scripts from the working tree (naviam.autoscript.deploy.js,
+ * naviam.autoscript.library.js, naviam.autoscript.objects.js, naviam.autoscript.screens.js,
+ * naviam.autoscript.form.js and naviam.autoscript.report.js) are uploaded before the tests run, so the tests always verify the local code. Pass --no-install to skip that step.
  *
  * Pass --verbose to print what Maximo reports while a case runs: the progress, info and warning
  * events a configuration deployment streams, the database configuration messages, and the step a
  * case is on, for the cases that report one.
  */
-const fs = require('fs');
-const path = require('path');
-const { loadEnvironment, MaximoTestClient, REPO_ROOT } = require('./harness');
+import fs from 'fs';
+import path from 'path';
+import { pathToFileURL } from 'url';
+import { loadEnvironment, MaximoTestClient, REPO_ROOT } from './harness.js';
 
-const CASES_DIR = path.join(__dirname, 'cases');
+const CASES_DIR = path.join(import.meta.dirname, 'cases');
 
 const MAXIMO_SCRIPTS = [
     path.join(REPO_ROOT, 'resources', 'naviam.autoscript.deploy.js'),
     path.join(REPO_ROOT, 'resources', 'naviam.autoscript.library.js'),
-    path.join(REPO_ROOT, 'resources', 'naviam.autoscript.objects.js')
+    path.join(REPO_ROOT, 'resources', 'naviam.autoscript.objects.js'),
+    path.join(REPO_ROOT, 'resources', 'naviam.autoscript.screens.js'),
+    path.join(REPO_ROOT, 'resources', 'naviam.autoscript.form.js'),
+    path.join(REPO_ROOT, 'resources', 'naviam.autoscript.report.js')
 ];
 
 function parseArgs(argv) {
@@ -44,12 +48,11 @@ function parseArgs(argv) {
     return options;
 }
 
-function discoverCases(only) {
-    return fs
-        .readdirSync(CASES_DIR)
-        .filter((file) => file.endsWith('.test.js'))
-        .map((file) => path.join(CASES_DIR, file))
-        .map((file) => require(file))
+async function discoverCases(only) {
+    const files = fs.readdirSync(CASES_DIR).filter((file) => file.endsWith('.test.js'));
+    const modules = await Promise.all(files.map((file) => import(pathToFileURL(path.join(CASES_DIR, file)).href)));
+    return modules
+        .map((module) => module.default)
         .filter((testCase) => only.length === 0 || only.includes(testCase.name));
 }
 
@@ -67,7 +70,7 @@ async function main() {
         }
     }
 
-    const cases = discoverCases(options.only);
+    const cases = await discoverCases(options.only);
     const failures = [];
 
     for (const testCase of cases) {

@@ -7,13 +7,13 @@
  * bundled into the extension, so it is deliberately free of webpack dependencies and can be
  * required directly here.
  */
-const { describe, it, after } = require('node:test');
-const assert = require('node:assert');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
+import { describe, it, after } from 'node:test';
+import assert from 'node:assert';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
-const webpackEntries = require('../../../templates/webpack-entries');
+import webpackEntries from '../../../templates/webpack-entries.js';
 
 /** @type {string[]} */
 const createdDirectories = [];

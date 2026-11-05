@@ -8,11 +8,10 @@
  * the source path is needed as well as the deployed path: the file deployed to Maximo is the webpack
  * bundle under the project's output directory, not the source the companions sit next to.
  */
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
-const path = require('node:path');
-
-const { resolveScriptCompanions } = require('../../../src/deploy/script-companions');
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import path from 'node:path';
+import { resolveScriptCompanions } from '../../../src/core/deploy/script-companions.js';
 
 const BUNDLE = path.join('/project', 'deployment', 'install', 'scripts', 'naviam.example.js');
 const SOURCE = path.join('/project', 'scripts', 'naviam.example', 'index.ts');

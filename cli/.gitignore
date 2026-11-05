@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Caches and build artifacts
+.npm/
+.eslintcache
+coverage/
+*.tgz
+tmp/
+
+# Local Maximo settings, keys and extracted output
+settings*.json
+!.vscode/settings.json
+*.key
+.env
+.env.*
+delete.json
+scripts/
+test/
+jd-gui.cfg
+
+# IDE and tooling
+.idea/
+.serena/
+.vscode-test/
+
+# OS
+.DS_Store

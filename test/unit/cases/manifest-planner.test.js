@@ -7,19 +7,12 @@
  * validation errors. It runs in plain Node with no VS Code host and no Maximo server, against
  * hermetic fixtures created under a temporary directory.
  */
-const { describe, it, after } = require('node:test');
-const assert = require('node:assert');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-
-const {
-    planManifest,
-    isManifestDocument,
-    isInspectionFormDocument,
-    supportedKinds,
-    extensionsForKinds
-} = require('../../../src/deploy/manifest-planner');
+import { describe, it, after } from 'node:test';
+import assert from 'node:assert';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { planManifest, isManifestDocument, isInspectionFormDocument, supportedKinds, extensionsForKinds, createOnlyKinds } from '../../../src/core/deploy/manifest-planner.js';
 
 /** @type {string[]} */
 const createdDirectories = [];
@@ -95,7 +88,7 @@ describe('planManifest', () => {
 
         assert.deepStrictEqual(result.errors, []);
         assert.deepStrictEqual(result.steps, [
-            { kind: 'databaseConfiguration', path: null, sidecars: false, manifestPath: path.join(projectRoot, 'deploy.manifest.json') }
+            { kind: 'databaseConfiguration', path: null, sidecars: false, createOnly: false, manifestPath: path.join(projectRoot, 'deploy.manifest.json') }
         ]);
     });
 
@@ -283,7 +276,6 @@ describe('planManifest validation', () => {
         assert.match(result.errors[0].message, /missing\.js/);
     });
 });
-
 
 describe('planManifest nesting', () => {
     it('expands a nested manifest in place', () => {
@@ -562,7 +554,7 @@ describe('JSON document classification', () => {
 });
 
 describe('the manifest schema', () => {
-    const schema = require('../../../schemas/manifest-schema.json');
+    const schema = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '..', '..', '..', 'schemas', 'manifest-schema.json'), 'utf8'));
 
     it('offers exactly the kinds the planner accepts', () => {
         const fileKinds = schema.definitions.fileEntry.properties.kind.enum;
@@ -573,7 +565,7 @@ describe('the manifest schema', () => {
 
     it('requires the same file extensions the planner does', () => {
         const extensionsByKind = {};
-        for (const rule of schema.definitions.fileEntry.allOf) {
+        for (const rule of schema.definitions.fileEntry.allOf.filter((candidate) => candidate.then.properties.path)) {
             const pattern = rule.then.properties.path.pattern;
             const extensions = pattern.replace(/^\\\.|\$$/g, '').replace(/^\(|\)$/g, '').split('|');
             for (const kind of rule.if.properties.kind.enum || [rule.if.properties.kind.const]) {
@@ -776,5 +768,88 @@ describe('planManifest disabled entries', () => {
         const result = planManifest(path.join(projectRoot, 'test.manifest.json'));
 
         assert.deepStrictEqual(codesOf(result), ['invalidEntry']);
+    });
+});
+describe('planManifest createOnly entries', () => {
+    it('carries createOnly on the step', () => {
+        const projectRoot = createProject({
+            'test.manifest.json': { manifest: [{ kind: 'automationScript', path: './a.js', createOnly: true }] },
+            'a.js': '// a'
+        });
+
+        const result = planManifest(path.join(projectRoot, 'test.manifest.json'));
+
+        assert.deepStrictEqual(result.errors, []);
+        assert.strictEqual(result.steps[0].createOnly, true);
+    });
+
+    it('plans createOnly false on every step that does not declare it', () => {
+        const projectRoot = createProject({
+            'test.manifest.json': { manifest: [{ kind: 'automationScript', path: './a.js' }, { kind: 'databaseConfiguration' }, './b.js'] },
+            'a.js': '// a',
+            'b.js': '// b'
+        });
+
+        const result = planManifest(path.join(projectRoot, 'test.manifest.json'));
+
+        assert.deepStrictEqual(result.steps.map((step) => step.createOnly), [false, false, false]);
+    });
+
+    for (const [kind, file, contents] of [
+        ['inspectionForm', 'form.json', { inspformnum: '1' }],
+        ['screen', 'screen.xml', '<presentation id="X"/>'],
+        ['report', 'report.rptdesign', '<report/>']
+    ]) {
+        it(`accepts createOnly on a ${kind} entry`, () => {
+            const projectRoot = createProject({ 'test.manifest.json': { manifest: [{ kind, path: './' + file, createOnly: true }] }, [file]: contents });
+
+            const result = planManifest(path.join(projectRoot, 'test.manifest.json'));
+
+            assert.deepStrictEqual(codesOf(result), []);
+            assert.strictEqual(result.steps[0].createOnly, true);
+        });
+    }
+
+    for (const [kind, file, contents] of [
+        ['configuration', 'config.json', { properties: [] }],
+        ['deployScript', 'once.js', '// once'],
+        ['manifest', 'nested.manifest.json', { manifest: [] }]
+    ]) {
+        it(`rejects createOnly on a ${kind} entry`, () => {
+            const projectRoot = createProject({ 'test.manifest.json': { manifest: [{ kind, path: './' + file, createOnly: true }] }, [file]: contents });
+
+            assert.deepStrictEqual(codesOf(planManifest(path.join(projectRoot, 'test.manifest.json'))), ['unsupportedCreateOnly']);
+        });
+    }
+
+    it('rejects createOnly on an entry without a kind', () => {
+        const projectRoot = createProject({ 'test.manifest.json': { manifest: [{ path: './a.js', createOnly: true }] }, 'a.js': '// a' });
+
+        assert.deepStrictEqual(codesOf(planManifest(path.join(projectRoot, 'test.manifest.json'))), ['unsupportedCreateOnly']);
+    });
+
+    it('rejects createOnly on a database configuration entry', () => {
+        const projectRoot = createProject({ 'test.manifest.json': { manifest: [{ kind: 'databaseConfiguration', createOnly: true }] } });
+
+        assert.deepStrictEqual(codesOf(planManifest(path.join(projectRoot, 'test.manifest.json'))), ['unexpectedProperty']);
+    });
+
+    it('rejects a createOnly value that is not a boolean', () => {
+        const projectRoot = createProject({ 'test.manifest.json': { manifest: [{ kind: 'automationScript', path: './a.js', createOnly: 'yes' }] }, 'a.js': '// a' });
+
+        assert.deepStrictEqual(codesOf(planManifest(path.join(projectRoot, 'test.manifest.json'))), ['invalidEntry']);
+    });
+
+    it('does not validate createOnly on a disabled entry', () => {
+        const projectRoot = createProject({ 'test.manifest.json': { manifest: [{ kind: 'configuration', path: './missing.json', createOnly: true, disabled: true }] } });
+
+        const result = planManifest(path.join(projectRoot, 'test.manifest.json'));
+
+        assert.deepStrictEqual(result.errors, []);
+        assert.strictEqual(result.disabled.length, 1);
+    });
+
+    it('names the kinds that accept createOnly', () => {
+        assert.deepStrictEqual(createOnlyKinds(), ['automationScript', 'inspectionForm', 'screen', 'report']);
     });
 });

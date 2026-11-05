@@ -1,175 +1,36 @@
 /*
- * Unit tests for MCP server definition URL generation and credential injection.
+ * Unit tests for the vscode-free MCP helpers.
  *
  *   npm run test:unit
  */
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
-const {
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import {
     getBaseUrl,
-    getScriptUrl,
-    formatMcpHeaders,
+    hasStoredCredentials,
     getMcpScriptName,
     getScriptCheckKey,
-    describeScriptStatus
-} = require('../../../src/mcp-core');
+    getConnectionKey,
+    describeScriptStatus,
+    isSessionRejected,
+    createSessionRenewer
+} from '../../../src/mcp-core.js';
 
-describe('getScriptUrl', () => {
-    it('generates an /api/ URL when apiKey is present and maxauthOnly is false', () => {
-        const env = {
-            host: 'maximo.example.com',
-            port: 443,
-            useSSL: true,
-            context: 'maximo',
-            hasApiKey: true,
-            maxauthOnly: false
-        };
-        const url = getScriptUrl(env, 'naviam.mcp');
-        assert.strictEqual(url, 'https://maximo.example.com/maximo/api/script/naviam.mcp');
+describe('hasStoredCredentials', () => {
+    it('accepts a stored API key, or a user name with a stored password', () => {
+        assert.strictEqual(hasStoredCredentials({ apiKey: 'secret-api-key-123' }), true);
+        assert.strictEqual(hasStoredCredentials({ username: 'wilson', password: 'secretpassword' }), true);
     });
 
-    it('generates an /api/ URL even when maxauthOnly is true', () => {
-        const env = {
-            host: 'maximo.example.com',
-            port: 443,
-            useSSL: true,
-            context: 'maximo',
-            hasApiKey: true,
-            maxauthOnly: true
-        };
-        const url = getScriptUrl(env, 'naviam.mcp');
-        assert.strictEqual(url, 'https://maximo.example.com/maximo/api/script/naviam.mcp');
+    it('rejects values that are still encrypted', () => {
+        assert.strictEqual(hasStoredCredentials({ apiKey: '{encrypted}1234567890abcdef' }), false);
+        assert.strictEqual(hasStoredCredentials({ username: 'wilson', password: '{encrypted}1234567890abcdef' }), false);
     });
 
-    it('generates an /api/ URL when apiKey is not present (password environment)', () => {
-        const env = {
-            host: 'maximo.example.com',
-            port: 443,
-            useSSL: true,
-            context: 'maximo',
-            hasApiKey: false,
-            maxauthOnly: false
-        };
-        const url = getScriptUrl(env, 'naviam.mcp');
-        assert.strictEqual(url, 'https://maximo.example.com/maximo/api/script/naviam.mcp');
-    });
-
-    it('includes non-default port in the URL', () => {
-        const env = {
-            host: 'localhost',
-            port: 9080,
-            useSSL: false,
-            context: 'maximo',
-            hasApiKey: true,
-            maxauthOnly: false
-        };
-        const url = getScriptUrl(env, 'naviam.mcp');
-        assert.strictEqual(url, 'http://localhost:9080/maximo/api/script/naviam.mcp');
-    });
-
-    it('omits standard default ports (443 for https, 80 for http)', () => {
-        const httpsEnv = {
-            host: 'maximo.example.com',
-            port: 443,
-            useSSL: true,
-            hasApiKey: true
-        };
-        assert.strictEqual(getScriptUrl(httpsEnv), 'https://maximo.example.com/maximo/api/script/naviam.mcp');
-
-        const httpEnv = {
-            host: 'maximo.example.com',
-            port: 80,
-            useSSL: false,
-            hasApiKey: true
-        };
-        assert.strictEqual(getScriptUrl(httpEnv), 'http://maximo.example.com/maximo/api/script/naviam.mcp');
-    });
-
-    it('uses a custom script name setting if provided', () => {
-        const env = {
-            host: 'maximo.example.com',
-            port: 443,
-            useSSL: true,
-            context: 'maximo',
-            hasApiKey: true
-        };
-        const url = getScriptUrl(env, 'custom.mcp.script');
-        assert.strictEqual(url, 'https://maximo.example.com/maximo/api/script/custom.mcp.script');
-    });
-
-    it('handles custom URL context paths', () => {
-        const env = {
-            host: 'maximo.example.com',
-            port: 443,
-            useSSL: true,
-            context: '/custom/manage/',
-            hasApiKey: true
-        };
-        const url = getScriptUrl(env);
-        assert.strictEqual(url, 'https://maximo.example.com/custom/manage/api/script/naviam.mcp');
-    });
-});
-
-describe('formatMcpHeaders', () => {
-    it('injects apikey header when apiKey is present and maxauthOnly is false', () => {
-        const env = {
-            apiKey: 'secret-api-key-123',
-            maxauthOnly: false,
-            username: 'wilson'
-        };
-        const headers = formatMcpHeaders(env);
-        assert.deepStrictEqual(headers, { apikey: 'secret-api-key-123' });
-    });
-
-    it('injects the maxauth header when maxauthOnly is true even if apiKey is present', () => {
-        const env = {
-            apiKey: 'secret-api-key-123',
-            maxauthOnly: true,
-            username: 'wilson',
-            password: 'secretpassword'
-        };
-        const headers = formatMcpHeaders(env);
-        const expectedMaxauth = Buffer.from('wilson:secretpassword').toString('base64');
-        assert.deepStrictEqual(headers, { maxauth: expectedMaxauth });
-    });
-
-    it('injects the maxauth header when only username and password are provided', () => {
-        const env = {
-            username: 'wilson',
-            password: 'secretpassword'
-        };
-        const headers = formatMcpHeaders(env);
-        const expectedMaxauth = Buffer.from('wilson:secretpassword').toString('base64');
-        assert.deepStrictEqual(headers, { maxauth: expectedMaxauth });
-    });
-
-    it('uses prompted password for the maxauth header when password was not pre-configured', () => {
-        const env = {
-            username: 'wilson'
-        };
-        const headers = formatMcpHeaders(env, 'prompted-pwd');
-        const expectedMaxauth = Buffer.from('wilson:prompted-pwd').toString('base64');
-        assert.deepStrictEqual(headers, { maxauth: expectedMaxauth });
-    });
-
-    it('rejects passwords or API keys that are still encrypted strings', () => {
-        const env = {
-            username: 'wilson',
-            password: '{encrypted}1234567890abcdef'
-        };
-        assert.strictEqual(formatMcpHeaders(env), null);
-
-        const envApi = {
-            apiKey: '{encrypted}1234567890abcdef'
-        };
-        assert.strictEqual(formatMcpHeaders(envApi), null);
-    });
-
-    it('returns null if neither apiKey nor password (or prompt) is available', () => {
-        const env = {
-            username: 'wilson'
-        };
-        assert.strictEqual(formatMcpHeaders(env), null);
+    it('rejects a missing password or a password without a user name', () => {
+        assert.strictEqual(hasStoredCredentials({ username: 'wilson' }), false);
+        assert.strictEqual(hasStoredCredentials({ password: 'secretpassword' }), false);
+        assert.strictEqual(hasStoredCredentials({ apiKey: '' }), false);
     });
 });
 
@@ -225,6 +86,40 @@ describe('getScriptCheckKey', () => {
     });
 });
 
+describe('getConnectionKey', () => {
+    const env = { host: 'maximo.example.com', port: 443, useSSL: true, context: 'maximo', username: 'wilson', password: 'secret-1' };
+
+    it('is the same for an unchanged environment, so a refresh keeps the session', () => {
+        assert.strictEqual(getConnectionKey({ ...env }), getConnectionKey(env));
+    });
+
+    it('differs when the target, user or stored credentials change', () => {
+        const key = getConnectionKey(env);
+        assert.notStrictEqual(getConnectionKey({ ...env, host: 'other.example.com' }), key);
+        assert.notStrictEqual(getConnectionKey({ ...env, username: 'maxadmin' }), key);
+        assert.notStrictEqual(getConnectionKey({ ...env, password: 'secret-2' }), key);
+        assert.notStrictEqual(getConnectionKey({ ...env, apiKey: 'key-1' }), key);
+    });
+
+    it('differs when TLS, proxy or maxauth options change, so the client is rebuilt with them', () => {
+        const key = getConnectionKey(env);
+        assert.notStrictEqual(getConnectionKey({ ...env, allowUntrustedCerts: true }), key);
+        assert.notStrictEqual(getConnectionKey({ ...env, ca: '-----BEGIN CERTIFICATE-----' }), key);
+        assert.notStrictEqual(getConnectionKey({ ...env, maxauthOnly: true }), key);
+        assert.notStrictEqual(getConnectionKey({ ...env, proxyHost: '192.0.2.1' }), key);
+        assert.notStrictEqual(getConnectionKey({ ...env, proxyHost: '192.0.2.1', proxyPort: 8080 }), getConnectionKey({ ...env, proxyHost: '192.0.2.1' }));
+        assert.notStrictEqual(getConnectionKey({ ...env, proxyUsername: 'proxy' }), key);
+        assert.notStrictEqual(getConnectionKey({ ...env, proxyPassword: 'proxy-secret' }), key);
+    });
+
+    it('does not contain the credentials', () => {
+        const key = getConnectionKey({ ...env, apiKey: 'key-1', proxyPassword: 'proxy-secret' });
+        assert.ok(!key.includes('secret-1'));
+        assert.ok(!key.includes('key-1'));
+        assert.ok(!key.includes('proxy-secret'));
+    });
+});
+
 describe('describeScriptStatus', () => {
     it('returns null when the script is installed and active', () => {
         assert.strictEqual(describeScriptStatus({ installed: true, active: true }, 'naviam.mcp', 'Dev'), null);
@@ -246,3 +141,100 @@ describe('describeScriptStatus', () => {
         assert.match(message, /Refresh Maximo MCP Server/);
     });
 });
+
+describe('isSessionRejected', () => {
+    it('treats a 401 and a redirect to the login page as a rejected session', () => {
+        for (const status of [401, 302, 303, 307]) {
+            assert.strictEqual(isSessionRejected(status), true, `status ${status}`);
+        }
+    });
+
+    it('passes every other answer through, including Maximo errors', () => {
+        for (const status of [200, 202, 400, 403, 404, 500]) {
+            assert.strictEqual(isSessionRejected(status), false, `status ${status}`);
+        }
+    });
+});
+
+describe('createSessionRenewer', () => {
+    function deferred() {
+        let resolve;
+        let reject;
+        const promise = new Promise((res, rej) => {
+            resolve = res;
+            reject = rej;
+        });
+        return { promise, resolve, reject };
+    }
+
+    it('logs in once for parallel requests rejected on the same session', async () => {
+        const renewer = createSessionRenewer();
+        const client = {};
+        const login = deferred();
+        let logins = 0;
+        const start = () => {
+            logins++;
+            return login.promise;
+        };
+
+        const sent = renewer.session(client);
+        const first = renewer.renew(client, sent, start);
+        const second = renewer.renew(client, sent, start);
+        login.resolve();
+        await Promise.all([first, second]);
+
+        assert.strictEqual(logins, 1);
+        assert.strictEqual(renewer.session(client), sent + 1);
+    });
+
+    it('does not log in again for a request sent on a session already replaced', async () => {
+        const renewer = createSessionRenewer();
+        const client = {};
+        let logins = 0;
+        const start = async () => {
+            logins++;
+        };
+
+        const late = renewer.session(client);
+        await renewer.renew(client, renewer.session(client), start);
+        await renewer.renew(client, late, start);
+
+        assert.strictEqual(logins, 1);
+    });
+
+    it('keeps the session after a failed login, so the next rejection tries again', async () => {
+        const renewer = createSessionRenewer();
+        const client = {};
+        let logins = 0;
+
+        await assert.rejects(
+            renewer.renew(client, 0, async () => {
+                logins++;
+                throw new Error('login failed');
+            }),
+            /login failed/
+        );
+        await renewer.renew(client, 0, async () => {
+            logins++;
+        });
+
+        assert.strictEqual(logins, 2);
+        assert.strictEqual(renewer.session(client), 1);
+    });
+
+    it('tracks each client separately', async () => {
+        const renewer = createSessionRenewer();
+        const a = {};
+        const b = {};
+        let logins = 0;
+        const start = async () => {
+            logins++;
+        };
+
+        await renewer.renew(a, 0, start);
+        await renewer.renew(b, 0, start);
+
+        assert.strictEqual(logins, 2);
+    });
+});
+

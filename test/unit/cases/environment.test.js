@@ -3,9 +3,9 @@
  *
  *   npm run test:unit
  */
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
-const { findSelectedEnvironment, resolveEnvironment } = require('../../../src/environment');
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import { findSelectedEnvironment, resolveEnvironment } from '../../../src/environment.js';
 
 function fakeSettings(map = {}) {
     return {
@@ -116,6 +116,19 @@ describe('resolveEnvironment', () => {
         assert.strictEqual(env.context, 'maximo');
         assert.strictEqual(env.maxauthOnly, false);
         assert.strictEqual(resolveEnvironment({ host: 'localhost', useSSL: false }, fakeSettings()).port, 80);
+    });
+
+    it('uses only the selected environment and the defaults when no settings are passed', () => {
+        const env = resolveEnvironment({ host: 'localhost', username: 'maxadmin' });
+        assert.strictEqual(env.host, 'localhost');
+        assert.strictEqual(env.username, 'maxadmin');
+        assert.strictEqual(env.apiKey, undefined);
+        assert.strictEqual(env.ca, undefined);
+        assert.strictEqual(env.port, 443);
+        assert.strictEqual(env.context, 'maximo');
+        assert.strictEqual(env.timeout, 30);
+        assert.strictEqual(env.configurationTimeout, 5);
+        assert.strictEqual(resolveEnvironment(null).host, undefined);
     });
 
     it('leaves the host empty when neither source supplies one', () => {

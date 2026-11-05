@@ -1,0 +1,68 @@
+{
+    "enterpriseServices": [
+        {
+            "ifaceName": "NVTEST_ES_ASSET",
+            "description": "Test enterprise service",
+            "intObjectName": "MXASSET",
+            "ifaceType": "MAXIMO",
+            "messageType": "Sync",
+            "storeMsg": true,
+            "useTxnTracking": true,
+            "searchField": "ASSETNUM",
+            "extMsgIdField": "ASSETNUM",
+            "interpreterClass": "com.example.NvTestInterpreter",
+            "additionalObjectStructures": [{ "intObjectName": "MXOPERLOC", "ifaceMapOrder": 1 }],
+            "gatewayProperties": [
+                { "param": "NVPARAM1", "value": "Value 1", "isXmlTag": false },
+                { "param": "NVPARAM2", "value": "ASSETNUM", "isXmlTag": true }
+            ],
+            "integrationControls": [{ "control": "WOSTART" }, { "control": "POSEND" }],
+            "processingRules": [
+                {
+                    "procName": "NVSKIP",
+                    "action": "!SKIP!",
+                    "objectName": "ASSET",
+                    "description": "Skip decommissioned assets",
+                    "enabled": true,
+                    "applyOnInsert": true,
+                    "applyOnUpdate": true,
+                    "applyOnDelete": false,
+                    "conditions": [
+                        {
+                            "condition": 10,
+                            "details": [
+                                {
+                                    "condSequence": 1,
+                                    "condType": "FIELD",
+                                    "evalType": "!EQUALS!",
+                                    "changeType": "!ALWAYS!",
+                                    "compareType": "VALUE",
+                                    "columnName": "STATUS",
+                                    "value": "DECOMMISSIONED"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "procName": "NVSET",
+                    "action": "!SET!",
+                    "objectName": "ASSET",
+                    "enabled": true,
+                    "applyOnInsert": true,
+                    "fields": [{ "fieldName": "DESCRIPTION", "replaceNull": true, "valueType": "VALUE", "value": "Received by NV test" }]
+                }
+            ],
+            "objectProcessingRules": [
+                {
+                    "procName": "NVOBJSKIP",
+                    "action": "!SKIP!",
+                    "objectName": "ASSET",
+                    "enabled": true,
+                    "applyOnInsert": true,
+                    "conditions": [{ "condition": 10, "details": [{ "condType": "FIELD", "evalType": "!ISNULL!", "changeType": "!ALWAYS!", "columnName": "LOCATION" }] }]
+                }
+            ]
+        }
+    ]
+}

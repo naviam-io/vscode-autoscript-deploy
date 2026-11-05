@@ -1,0 +1,90 @@
+{
+    "productV1": {
+        "loggers": [
+            {
+                "logger": "testretainlogger",
+                "logKey": "log4j.logger.maximo.testretainlogger",
+                "logLevel": "INFO",
+                "active": true,
+                "appenders": "Console",
+                "_retain": ["logLevel", "appenders"]
+            },
+            {
+                "logger": "testretainlogger",
+                "parent": "testretainlogger",
+                "logLevel": "ERROR",
+                "active": true,
+                "_retain": ["active"]
+            }
+        ]
+    },
+    "customerEdit": {
+        "loggers": [
+            {
+                "logger": "testretainlogger",
+                "logKey": "log4j.logger.maximo.testretainlogger",
+                "logLevel": "DEBUG",
+                "active": false,
+                "appenders": "Rolling"
+            },
+            {
+                "logger": "testretainlogger",
+                "parent": "testretainlogger",
+                "logLevel": "INFO",
+                "active": false
+            }
+        ]
+    },
+    "productV2": {
+        "loggers": [
+            {
+                "logger": "testretainlogger",
+                "logKey": "log4j.logger.maximo.testretainlogger",
+                "logLevel": "WARN",
+                "active": true,
+                "appenders": "DailyRolling",
+                "_retain": ["logLevel", "appenders"]
+            },
+            {
+                "logger": "testretainlogger",
+                "parent": "testretainlogger",
+                "logLevel": "WARN",
+                "active": true,
+                "_retain": ["active"]
+            }
+        ]
+    },
+    "customerEditCleared": {
+        "loggers": [
+            {
+                "logger": "testretainlogger",
+                "logKey": "log4j.logger.maximo.testretainlogger",
+                "logLevel": "FATAL",
+                "active": false,
+                "appenders": ""
+            },
+            {
+                "logger": "testretainlogger",
+                "parent": "testretainlogger",
+                "logLevel": "INFO",
+                "active": true
+            }
+        ]
+    },
+    "ambiguous": {
+        "loggers": [
+            {
+                "logger": "testretainlogger",
+                "logLevel": "INFO"
+            }
+        ]
+    },
+    "byName": {
+        "loggers": [
+            {
+                "logger": "testretainlogger",
+                "logLevel": "ERROR"
+            }
+        ]
+    }
+}

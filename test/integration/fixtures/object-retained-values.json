@@ -1,0 +1,190 @@
+{
+    "productV1": {
+        "objects": [
+            {
+                "object": "NVTEST_RETAINOBJ",
+                "description": "Retained values test, release 1",
+                "service": "ASSET",
+                "entity": "NVTEST_RETAINOBJ",
+                "level": "!SYSTEM!",
+                "persistent": true,
+                "uniqueColumn": "NVTEST_RETAINOBJID",
+                "class": "psdi.mbo.custapp.CustomMboSet",
+                "_retain": [
+                    "description"
+                ],
+                "attributes": [
+                    {
+                        "attribute": "NVTEST_RETAINOBJID",
+                        "description": "Unique identifier",
+                        "title": "Identifier",
+                        "type": "BIGINT",
+                        "required": true,
+                        "primaryColumn": 1,
+                        "searchType": "EXACT"
+                    },
+                    {
+                        "attribute": "NVTEST_NOTE",
+                        "description": "Note",
+                        "title": "Note",
+                        "type": "ALN",
+                        "length": 50,
+                        "searchType": "WILDCARD",
+                        "_retain": [
+                            "length",
+                            "title"
+                        ]
+                    }
+                ],
+                "relationships": [
+                    {
+                        "relationship": "NVTEST_RETAIN_WO",
+                        "child": "WORKORDER",
+                        "remarks": "Release 1",
+                        "whereClause": "1=0",
+                        "_retain": [
+                            "whereClause"
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "customerEdit": {
+        "objects": [
+            {
+                "object": "NVTEST_RETAINOBJ",
+                "description": "Customer description",
+                "attributes": [
+                    {
+                        "attribute": "NVTEST_NOTE",
+                        "description": "Note",
+                        "title": "Customer note",
+                        "type": "ALN",
+                        "length": 200,
+                        "searchType": "WILDCARD"
+                    }
+                ],
+                "relationships": [
+                    {
+                        "relationship": "NVTEST_RETAIN_WO",
+                        "child": "WORKORDER",
+                        "remarks": "Customer remarks",
+                        "whereClause": "1=2"
+                    }
+                ]
+            }
+        ]
+    },
+    "productV2": {
+        "objects": [
+            {
+                "object": "nvtest_retainobj",
+                "description": "Retained values test, release 2",
+                "service": "ASSET",
+                "entity": "NVTEST_RETAINOBJ",
+                "level": "!SYSTEM!",
+                "persistent": true,
+                "uniqueColumn": "NVTEST_RETAINOBJID",
+                "class": "psdi.mbo.custapp.CustomMboSet",
+                "_retain": [
+                    "description"
+                ],
+                "attributes": [
+                    {
+                        "attribute": "NVTEST_RETAINOBJID",
+                        "description": "Unique identifier",
+                        "title": "Identifier",
+                        "type": "BIGINT",
+                        "required": true,
+                        "primaryColumn": 1,
+                        "searchType": "EXACT"
+                    },
+                    {
+                        "attribute": "nvtest_note",
+                        "description": "Note, release 2",
+                        "title": "Note 2",
+                        "type": "ALN",
+                        "length": 60,
+                        "searchType": "WILDCARD",
+                        "_retain": [
+                            "length",
+                            "title"
+                        ]
+                    },
+                    {
+                        "attribute": "nvtest_added",
+                        "description": "Added in release 2",
+                        "title": "Added",
+                        "type": "ALN",
+                        "length": 20,
+                        "searchType": "WILDCARD",
+                        "_retain": [
+                            "length"
+                        ]
+                    }
+                ],
+                "relationships": [
+                    {
+                        "relationship": "nvtest_retain_wo",
+                        "child": "WORKORDER",
+                        "remarks": "Release 2",
+                        "whereClause": "1=3",
+                        "_retain": [
+                            "whereClause"
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "productV2NoRetain": {
+        "objects": [
+            {
+                "object": "nvtest_retainobj",
+                "description": "Retained values test, release 2",
+                "service": "ASSET",
+                "entity": "NVTEST_RETAINOBJ",
+                "level": "!SYSTEM!",
+                "persistent": true,
+                "uniqueColumn": "NVTEST_RETAINOBJID",
+                "class": "psdi.mbo.custapp.CustomMboSet",
+                "attributes": [
+                    {
+                        "attribute": "NVTEST_RETAINOBJID",
+                        "description": "Unique identifier",
+                        "title": "Identifier",
+                        "type": "BIGINT",
+                        "required": true,
+                        "primaryColumn": 1,
+                        "searchType": "EXACT"
+                    },
+                    {
+                        "attribute": "nvtest_note",
+                        "description": "Note, release 2",
+                        "title": "Note 2",
+                        "type": "ALN",
+                        "length": 60,
+                        "searchType": "WILDCARD"
+                    },
+                    {
+                        "attribute": "nvtest_added",
+                        "description": "Added in release 2",
+                        "title": "Added",
+                        "type": "ALN",
+                        "length": 20,
+                        "searchType": "WILDCARD"
+                    }
+                ],
+                "relationships": [
+                    {
+                        "relationship": "nvtest_retain_wo",
+                        "child": "WORKORDER",
+                        "remarks": "Release 2",
+                        "whereClause": "1=3"
+                    }
+                ]
+            }
+        ]
+    }
+}

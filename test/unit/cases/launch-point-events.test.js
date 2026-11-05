@@ -7,9 +7,9 @@
  * part of the contract: an attribute launch point that sets both initializeAccessRestriction and
  * initializeValue is an access restriction, not an initialisation.
  */
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
-const { loadScriptFunctions } = require('../harness');
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import { loadScriptFunctions } from '../harness.js';
 
 const DEPLOY_SCRIPT = 'resources/naviam.autoscript.deploy.js';
 

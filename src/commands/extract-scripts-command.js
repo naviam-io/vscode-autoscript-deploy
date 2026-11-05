@@ -1,45 +1,19 @@
-/* eslint-disable indent */
-import * as fs from 'fs';
-import * as path from 'path';
-import * as crypto from 'crypto';
-import * as os from 'os';
+import { window, workspace } from 'vscode';
 
-import { ProgressLocation, window, workspace } from 'vscode';
-
-// get a reference to the fetched source object
-import { getMaximoConfig, asyncForEach } from '../extension';
+import { getMaximoConfig } from '../extension';
+import { extractScripts } from '../core/extract/extract-scripts.js';
+import vscodeUi from '../vscode-ui.js';
 import Logger from '../logger';
+import { prepareExtractFolder, showExtractResult } from '../core/extract/extract-support.js';
 
 const LOG_SOURCE = 'ExtractScriptsCommand';
 
 export default async function extractScriptsCommand(client) {
     Logger.info('Extract automation scripts command requested.', LOG_SOURCE);
-    let extractLoc = (await getMaximoConfig()).extractLocation;
-    // if the extract location has not been specified use the workspace folder.
-    if (typeof extractLoc === 'undefined' || !extractLoc) {
-        if (workspace.workspaceFolders !== undefined) {
-            extractLoc = workspace.workspaceFolders[0].uri.fsPath;
-        } else {
-            Logger.error('Extract scripts command failed because no working folder or extract folder is configured.', null, LOG_SOURCE);
-            window.showErrorMessage('A working folder must be selected or an export folder configured before exporting automation scripts. ', {
-                modal: true,
-            });
-            return;
-        }
+    const extractDir = prepareExtractFolder(vscodeUi, (await getMaximoConfig()).extractLocation, workspace.workspaceFolders?.[0]?.uri.fsPath, 'automation scripts', LOG_SOURCE);
+    if (!extractDir) {
+        return;
     }
-
-    if (extractLoc.startsWith('~')) {
-        extractLoc = path.join(os.homedir(), extractLoc.slice(1));
-    } else if ((extractLoc.startsWith('./') || extractLoc.startsWith('.\\')) && workspace.workspaceFolders !== undefined) {
-        extractLoc = path.join(workspace.workspaceFolders[0].uri.fsPath, extractLoc.slice(2));
-    } else if (!path.isAbsolute(extractLoc) && workspace.workspaceFolders !== undefined) {
-        extractLoc = path.join(workspace.workspaceFolders[0].uri.fsPath, extractLoc);
-    }
-
-    if (!fs.existsSync(extractLoc)) {
-        fs.mkdirSync(extractLoc, { recursive: true });
-    }
-    Logger.info(`Extracting automation scripts to ${extractLoc}.`, LOG_SOURCE);
 
     const quickPick = window.createQuickPick();
     quickPick.canSelectMany = true;
@@ -58,82 +32,11 @@ export default async function extractScriptsCommand(client) {
         quickPick.busy = false;
 
         quickPick.onDidAccept(async () => {
-            const scriptNames = quickPick.selectedItems.map((item) => item.label);
-            if (scriptNames.length > 0) {
-                Logger.info(`Extracting ${scriptNames.length} automation script(s).`, LOG_SOURCE);
-                await window.withProgress(
-                    {
-                        title: 'Extracting Automation Script',
-                        location: ProgressLocation.Notification,
-                        cancellable: true,
-                    },
-                    async (progress, cancelToken) => {
-                        let percent = Math.round((1 / scriptNames.length) * 100);
-
-                        let overwriteAll = false;
-                        let overwrite = false;
-
-                        await asyncForEach(scriptNames, async (scriptName) => {
-                            if (!cancelToken.isCancellationRequested) {
-                                progress.report({
-                                    increment: percent,
-                                    message: `Extracting ${scriptName}`,
-                                });
-                                let scriptInfo = await client.getScript(scriptName);
-
-                                let fileExtension = getExtension(scriptInfo.scriptLanguage);
-
-                                let outputFile = extractLoc + '/' + scriptName.toLowerCase() + fileExtension;
-
-                                // if the file doesn't exist then just write it out.
-                                if (!fs.existsSync(outputFile)) {
-                                    fs.writeFileSync(outputFile, scriptInfo.script);
-                                } else {
-                                    let incomingHash = crypto.createHash('sha256').update(scriptInfo.script).digest('hex');
-                                    // @ts-ignore
-                                    let fileHash = crypto.createHash('sha256').update(fs.readFileSync(outputFile)).digest('hex');
-
-                                    if (fileHash !== incomingHash) {
-                                        if (!overwriteAll) {
-                                            await window
-                                                .showInformationMessage(
-                                                    `The script ${scriptName.toLowerCase()}${fileExtension} exists. \nReplace?`,
-                                                    { modal: true },
-                                                    ...['Replace', 'Replace All', 'Skip']
-                                                )
-                                                .then(async (response) => {
-                                                    if (response === 'Replace') {
-                                                        overwrite = true;
-                                                    } else if (response === 'Replace All') {
-                                                        overwriteAll = true;
-                                                    } else if (response === 'Skip') {
-                                                        // do nothing
-                                                        overwrite = false;
-                                                    } else {
-                                                        // @ts-ignore
-                                                        cancelToken.cancel();
-                                                    }
-                                                });
-                                        }
-                                        if (overwriteAll || overwrite) {
-                                            fs.writeFileSync(outputFile, scriptInfo.script);
-                                            overwrite = false;
-                                        }
-                                    }
-                                }
-
-                                if (cancelToken.isCancellationRequested) {
-                                    return;
-                                }
-                            }
-                        });
-
-                        if (!cancelToken.isCancellationRequested) {
-                            window.showInformationMessage('Automation scripts extracted.', { modal: true });
-                            Logger.info(`${scriptNames.length} automation script(s) extracted.`, LOG_SOURCE);
-                        }
-                    }
-                );
+            const selected = quickPick.selectedItems.map((item) => item.label);
+            if (selected.length > 0) {
+                Logger.info(`Extracting ${selected.length} automation script(s).`, LOG_SOURCE);
+                const result = await extractScripts(client, vscodeUi, selected, extractDir);
+                showExtractResult(vscodeUi, result, selected.length, { singular: 'automation script', plural: 'automation scripts', success: 'Automation scripts extracted.' }, LOG_SOURCE);
             } else {
                 Logger.info('Extract scripts command cancelled without a selection.', LOG_SOURCE);
                 quickPick.hide();
@@ -142,23 +45,6 @@ export default async function extractScriptsCommand(client) {
     } else {
         quickPick.hide();
         Logger.error('No automation scripts were found to extract.', null, LOG_SOURCE);
-        window.showErrorMessage('No scripts were found to extract.', {
-            modal: true,
-        });
-    }
-
-    function getExtension(scriptLanguage) {
-        switch (scriptLanguage.toLowerCase()) {
-            case 'python':
-            case 'jython':
-                return '.py';
-            case 'nashorn':
-            case 'javascript':
-            case 'emcascript':
-            case 'js':
-                return '.js';
-            default:
-                return '.unknown';
-        }
+        window.showErrorMessage('No scripts were found to extract.', { modal: true });
     }
 }

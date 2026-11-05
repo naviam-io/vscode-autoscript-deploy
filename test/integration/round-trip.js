@@ -2,11 +2,11 @@
 /*
  * Shared deploy/extract round trip used by the configuration type test cases.
  */
-const fs = require('fs');
-const path = require('path');
-const { assertEquals, assertNotNull } = require('./harness');
+import fs from 'fs';
+import path from 'path';
+import { assertEquals, assertNotNull } from './harness.js';
 
-const FIXTURES_DIR = path.join(__dirname, 'fixtures');
+const FIXTURES_DIR = path.join(import.meta.dirname, 'fixtures');
 
 function loadFixture(fixtureName) {
     return JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, fixtureName + '.json'), 'utf8'));
@@ -152,4 +152,4 @@ async function deleteObjects(client, options, items) {
     await client.deployConfig(payload);
 }
 
-module.exports = { loadFixture, localizedValue, roundTrip };
+export { assertSubset, loadFixture, localizedValue, roundTrip };

@@ -2,6 +2,7 @@
     "properties": [
         {
             "propName": "TESTcomplete.property",
+            "_retain": ["propValue", "maxPropInstance"],
             "description": "Complete manifest test property",
             "propValue": "deployed",
             "liveRefresh": true,
@@ -13,6 +14,7 @@
                 {
                     "serverName": "TESTSERVER",
                     "serverHost": "localhost",
+                    "_retain": ["propValue"],
                     "propValue": "instance"
                 }
             ]

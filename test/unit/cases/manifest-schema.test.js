@@ -7,14 +7,16 @@
  * deprecation of entries that declare no "kind". Every entry form has to match exactly one branch
  * of the top level oneOf, or the editor reports a spurious error.
  */
-const { describe, it, before } = require('node:test');
-const assert = require('node:assert');
-const fs = require('node:fs');
-const path = require('node:path');
+import { describe, it, before } from 'node:test';
+import assert from 'node:assert';
+import fs from 'node:fs';
+import path from 'node:path';
 
-const Ajv = require('ajv');
+import Ajv from 'ajv';
 
-const schema = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', '..', '..', 'schemas', 'manifest-schema.json'), 'utf8'));
+import { createOnlyKinds } from '../../../src/core/deploy/manifest-planner.js';
+
+const schema = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '..', '..', '..', 'schemas', 'manifest-schema.json'), 'utf8'));
 
 /** @type {import('ajv').ValidateFunction} */
 let validate;
@@ -91,5 +93,52 @@ describe('manifest schema', () => {
 
     it('rejects an unknown kind', () => {
         assert.strictEqual(validateManifest([{ path: 'scripts/example/index.ts', kind: 'nonsense' }]), false);
+    });
+});
+
+describe('manifest schema createOnly', () => {
+    const accepting = [
+        ['automationScript', 'scripts/a.js'],
+        ['inspectionForm', 'forms/a.json'],
+        ['screen', 'screens/a.xml'],
+        ['report', 'WOTRACK/a.rptdesign']
+    ];
+
+    for (const [kind, entryPath] of accepting) {
+        it(`accepts createOnly on a ${kind} entry`, () => {
+            assert.strictEqual(validateManifest([{ kind, path: entryPath, createOnly: true }]), true, JSON.stringify(validate.errors));
+        });
+    }
+
+    for (const [kind, entryPath] of [
+        ['configuration', 'config/a.json'],
+        ['deployScript', 'scripts/a.js'],
+        ['manifest', 'nested.manifest.json']
+    ]) {
+        it(`rejects createOnly on a ${kind} entry`, () => {
+            assert.strictEqual(validateManifest([{ kind, path: entryPath, createOnly: true }]), false);
+        });
+    }
+
+    it('rejects createOnly on an entry without a kind', () => {
+        assert.strictEqual(validateManifest([{ path: 'scripts/a.js', createOnly: true }]), false);
+    });
+
+    it('rejects createOnly on a database configuration entry', () => {
+        assert.strictEqual(validateManifest([{ kind: 'databaseConfiguration', createOnly: true }]), false);
+    });
+
+    it('rejects a createOnly value that is not a boolean', () => {
+        assert.strictEqual(validateManifest([{ kind: 'screen', path: 'a.xml', createOnly: 'yes' }]), false);
+    });
+
+    it('accepts createOnly false on any file kind', () => {
+        assert.strictEqual(validateManifest([{ kind: 'configuration', path: 'a.json', createOnly: false }]), true, JSON.stringify(validate.errors));
+    });
+
+    it('accepts createOnly for exactly the kinds the planner accepts', () => {
+        const paths = { configuration: 'a.json', automationScript: 'a.js', deployScript: 'a.js', inspectionForm: 'a.json', screen: 'a.xml', report: 'a.rptdesign', manifest: 'a.json' };
+        const accepted = Object.keys(paths).filter((kind) => validateManifest([{ kind, path: paths[kind], createOnly: true }]));
+        assert.deepStrictEqual(accepted.sort(), createOnlyKinds().sort());
     });
 });

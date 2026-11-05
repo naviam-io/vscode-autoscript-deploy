@@ -2,12 +2,44 @@
 /// <reference path="../../manage-facade.d.ts" />
 
 import {
-    applyValues, applyWritableValues, close, setValue, toExternalSynonymValue, updateProgress, valueOrDefault
+    applyOptionalValues,
+    applyValues,
+    applyWritableValues,
+    arrayOrEmpty,
+    booleanOrDefault,
+    close,
+    rejectDuplicates,
+    requireKeys,
+    setValue,
+    toExternalSynonymValue,
+    updateProgress,
+    valueOrDefault
 } from '../core/util';
+import { applyRetainedValues, hasRetainDeclarations, retainIdentityOf } from '../core/retained-values';
+import { deleteSnapshot, readSnapshot, snapshotKey, writeSnapshot } from '../core/snapshot-store';
+import { captureExistingState } from '../core/capture';
 
 var MXServer = Java.type('psdi.server.MXServer');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
 var MboConstants = Java.type('psdi.mbo.MboConstants');
+
+/** The Maximo object an integration object snapshot is keyed by. */
+export const SNAPSHOT_OBJECT = 'MAXINTOBJECT';
+
+/** Whether the object structure is a product one, which a deployment never changes or deletes. */
+export function isPredefined(intObjectName: string): boolean {
+    const maximo: psdi.server.MXServer = MXServer.getMXServer();
+    let mboSet: psdi.mbo.MboSetRemote | null = null;
+    try {
+        mboSet = maximo.getMboSet('MAXINTOBJECT', maximo.getSystemUserInfo());
+        const sqlf = new SqlFormat('intobjectname = :1 and userdefined = 0');
+        sqlf.setObject(1, 'MAXINTOBJECT', 'INTOBJECTNAME', intObjectName);
+        mboSet.setWhere(sqlf.format());
+        return !mboSet.isEmpty();
+    } finally {
+        close(mboSet);
+    }
+}
 
 export type MaximoIntegrationObjectFieldType = 'EXCLUDE' | 'NONPERSISTENT';
 export type MaximoOSLCActionImplementationType = 'script' | 'system' | 'workflow' | 'wsmethod';
@@ -20,6 +52,7 @@ interface MaximoGroup {
 
 export function process(integrationObject: MaximoIntegrationObject): void {
     const maximo: psdi.server.MXServer = MXServer.getMXServer();
+    const key = snapshotKey(SNAPSHOT_OBJECT, retainIdentityOf(integrationObject));
     let mboSet: psdi.mbo.MboSetRemote | null = null;
     try {
         mboSet = maximo.getMboSet('MAXINTOBJECT', maximo.getSystemUserInfo());
@@ -27,10 +60,12 @@ export function process(integrationObject: MaximoIntegrationObject): void {
         if (integrationObject._delete) {
             updateProgress('Deleting integration object ' + integrationObject.intObjectName);
             deleteIntegrationObject(mboSet, integrationObject);
+            deleteSnapshot(key);
             updateProgress('Deleted integration object ' + integrationObject.intObjectName);
         } else {
             updateProgress('Adding/Updating integration object ' + integrationObject.intObjectName);
-            addOrUpdateIntegrationObject(mboSet, integrationObject);
+            addOrUpdateIntegrationObject(mboSet, integrationObject, key);
+            deleteSnapshot(key);
             updateProgress('Added/Updated integration object ' + integrationObject.intObjectName);
         }
     } finally {
@@ -46,12 +81,58 @@ function deleteIntegrationObject(mboSet: psdi.mbo.MboSetRemote, integrationObjec
 
     deleteNonCascadingChildren(mbo);
     mbo.delete();
-    mboSet.save();
+    saveDeletedIntegrationObject(mboSet);
 }
 
-function addOrUpdateIntegrationObject(mboSet: psdi.mbo.MboSetRemote, integrationObject: MaximoIntegrationObject): void {
+// Saving an object structure refreshes the object-structure and OSLC caches. Up to MAS 9.1 that is a
+// full reload; MAS 9.2 with mxe.oslcfastreload reloads only the saved name, which fails with
+// iface#oslcloaderr once that name is deleted, after the deletion is committed. WSIOTXN suppresses
+// the automatic refresh during the save, and the whole cache is then reloaded as earlier versions do.
+function saveDeletedIntegrationObject(mboSet: psdi.mbo.MboSetRemote): void {
+    const IntegrationContext = Java.type('psdi.iface.mic.IntegrationContext');
+    let context = IntegrationContext.getCurrentContext();
+    const createdContext = !context;
+    if (createdContext) {
+        context = IntegrationContext.createCurrentContext();
+    }
+    const previous = context.getProperty('WSIOTXN');
+    try {
+        context.setProperty('WSIOTXN', '1');
+        mboSet.save();
+    } finally {
+        if (createdContext) {
+            IntegrationContext.destroyCurrentContext();
+        } else if (previous === null) {
+            context.removeProperty('WSIOTXN');
+        } else {
+            context.setProperty('WSIOTXN', previous);
+        }
+    }
+    Java.type('psdi.server.MXServer').getMXServer().reloadMaximoCache(Java.type('psdi.iface.mos.ObjectStructureCache').getInstance().getName(), true);
+}
+
+function addOrUpdateIntegrationObject(mboSet: psdi.mbo.MboSetRemote, integrationObject: MaximoIntegrationObject, key: string): void {
     let existing = findIntegrationObject(mboSet, integrationObject.intObjectName);
     const existingGroups: MaximoGroup[] = [];
+
+    // Captured before the security groups and the object structure itself are deleted.
+    if (hasRetainDeclarations(integrationObject)) {
+        let snapshot = readSnapshot(key);
+        if (!snapshot && existing) {
+            snapshot = captureExistingState('integrationobjects', existing.getUniqueIDValue());
+            if (!snapshot) {
+                throw Error(
+                    'Integration object ' +
+                        integrationObject.intObjectName +
+                        ' has an existing record whose state could not be captured, so its retained values cannot be preserved.'
+                );
+            }
+            writeSnapshot(key, snapshot);
+        }
+
+        applyDefaultTemplateOwner(integrationObject, mboSet.getUserInfo().getPersonId());
+        integrationObject = applyRetainedValues(integrationObject, snapshot ? new MaximoIntegrationObject(snapshot) : null);
+    }
 
     if (existing) {
         // if the current object has os security then we need to remove the groups from that first then put it back.
@@ -63,7 +144,7 @@ function addOrUpdateIntegrationObject(mboSet: psdi.mbo.MboSetRemote, integration
 
         deleteNonCascadingChildren(existing);
         existing.delete();
-        mboSet.save();
+        saveDeletedIntegrationObject(mboSet);
         mboSet.reset();
     }
 
@@ -74,8 +155,10 @@ function addOrUpdateIntegrationObject(mboSet: psdi.mbo.MboSetRemote, integration
     mboSet.save();
 
     // MAS 9 validates OSLC actions, queries and query templates against the object structure cache,
-    // which only knows saved object structures.
+    // which only knows saved object structures. Signature options follow the save that creates the
+    // standard options of a secured object structure, so a payload that repeats them updates them.
     const savedMbo = mboSet.getMboForUniqueId(uniqueId);
+    applySigOptions(savedMbo, integrationObject.sigOption);
     applyOSLCActions(savedMbo, integrationObject);
     applyOSLCQueries(savedMbo, integrationObject.oslcQuery);
     applyQueryTemplates(savedMbo, integrationObject.queryTemplate);
@@ -84,6 +167,15 @@ function addOrUpdateIntegrationObject(mboSet: psdi.mbo.MboSetRemote, integration
     if (integrationObject.useOSSecurity && existingGroups.length > 0) {
         restoreExistingSecurityGroups(mboSet.getMboForUniqueId(uniqueId), integrationObject.intObjectName, existingGroups);
     }
+}
+
+/** A query template is keyed by its owner, which Maximo sets on save, so a retained template only matches with it set first. */
+function applyDefaultTemplateOwner(integrationObject: MaximoIntegrationObject, owner: string): void {
+    integrationObject.queryTemplate.forEach(function (template: MaximoQueryTemplate): void {
+        if (template.owner === null) {
+            template.owner = owner;
+        }
+    });
 }
 
 function findIntegrationObject(mboSet: psdi.mbo.MboSetRemote, intObjectName: string): psdi.mbo.MboRemote {
@@ -200,9 +292,7 @@ function applyIntegrationObjectValues(mbo: psdi.mbo.MboRemote, integrationObject
 
     applyWritableValues(mbo, [['FLATSUPPORTED', integrationObject.flatSupported]]);
 
-    if (attributeExists('MAXINTOBJECT', 'AUTOPAGINGTHRESHOLD')) {
-        setValue(mbo, 'AUTOPAGINGTHRESHOLD', integrationObject.autoPagingThreshold);
-    }
+    setValue(mbo, 'AUTOPAGINGTHRESHOLD', integrationObject.autoPagingThreshold);
 
     applyIntegrationObjectDetails(mbo, integrationObject);
 
@@ -211,8 +301,6 @@ function applyIntegrationObjectValues(mbo: psdi.mbo.MboRemote, integrationObject
     } else if (integrationObject.useOSSecurity) {
         setValue(mbo, 'USEOSSECURITY', integrationObject.useOSSecurity);
     }
-
-    applySigOptions(mbo, integrationObject.sigOption);
 }
 
 function applyIntegrationObjectDetails(mbo: psdi.mbo.MboRemote, integrationObject: MaximoIntegrationObject): void {
@@ -221,20 +309,24 @@ function applyIntegrationObjectDetails(mbo: psdi.mbo.MboRemote, integrationObjec
     integrationObject.maxIntObjDetail.forEach(function (detail: MaximoIntegrationObjectDetail): void {
         const maxIntObjDetail = maxIntObjDetailSet.add();
 
-        setValue(maxIntObjDetail, 'OBJECTNAME', detail.objectName);
-        setValue(maxIntObjDetail, 'ALTKEY', detail.altKey);
-        setValue(maxIntObjDetail, 'EXCLUDEBYDEFAULT', detail.excludeByDefault);
-        setValue(maxIntObjDetail, 'SKIPKEYUPDATE', detail.skipKeyUpdate);
-        setValue(maxIntObjDetail, 'EXCLUDEPARENTKEY', detail.excludeParentKey);
-        setValue(maxIntObjDetail, 'DELETEONCREATE', detail.deleteOnCreate);
-        setValue(maxIntObjDetail, 'PROPAGATEEVENT', detail.propagateEvent);
-        setValue(maxIntObjDetail, 'INVOKEEXECUTE', detail.invokeExecute);
-        setValue(maxIntObjDetail, 'FDRESOURCE', detail.fdResource);
+        applyValues(maxIntObjDetail, [
+            ['OBJECTNAME', detail.objectName],
+            ['ALTKEY', detail.altKey],
+            ['EXCLUDEBYDEFAULT', detail.excludeByDefault],
+            ['SKIPKEYUPDATE', detail.skipKeyUpdate],
+            ['EXCLUDEPARENTKEY', detail.excludeParentKey],
+            ['DELETEONCREATE', detail.deleteOnCreate],
+            ['PROPAGATEEVENT', detail.propagateEvent],
+            ['INVOKEEXECUTE', detail.invokeExecute],
+            ['FDRESOURCE', detail.fdResource]
+        ]);
 
         if (detail.parentObjName) {
-            setValue(maxIntObjDetail, 'PARENTOBJNAME', detail.parentObjName);
-            setValue(maxIntObjDetail, 'RELATION', detail.relation);
-            setValue(maxIntObjDetail, 'OBJECTORDER', detail.objectOrder);
+            applyValues(maxIntObjDetail, [
+                ['PARENTOBJNAME', detail.parentObjName],
+                ['RELATION', detail.relation],
+                ['OBJECTORDER', detail.objectOrder]
+            ]);
         }
 
         applyIntegrationObjectColumns(maxIntObjDetail, detail.maxIntObjCols);
@@ -248,8 +340,10 @@ function applyIntegrationObjectColumns(mbo: psdi.mbo.MboRemote, columns: MaximoI
 
     columns.forEach(function (column: MaximoIntegrationObjectColumn): void {
         const maxIntObjCols = maxIntObjColsSet.add();
-        setValue(maxIntObjCols, 'NAME', column.name);
-        setValue(maxIntObjCols, 'INTOBJFLDTYPE', column.intObjFldType);
+        applyValues(maxIntObjCols, [
+            ['NAME', column.name],
+            ['INTOBJFLDTYPE', column.intObjFldType]
+        ]);
     });
 }
 
@@ -258,8 +352,10 @@ function applyIntegrationObjectAliases(mbo: psdi.mbo.MboRemote, aliases: MaximoI
 
     aliases.forEach(function (alias: MaximoIntegrationObjectAlias): void {
         const maxIntObjAlias = maxIntObjAliasSet.add();
-        setValue(maxIntObjAlias, 'NAME', alias.name);
-        setValue(maxIntObjAlias, 'ALIASNAME', alias.aliasName);
+        applyValues(maxIntObjAlias, [
+            ['NAME', alias.name],
+            ['ALIASNAME', alias.aliasName]
+        ]);
     });
 }
 
@@ -275,12 +371,16 @@ function applyObjectApplicationAuth(maxIntObjDetail: psdi.mbo.MboRemote, auths: 
 
         if (!objectAppAuth) {
             objectAppAuth = objectAppAuthSet.add();
-            setValue(objectAppAuth, 'CONTEXT', auth.context);
-            setValue(objectAppAuth, 'OBJECTNAME', maxIntObjDetail.getString('OBJECTNAME'));
+            applyValues(objectAppAuth, [
+                ['CONTEXT', auth.context],
+                ['OBJECTNAME', maxIntObjDetail.getString('OBJECTNAME')]
+            ]);
         }
 
-        setValue(objectAppAuth, 'AUTHAPP', auth.authApp);
-        setValue(objectAppAuth, 'DESCRIPTION', auth.description);
+        applyValues(objectAppAuth, [
+            ['AUTHAPP', auth.authApp],
+            ['DESCRIPTION', auth.description]
+        ]);
     });
 }
 
@@ -288,15 +388,34 @@ function applySigOptions(mbo: psdi.mbo.MboRemote, options: MaximoSignatureOption
     const sigOptionSet = mbo.getMboSet('SIGOPTION');
 
     options.forEach(function (option: MaximoSignatureOption): void {
-        const sigOption = sigOptionSet.add();
-        setValue(sigOption, 'OPTIONNAME', option.optionName);
-        setValue(sigOption, 'DESCRIPTION', option.description);
-        setValue(sigOption, 'ALSOGRANTS', option.alsoGrants);
-        setValue(sigOption, 'ALSOREVOKES', option.alsoRevokes);
-        setValue(sigOption, 'PREREQUISITE', option.prerequisite);
-        setValue(sigOption, 'ESIGENABLED', option.esigEnabled);
-        setValue(sigOption, 'VISIBLE', option.visible);
+        let sigOption = findSigOption(sigOptionSet, option.optionName);
+
+        if (!sigOption) {
+            sigOption = sigOptionSet.add();
+            setValue(sigOption, 'OPTIONNAME', option.optionName);
+        }
+
+        applyValues(sigOption, [
+            ['DESCRIPTION', option.description],
+            ['ALSOGRANTS', option.alsoGrants],
+            ['ALSOREVOKES', option.alsoRevokes],
+            ['PREREQUISITE', option.prerequisite],
+            ['ESIGENABLED', option.esigEnabled],
+            ['VISIBLE', option.visible]
+        ]);
     });
+}
+
+function findSigOption(sigOptionSet: psdi.mbo.MboSetRemote, optionName: string): psdi.mbo.MboRemote | null {
+    for (let index = 0; index < sigOptionSet.count(); index++) {
+        const sigOption = sigOptionSet.getMbo(index);
+
+        if (sigOption && !sigOption.toBeDeleted() && sigOption.getString('OPTIONNAME') === optionName) {
+            return sigOption;
+        }
+    }
+
+    return null;
 }
 
 function applyOSLCActions(mbo: psdi.mbo.MboRemote, integrationObject: MaximoIntegrationObject): void {
@@ -304,9 +423,11 @@ function applyOSLCActions(mbo: psdi.mbo.MboRemote, integrationObject: MaximoInte
 
     integrationObject.osOSLCAction.forEach(function (action: MaximoOSLCAction): void {
         const osOSLCAction = osOSLCActionSet.add();
-        setValue(osOSLCAction, 'NAME', action.name);
-        setValue(osOSLCAction, 'DESCRIPTION', action.description);
-        setValue(osOSLCAction, 'IMPLTYPE', action.implType);
+        applyValues(osOSLCAction, [
+            ['NAME', action.name],
+            ['DESCRIPTION', action.description],
+            ['IMPLTYPE', action.implType]
+        ]);
 
         switch (action.implType) {
             case 'system':
@@ -354,21 +475,27 @@ function applyOSLCQueries(mbo: psdi.mbo.MboRemote, queries: MaximoOSLCQuery[]): 
 
         switch (query.queryType) {
             case 'appclause':
-                setValue(oslcQuery, 'APP', query.app);
-                setValue(oslcQuery, 'CLAUSENAME', query.clauseName);
+                applyValues(oslcQuery, [
+                    ['APP', query.app],
+                    ['CLAUSENAME', query.clauseName]
+                ]);
                 break;
             case 'method':
-                setValue(oslcQuery, 'METHOD', query.method);
-                setValue(oslcQuery, 'DESCRIPTION', query.description);
+                applyValues(oslcQuery, [
+                    ['METHOD', query.method],
+                    ['DESCRIPTION', query.description]
+                ]);
                 break;
             case 'osclause':
-                setValue(oslcQuery, 'CLAUSENAME', query.clauseName);
-                setValue(oslcQuery, 'DESCRIPTION', query.description);
-                setValue(oslcQuery, 'CLAUSE', query.clause);
-                setValue(oslcQuery, 'ISPUBLIC', query.isPublic);
+                applyValues(oslcQuery, [
+                    ['CLAUSENAME', query.clauseName],
+                    ['DESCRIPTION', query.description],
+                    ['CLAUSE', query.clause],
+                    ['ISPUBLIC', query.isPublic]
+                ]);
                 break;
             case 'script':
-                setValue(oslcQuery, 'SCRIPT', query.script);
+                setValue(oslcQuery, 'SCRIPTNAME', query.script);
                 break;
         }
     });
@@ -379,13 +506,16 @@ function applyQueryTemplates(mbo: psdi.mbo.MboRemote, templates: MaximoQueryTemp
 
     templates.forEach(function (template: MaximoQueryTemplate): void {
         const queryTemplate = queryTemplateSet.add();
-        setValue(queryTemplate, 'TEMPLATENAME', template.templateName);
-        setValue(queryTemplate, 'DESCRIPTION', template.description);
-        setValue(queryTemplate, 'PAGESIZE', template.pageSize);
-        setValue(queryTemplate, 'ROLE', template.role);
-        setValue(queryTemplate, 'SEARCHATTRIBUTES', template.searchAttributes);
-        setValue(queryTemplate, 'TIMELINEATTRIBUTE', template.timelineAttributes);
-        setValue(queryTemplate, 'ISPUBLIC', template.isPublic);
+        applyValues(queryTemplate, [
+            ['TEMPLATENAME', template.templateName],
+            ['DESCRIPTION', template.description],
+            ['PAGESIZE', template.pageSize],
+            ['ROLE', template.role],
+            ['SEARCHATTRIBUTES', template.searchAttributes],
+            ['TIMELINEATTRIBUTE', template.timelineAttributes],
+            ['ISPUBLIC', template.isPublic]
+        ]);
+        applyOptionalValues(queryTemplate, [['OWNER', template.owner, MboConstants.NOACCESSCHECK]]);
         applyQueryTemplateAttributes(queryTemplate, template.queryTemplateAttr);
     });
 }
@@ -395,49 +525,49 @@ function applyQueryTemplateAttributes(mbo: psdi.mbo.MboRemote, attributes: Maxim
 
     attributes.forEach(function (attribute: MaximoQueryTemplateAttribute): void {
         const queryTemplateAttr = queryTemplateAttrSet.add();
-        setValue(queryTemplateAttr, 'SELECTATTRNAME', attribute.selectAttrName);
-        setValue(queryTemplateAttr, 'TITLE', attribute.title);
-        setValue(queryTemplateAttr, 'SELECTORDER', attribute.selectOrder);
-        setValue(queryTemplateAttr, 'ALIAS', attribute.alias);
-        setValue(queryTemplateAttr, 'SORTBYON', attribute.sortByOn);
+        applyValues(queryTemplateAttr, [
+            ['SELECTATTRNAME', attribute.selectAttrName],
+            ['TITLE', attribute.title],
+            ['SELECTORDER', attribute.selectOrder],
+            ['ALIAS', attribute.alias],
+            ['SORTBYON', attribute.sortByOn]
+        ]);
 
         // ASCENDING and SORTBYORDER are read only unless SORTBYON is set. MAS 8.11 only unlocks them
         // once SORTBYON is saved, so the access check is skipped.
         if (attribute.sortByOn) {
-            setValue(queryTemplateAttr, 'ASCENDING', attribute.ascending, MboConstants.NOACCESSCHECK);
-            setValue(queryTemplateAttr, 'SORTBYORDER', attribute.sortByOrder, MboConstants.NOACCESSCHECK);
+            applyValues(queryTemplateAttr, [
+                ['ASCENDING', attribute.ascending, MboConstants.NOACCESSCHECK],
+                ['SORTBYORDER', attribute.sortByOrder, MboConstants.NOACCESSCHECK]
+            ]);
         }
     });
-}
-
-function attributeExists(objectName: string, attributeName: string): boolean {
-    const mboSetInfo = MXServer.getMXServer().getMaximoDD().getMboSetInfo(objectName);
-    return mboSetInfo != null && mboSetInfo.getMboValueInfo(attributeName) != null;
 }
 
 function lowerCase(value: string | null | undefined): string | null | undefined {
     return typeof value === 'undefined' || value === null ? value : String(value).toLowerCase();
 }
 
-function arrayOrEmpty<T>(value: T[] | null | undefined): T[] {
-    return Array.isArray(value) ? value : [];
-}
-
-function booleanOrDefault(value: any, defaultValue: boolean): boolean {
-    return typeof value === 'undefined' ? defaultValue : value == true;
-}
-
 function isMissing(value: any): boolean {
     return typeof value === 'undefined' || !value;
 }
 
+/** Maximo only accepts a child object once its parent has been added, so objects are sorted by depth. */
+function sortDetails(details: MaximoIntegrationObjectDetail[]): MaximoIntegrationObjectDetail[] {
+    const parents: { [objectName: string]: string | null } = {};
+    const depths: { [objectName: string]: number } = {};
+    details.forEach((detail) => (parents[detail.objectName] = detail.parentObjName));
+
+    const depth = (objectName: string, guard: number): number =>
+        objectName in depths
+            ? depths[objectName]
+            : (depths[objectName] = parents[objectName] && guard > 0 ? depth(parents[objectName] as string, guard - 1) + 1 : 0);
+
+    details.forEach((detail) => depth(detail.objectName, details.length));
+    return details.sort((a, b) => depths[a.objectName] - depths[b.objectName]);
+}
+
 function validateIntegrationObjectInput(input: MaximoIntegrationObjectInput): void {
-    if (!input) {
-        throw new Error('A integration object JSON is required to create the IntegrationObject object.');
-    }
-    if (typeof input.intObjectName === 'undefined') {
-        throw new Error('The intObjectName property is required and must a Maximo Integration Object field value.');
-    }
     if (input._delete === true) {
         return;
     }
@@ -484,7 +614,23 @@ function validateIntegrationObjectDetails(input: MaximoIntegrationObjectInput): 
         );
     }
 
+    const objectNames = details.map(function (detail: MaximoIntegrationObjectDetailInput): string {
+        return detail.objectName;
+    });
+
     details.forEach(function (detail: MaximoIntegrationObjectDetailInput): void {
+        if (detail.parentObjName && objectNames.indexOf(detail.parentObjName) === -1) {
+            throw new Error(
+                'The integration object ' +
+                    input.intObjectName +
+                    ' object ' +
+                    detail.objectName +
+                    ' has the parent object ' +
+                    detail.parentObjName +
+                    ', which is not one of its objects.'
+            );
+        }
+
         if (Array.isArray(detail.maxIntObjCols)) {
             detail.maxIntObjCols.forEach(function (column: MaximoIntegrationObjectColumnInput): void {
                 if (isMissing(column.name)) {
@@ -508,15 +654,7 @@ function validateIntegrationObjectDetails(input: MaximoIntegrationObjectInput): 
             });
         }
 
-        if (Array.isArray(detail.maxIntObjAlias)) {
-            if (!input.flatSupported) {
-                throw new Error(
-                    'The maxIntObjAlias entries can only be applied to integration objects that support flat structure, ' +
-                        (input as any).objectName +
-                        ' does not support flat structure.'
-                );
-            }
-
+        if (Array.isArray(detail.maxIntObjAlias) && detail.maxIntObjAlias.length > 0) {
             detail.maxIntObjAlias.forEach(function (alias: MaximoIntegrationObjectAliasInput): void {
                 if (isMissing(alias.name)) {
                     throw new Error(
@@ -573,6 +711,9 @@ function validateOSLCActions(input: MaximoIntegrationObjectInput): void {
     }
 
     const implTypes = ['script', 'system', 'workflow', 'wsmethod'];
+    const optionNames = arrayOrEmpty(input.sigOption).map(function (option: MaximoSignatureOptionInput): string {
+        return option.optionName;
+    });
 
     input.osOSLCAction.forEach(function (action: MaximoOSLCActionInput): void {
         if (isMissing(action.name)) {
@@ -601,6 +742,13 @@ function validateOSLCActions(input: MaximoIntegrationObjectInput): void {
         }
         if (implType === 'wsmethod' && isMissing(action.methodName)) {
             throw new Error('The osOSLCAction entry is missing the required methodName property for the implementation type of "wsmethod".');
+        }
+
+        // Object structure security creates the standard options, which Maximo validates itself.
+        if (action.optionName && !input.useOSSecurity && optionNames.indexOf(action.optionName) === -1) {
+            throw new Error(
+                'The osOSLCAction ' + action.name + ' requires the signature option ' + action.optionName + ', which is not one of the sigOption entries.'
+            );
         }
     });
 }
@@ -674,6 +822,8 @@ export interface MaximoIntegrationObjectColumnInput {
 }
 
 export class MaximoIntegrationObjectColumn {
+    static _keys = ['name', 'intObjFldType'];
+
     name: string;
     intObjFldType: MaximoIntegrationObjectFieldType;
 
@@ -686,15 +836,20 @@ export class MaximoIntegrationObjectColumn {
 export interface MaximoIntegrationObjectAliasInput {
     name: string;
     aliasName: string;
+    _retain?: any;
 }
 
 export class MaximoIntegrationObjectAlias {
+    static _keys = ['name'];
+
     name: string;
     aliasName: string;
+    _retain: any = [];
 
     constructor(input: MaximoIntegrationObjectAliasInput) {
         this.name = input.name;
         this.aliasName = input.aliasName;
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -702,17 +857,22 @@ export interface MaximoObjectApplicationAuthInput {
     context: string;
     description?: string | null;
     authApp?: string | null;
+    _retain?: any;
 }
 
 export class MaximoObjectApplicationAuth {
+    static _keys = ['context'];
+
     context: string;
     description?: string | null;
     authApp?: string | null;
+    _retain: any = [];
 
     constructor(input: MaximoObjectApplicationAuthInput) {
         this.context = input.context;
         this.authApp = input.authApp;
         this.description = input.description;
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -732,9 +892,12 @@ export interface MaximoIntegrationObjectDetailInput {
     maxIntObjCols?: MaximoIntegrationObjectColumnInput[] | null;
     maxIntObjAlias?: MaximoIntegrationObjectAliasInput[] | null;
     objectAppAuth?: MaximoObjectApplicationAuthInput[] | null;
+    _retain?: any;
 }
 
 export class MaximoIntegrationObjectDetail {
+    static _keys = ['objectName', 'parentObjName', 'relation'];
+
     objectName: string;
     altKey: string | null = '';
     excludeByDefault: boolean | null = false;
@@ -750,6 +913,7 @@ export class MaximoIntegrationObjectDetail {
     maxIntObjCols: MaximoIntegrationObjectColumn[] = [];
     maxIntObjAlias: MaximoIntegrationObjectAlias[] = [];
     objectAppAuth: MaximoObjectApplicationAuth[] = [];
+    _retain: any = [];
 
     constructor(input: MaximoIntegrationObjectDetailInput) {
         this.objectName = input.objectName;
@@ -768,6 +932,7 @@ export class MaximoIntegrationObjectDetail {
         this.maxIntObjCols = arrayOrEmpty(input.maxIntObjCols).map((column) => new MaximoIntegrationObjectColumn(column));
         this.maxIntObjAlias = arrayOrEmpty(input.maxIntObjAlias).map((alias) => new MaximoIntegrationObjectAlias(alias));
         this.objectAppAuth = arrayOrEmpty(input.objectAppAuth).map((auth) => new MaximoObjectApplicationAuth(auth));
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -779,9 +944,12 @@ export interface MaximoSignatureOptionInput {
     alsoRevokes?: string | null;
     prerequisite?: string | null;
     visible?: boolean | null;
+    _retain?: any;
 }
 
 export class MaximoSignatureOption {
+    static _keys = ['optionName'];
+
     optionName: string;
     description: string | null = '';
     esigEnabled: boolean | null = false;
@@ -789,6 +957,7 @@ export class MaximoSignatureOption {
     alsoRevokes: string | null = '';
     prerequisite: string | null = '';
     visible: boolean | null = true;
+    _retain: any = [];
 
     constructor(input: MaximoSignatureOptionInput) {
         this.optionName = input.optionName;
@@ -799,6 +968,7 @@ export class MaximoSignatureOption {
         this.alsoRevokes = valueOrDefault(input.alsoRevokes, this.alsoRevokes);
         this.prerequisite = valueOrDefault(input.prerequisite, this.prerequisite);
         this.visible = booleanOrDefault(input.visible, this.visible);
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -812,9 +982,12 @@ export interface MaximoOSLCActionInput {
     methodName?: string | null;
     optionName?: string | null;
     collection?: boolean | null;
+    _retain?: any;
 }
 
 export class MaximoOSLCAction {
+    static _keys = ['name'];
+
     name: string;
     description: string | null = '';
     implType: MaximoOSLCActionImplementationType;
@@ -824,6 +997,7 @@ export class MaximoOSLCAction {
     methodName: string | null = '';
     optionName: string | null = '';
     collection: boolean | null = false;
+    _retain: any = [];
 
     constructor(input: MaximoOSLCActionInput) {
         this.name = input.name;
@@ -836,6 +1010,7 @@ export class MaximoOSLCAction {
         this.methodName = valueOrDefault(input.methodName, this.methodName);
         this.optionName = valueOrDefault(input.optionName, this.optionName);
         this.collection = booleanOrDefault(input.collection, this.collection);
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -849,9 +1024,12 @@ export interface MaximoOSLCQueryInput {
     isPublic?: boolean | null;
     script?: string | null;
     filter?: boolean | null;
+    _retain?: any;
 }
 
 export class MaximoOSLCQuery {
+    static _keys = ['queryType', 'app', 'clauseName'];
+
     queryType: MaximoOSLCQueryType;
     app: string | null = '';
     clauseName: string | null = '';
@@ -861,6 +1039,7 @@ export class MaximoOSLCQuery {
     isPublic: boolean | null = true;
     script: string | null = '';
     filter: boolean | null = false;
+    _retain: any = [];
 
     constructor(input: MaximoOSLCQueryInput) {
         this.queryType = lowerCase(input.queryType) as MaximoOSLCQueryType;
@@ -872,6 +1051,7 @@ export class MaximoOSLCQuery {
         this.isPublic = booleanOrDefault(input.isPublic, this.isPublic);
         this.script = valueOrDefault(input.script, this.script);
         this.filter = booleanOrDefault(input.filter, this.filter);
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -883,9 +1063,12 @@ export interface MaximoQueryTemplateAttributeInput {
     sortByOn?: boolean | null;
     ascending?: boolean | null;
     sortByOrder?: number | string | null;
+    _retain?: any;
 }
 
 export class MaximoQueryTemplateAttribute {
+    static _keys = ['selectAttrName'];
+
     selectAttrName: string;
     title: string | null = '';
     selectOrder: number | string | null = '';
@@ -893,6 +1076,7 @@ export class MaximoQueryTemplateAttribute {
     sortByOn: boolean | null = false;
     ascending: boolean | null = false;
     sortByOrder: number | string | null = '';
+    _retain: any = [];
 
     constructor(input: MaximoQueryTemplateAttributeInput) {
         this.selectAttrName = input.selectAttrName;
@@ -903,6 +1087,7 @@ export class MaximoQueryTemplateAttribute {
         this.sortByOn = booleanOrDefault(input.sortByOn, this.sortByOn);
         this.ascending = booleanOrDefault(input.ascending, this.ascending);
         this.sortByOrder = valueOrDefault(input.sortByOrder, this.sortByOrder);
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -914,10 +1099,14 @@ export interface MaximoQueryTemplateInput {
     searchAttributes?: string | null;
     timelineAttributes?: string | null;
     isPublic?: boolean | null;
+    owner?: string | null;
     queryTemplateAttr?: MaximoQueryTemplateAttributeInput[] | null;
+    _retain?: any;
 }
 
 export class MaximoQueryTemplate {
+    static _keys = ['templateName', 'owner'];
+
     templateName: string;
     description: string | null = '';
     pageSize: number | string | null = '';
@@ -925,7 +1114,9 @@ export class MaximoQueryTemplate {
     searchAttributes: string | null = '';
     timelineAttributes: string | null = '';
     isPublic: boolean | null = true;
+    owner: string | null = null;
     queryTemplateAttr: MaximoQueryTemplateAttribute[] = [];
+    _retain: any = [];
 
     constructor(input: MaximoQueryTemplateInput) {
         this.templateName = input.templateName;
@@ -936,7 +1127,9 @@ export class MaximoQueryTemplate {
         this.searchAttributes = valueOrDefault(input.searchAttributes, this.searchAttributes);
         this.timelineAttributes = valueOrDefault(input.timelineAttributes, this.timelineAttributes);
         this.isPublic = booleanOrDefault(input.isPublic, this.isPublic);
+        this.owner = input.owner || this.owner;
         this.queryTemplateAttr = arrayOrEmpty(input.queryTemplateAttr).map((attribute) => new MaximoQueryTemplateAttribute(attribute));
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -962,9 +1155,12 @@ export interface MaximoIntegrationObjectInput {
     osOSLCAction?: MaximoOSLCActionInput[] | null;
     oslcQuery?: MaximoOSLCQueryInput[] | null;
     queryTemplate?: MaximoQueryTemplateInput[] | null;
+    _retain?: any;
 }
 
 export class MaximoIntegrationObject {
+    static _keys = ['intObjectName'];
+
     _delete = false;
     intObjectName: string;
     description: string | null = '';
@@ -986,8 +1182,10 @@ export class MaximoIntegrationObject {
     osOSLCAction: MaximoOSLCAction[] = [];
     oslcQuery: MaximoOSLCQuery[] = [];
     queryTemplate: MaximoQueryTemplate[] = [];
+    _retain: any = [];
 
     constructor(input: MaximoIntegrationObjectInput) {
+        requireKeys(MaximoIntegrationObject, input, 'integration object');
         validateIntegrationObjectInput(input);
 
         this.intObjectName = input.intObjectName;
@@ -1007,29 +1205,20 @@ export class MaximoIntegrationObject {
         this.restrictWhere = valueOrDefault(input.restrictWhere, this.restrictWhere);
         this.module = valueOrDefault(input.module, this.module);
         this.autoPagingThreshold = valueOrDefault(input.autoPagingThreshold, this.autoPagingThreshold);
-        this.maxIntObjDetail = arrayOrEmpty(input.maxIntObjDetail).map((detail) => new MaximoIntegrationObjectDetail(detail));
-        this.sortDetails();
+        this.maxIntObjDetail = sortDetails(arrayOrEmpty(input.maxIntObjDetail).map((detail) => new MaximoIntegrationObjectDetail(detail)));
         this.sigOption = arrayOrEmpty(input.sigOption).map((option) => new MaximoSignatureOption(option));
         this.osOSLCAction = arrayOrEmpty(input.osOSLCAction).map((action) => new MaximoOSLCAction(action));
         this.oslcQuery = arrayOrEmpty(input.oslcQuery).map((query) => new MaximoOSLCQuery(query));
         this.queryTemplate = arrayOrEmpty(input.queryTemplate).map((template) => new MaximoQueryTemplate(template));
-    }
+        this._retain = valueOrDefault(input._retain, this._retain);
 
-    private sortDetails(): void {
-        this.maxIntObjDetail.sort(function (a: MaximoIntegrationObjectDetail, b: MaximoIntegrationObjectDetail): number {
-            if (!a.parentObjName) {
-                return -1;
-            }
-            if (!b.parentObjName) {
-                return 1;
-            }
-            if (a.objectName === b.parentObjName) {
-                return -1;
-            }
-            if (b.objectName === a.parentObjName) {
-                return 1;
-            }
-            return 0;
+        const owner = 'Integration object ' + this.intObjectName;
+        rejectDuplicates(owner, 'object', this.maxIntObjDetail, MaximoIntegrationObjectDetail._keys);
+        this.maxIntObjDetail.forEach(function (detail: MaximoIntegrationObjectDetail): void {
+            rejectDuplicates(owner + ' object ' + detail.objectName, 'column', detail.maxIntObjCols, MaximoIntegrationObjectColumn._keys);
+            rejectDuplicates(owner + ' object ' + detail.objectName, 'alias', detail.maxIntObjAlias, MaximoIntegrationObjectAlias._keys);
         });
+        rejectDuplicates(owner, 'OSLC action', this.osOSLCAction, MaximoOSLCAction._keys);
+        rejectDuplicates(owner, 'query template', this.queryTemplate, MaximoQueryTemplate._keys);
     }
 }

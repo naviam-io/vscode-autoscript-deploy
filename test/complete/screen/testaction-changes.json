@@ -1,0 +1,27 @@
+{
+    "presentations": [
+        {
+            "app": "TESTACTION",
+            "changes": [
+                {
+                    "add": {
+                        "name": "tab",
+                        "id": "testaction_details",
+                        "label": "TEST Details",
+                        "children": [
+                            {
+                                "name": "section",
+                                "id": "testaction_details_s1",
+                                "children": [{ "name": "textbox", "id": "testaction_details_memo", "dataattribute": "memo", "sigoption": "TESTMEMO" }]
+                            }
+                        ]
+                    },
+                    "after": { "name": "tab", "id": "main" }
+                },
+                { "modify": { "name": "pushbutton", "id": "member_table_buttongroup_1" }, "set": { "label": "Choose Members" } },
+                { "move": { "name": "textbox", "id": "main_grid11_12" }, "into": { "name": "section", "id": "main_grid11_c1_1" } },
+                { "remove": { "name": "tablecol", "id": "main_grid1_members_table_tablebody_10" } }
+            ]
+        }
+    ]
+}

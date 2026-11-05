@@ -1,14 +1,21 @@
 /// <reference path="../../globals.d.ts" />
 /// <reference path="../../manage-facade.d.ts" />
 
-import { applyOptionalWritableValues, applyValues, applyWritableValues, close, setValue, toExternalSynonymValue, updateProgress, valueOrDefault } from '../core/util';
+import { applyOptionalWritableValues, applyValues, close, requireKeys, setValue, toExternalSynonymValue, updateProgress, valueOrDefault } from '../core/util';
+import { applyRetainedValues, hasRetainDeclarations, retainIdentityOf } from '../core/retained-values';
+import { deleteSnapshot, readSnapshot, snapshotKey, writeSnapshot } from '../core/snapshot-store';
+import { captureExistingState } from '../core/capture';
 
 var MXServer = Java.type('psdi.server.MXServer');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
 var MboConstants = Java.type('psdi.mbo.MboConstants');
 
+/** The Maximo object an escalation snapshot is keyed by. */
+export const SNAPSHOT_OBJECT = 'ESCALATION';
+
 export function process(escalation: MaximoEscalation): void {
     const maximo: psdi.server.MXServer = MXServer.getMXServer();
+    const key = snapshotKey(SNAPSHOT_OBJECT, retainIdentityOf(escalation));
     let mboSet: psdi.mbo.MboSetRemote | null = null;
     try {
         mboSet = maximo.getMboSet('ESCALATION', maximo.getSystemUserInfo());
@@ -16,10 +23,12 @@ export function process(escalation: MaximoEscalation): void {
         if (escalation._delete) {
             updateProgress('Deleting escalation ' + escalation.escalation);
             deleteEscalation(mboSet, escalation);
+            deleteSnapshot(key);
             updateProgress('Deleted escalation ' + escalation.escalation);
         } else {
             updateProgress('Adding/Updating escalation ' + escalation.escalation);
-            addOrUpdateEscalation(mboSet, escalation);
+            addOrUpdateEscalation(mboSet, escalation, key);
+            deleteSnapshot(key);
             updateProgress('Added/Updated escalation ' + escalation.escalation);
         }
     } finally {
@@ -42,8 +51,27 @@ function deleteEscalation(mboSet: psdi.mbo.MboSetRemote, escalation: MaximoEscal
     mboSet.save();
 }
 
-function addOrUpdateEscalation(mboSet: psdi.mbo.MboSetRemote, escalation: MaximoEscalation): void {
+function addOrUpdateEscalation(mboSet: psdi.mbo.MboSetRemote, escalation: MaximoEscalation, key: string): void {
     let mbo = findEscalation(mboSet, escalation.escalation);
+
+    // Captured before the escalation is deactivated and its escalation points are deleted.
+    if (hasRetainDeclarations(escalation)) {
+        let snapshot = readSnapshot(key);
+        if (!snapshot && mbo) {
+            snapshot = captureExistingState('escalations', mbo.getUniqueIDValue());
+            if (!snapshot) {
+                throw Error(
+                    'Escalation ' +
+                        escalation.escalation +
+                        ' has an existing record whose state could not be captured, so its retained values cannot be preserved.'
+                );
+            }
+            writeSnapshot(key, snapshot);
+        }
+
+        escalation = applyRetainedValues(escalation, snapshot ? new MaximoEscalation(snapshot) : null);
+    }
+
     if (!mbo) {
         mbo = mboSet.add();
     } else {
@@ -51,7 +79,7 @@ function addOrUpdateEscalation(mboSet: psdi.mbo.MboSetRemote, escalation: Maximo
         if (!mbo) {
             return;
         }
-        clearEscalationChildren(mbo);
+        mbo = clearEscalationChildren(mboSet, mbo, escalation.escalation);
     }
 
     applyEscalationValues(mbo, escalation);
@@ -95,8 +123,14 @@ function findEscalation(mboSet: psdi.mbo.MboSetRemote, escalationName: string): 
     return mboSet.moveFirst();
 }
 
-function clearEscalationChildren(mbo: psdi.mbo.MboRemote): void {
+/**
+ * The escalation points are deleted and saved before the payload's are added, because Maximo checks
+ * a new point's action and notifications against the saved rows.
+ */
+function clearEscalationChildren(mboSet: psdi.mbo.MboSetRemote, mbo: psdi.mbo.MboRemote, escalationName: string): psdi.mbo.MboRemote {
     mbo.getMboSet('ESCREFPOINT').deleteAll();
+    mboSet.save();
+    return findEscalation(mboSet, escalationName);
 }
 
 function applyEscalationValues(mbo: psdi.mbo.MboRemote, escalation: MaximoEscalation): void {
@@ -134,11 +168,22 @@ function applyEscalationRefPoints(mbo: psdi.mbo.MboRemote, refPoints: MaximoEsca
 
     refPoints.forEach(function (refPoint: MaximoEscalationRefPoint): void {
         const escRefPoint = escRefPointSet.add();
-        applyWritableValues(escRefPoint, [['REFPOINTNUM', refPoint.refPointNum]]);
+        // REFPOINTNUM is read only once added, and Maximo numbers past the deleted points, so the
+        // payload number is forced to keep escalation points identifiable across deployments.
+        if (refPoint.refPointNum !== null && typeof refPoint.refPointNum !== 'undefined') {
+            setValue(escRefPoint, 'REFPOINTNUM', refPoint.refPointNum, MboConstants.NOACCESSCHECK);
+        }
         setValue(escRefPoint, 'EVENTATTRIBUTE', refPoint.eventAttribute);
         setValue(escRefPoint, 'ELAPSEDINTERVAL', refPoint.elapsedInterval);
         setValue(escRefPoint, 'INTERVALUOM', toExternalSynonymValue('ESCTIMEINTERVAL', refPoint.intervalUom, escRefPoint));
         setValue(escRefPoint, 'REPEAT', refPoint.repeat);
+        setValue(escRefPoint, 'EVENTCONDITION', refPoint.eventCondition);
+        setValue(escRefPoint, 'ACTION', refPoint.action);
+        applyOptionalWritableValues(escRefPoint, [
+            ['CALCORGID', refPoint.calcOrgId],
+            ['CALCCALENDAR', refPoint.calcCalendar],
+            ['CALCSHIFT', refPoint.calcShift]
+        ]);
         applyEscalationNotifications(escRefPoint, refPoint.escNotification);
     });
 }
@@ -157,6 +202,8 @@ export interface MaximoEscalationNotificationInput {
 }
 
 export class MaximoEscalationNotification {
+    static _keys = ['templateId'];
+
     templateId: string;
 
     constructor(input: MaximoEscalationNotificationInput) {
@@ -170,24 +217,44 @@ export interface MaximoEscalationRefPointInput {
     elapsedInterval?: number | null;
     intervalUom?: string | null;
     repeat?: boolean | null;
+    eventCondition?: string | null;
+    calcCalendar?: string | null;
+    calcShift?: string | null;
+    calcOrgId?: string | null;
+    action?: string | null;
     escNotification?: MaximoEscalationNotificationInput[] | null;
+    _retain?: any;
 }
 
 export class MaximoEscalationRefPoint {
+    static _keys = ['refPointNum'];
+
     refPointNum: number;
-    eventAttribute: string | null = '';
-    elapsedInterval: number | null = null;
-    intervalUom: string | null = '';
+    eventAttribute?: string | null;
+    elapsedInterval?: number | null;
+    intervalUom?: string | null;
     repeat: boolean | null = false;
+    eventCondition?: string | null;
+    calcCalendar?: string | null;
+    calcShift?: string | null;
+    calcOrgId?: string | null;
+    action?: string | null;
     escNotification: MaximoEscalationNotification[] = [];
+    _retain: any = [];
 
     constructor(input: MaximoEscalationRefPointInput) {
         this.refPointNum = input.refPointNum;
-        this.eventAttribute = valueOrDefault(input.eventAttribute, this.eventAttribute);
-        this.elapsedInterval = valueOrDefault(input.elapsedInterval, this.elapsedInterval);
-        this.intervalUom = valueOrDefault(input.intervalUom, this.intervalUom);
+        this.eventAttribute = input.eventAttribute;
+        this.elapsedInterval = input.elapsedInterval;
+        this.intervalUom = input.intervalUom;
         this.repeat = valueOrDefault(input.repeat, this.repeat);
+        this.eventCondition = input.eventCondition;
+        this.calcCalendar = input.calcCalendar;
+        this.calcShift = input.calcShift;
+        this.calcOrgId = input.calcOrgId;
+        this.action = input.action;
         this.escNotification = (input.escNotification || []).map((notification) => new MaximoEscalationNotification(notification));
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -210,9 +277,12 @@ export interface MaximoEscalationInput {
     orgId?: string | null;
     siteId?: string | null;
     escRefPoint?: MaximoEscalationRefPointInput[] | null;
+    _retain?: any;
 }
 
 export class MaximoEscalation {
+    static _keys = ['escalation'];
+
     _delete = false;
     escalation: string;
     description: string | null = '';
@@ -231,8 +301,10 @@ export class MaximoEscalation {
     orgId: string | null = null;
     siteId: string | null = null;
     escRefPoint: MaximoEscalationRefPoint[] = [];
+    _retain: any = [];
 
     constructor(input: MaximoEscalationInput) {
+        requireKeys(MaximoEscalation, input, 'escalation');
         this.escalation = input.escalation;
 
         this._delete = valueOrDefault(input._delete, this._delete);
@@ -252,5 +324,6 @@ export class MaximoEscalation {
         this.orgId = valueOrDefault(input.orgId, this.orgId);
         this.siteId = valueOrDefault(input.siteId, this.siteId);
         this.escRefPoint = (input.escRefPoint || []).map((refPoint) => new MaximoEscalationRefPoint(refPoint));
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }

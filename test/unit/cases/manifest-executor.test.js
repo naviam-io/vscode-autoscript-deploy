@@ -6,10 +6,10 @@
  * The executor walks a plan produced by the planner and hands each step to the handler for its
  * kind. The handlers are injected, so this runs with no VS Code host and no Maximo server.
  */
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
-
-const { executePlan } = require('../../../src/deploy/manifest-executor');
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import { executePlan } from '../../../src/core/deploy/manifest-executor.js';
+import { SKIPPED } from '../../../src/core/deploy/create-only.js';
 
 function step(kind, filePath) {
     return { kind, path: filePath || null, sidecars: false, manifestPath: '/project/deploy.manifest.json' };
@@ -87,5 +87,21 @@ describe('executePlan', () => {
 
         assert.strictEqual(result.completed, 0);
         assert.strictEqual(result.failure, null);
+    });
+});
+
+describe('executePlan skipped steps', () => {
+    it('counts the steps whose handler reports a skip, as completed too', async () => {
+        const handlers = { screen: async (item) => (item.path === '/project/b.xml' ? SKIPPED : true) };
+
+        const result = await executePlan([step('screen', '/project/a.xml'), step('screen', '/project/b.xml')], handlers);
+
+        assert.deepStrictEqual([result.completed, result.skipped, result.failure], [2, 1, null]);
+    });
+
+    it('reports no skipped steps when none were skipped, including on failure', async () => {
+        const result = await executePlan([step('screen', '/project/a.xml')], { screen: async () => false });
+
+        assert.strictEqual(result.skipped, 0);
     });
 });

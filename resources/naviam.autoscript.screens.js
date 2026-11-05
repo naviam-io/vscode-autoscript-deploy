@@ -12,15 +12,13 @@ var SqlFormat = Java.type('psdi.mbo.SqlFormat');
 var MXServer = Java.type('psdi.server.MXServer');
 
 var MXException = Java.type('psdi.util.MXException');
-var MXApplicationException = Java.type('psdi.util.MXApplicationException');
 
-try {
-    var PresentationParser = Java.type('psdi.webclient.system.controller.PresentationParser');
-    var LabelCacheMgr = Java.type('psdi.webclient.system.controller.LabelCacheMgr');
-    var IdProperty = Java.type('psdi.webclient.system.controller.IdProperty');
-} catch (ignored) {
-    //ignored
-}
+var HashMap = Java.type('java.util.HashMap');
+var ScriptCache = Java.type('com.ibm.tivoli.maximo.script.ScriptCache');
+var ScriptDriverFactory = Java.type('com.ibm.tivoli.maximo.script.ScriptDriverFactory');
+
+var LIBRARY_SCRIPT = 'NAVIAM.AUTOSCRIPT.LIBRARY';
+var libraryExports = null;
 
 var MXLoggerFactory = Java.type('psdi.util.logging.MXLoggerFactory');
 
@@ -97,6 +95,14 @@ function main() {
                 var screen = new SAXBuilder().build(new StringReader(requestBody));
                 var metadata = screen.getRootElement().getChild('metadata');
                 var app = screen.getRootElement().getAttributeValue('id');
+                var presentationExisted = presentationExists(app);
+
+                if (isCreateOnlyRequest() && presentationExisted) {
+                    response.status = 'success';
+                    response.outcome = 'skipped';
+                    responseBody = JSON.stringify(response);
+                    return;
+                }
 
                 if (metadata) {
                     var controlGroups = metadata.getChildren('ctrlgroup');
@@ -104,6 +110,7 @@ function main() {
                     // remove any existing control groups
                     resetControlGroups(screen.getRootElement().getAttributeValue('id'));
                     if (controlGroups) {
+                        loadConditionalProperties();
                         controlGroups.forEach(function (controlGroupInfo) {
                             createGroupIfNotExists(controlGroupInfo.getChild('group'));
                             createOrUpdateSigOption(controlGroupInfo.getChild('sigoption'));
@@ -134,70 +141,9 @@ function main() {
 
                 var xml = writer.toString();
 
-                if (typeof PresentationParser !== 'undefined' && typeof LabelCacheMgr !== 'undefined') {
-                    var pp = new PresentationParser(xml);
-                    var appId = pp.getApplication();
+                library().deployPresentationXml(xml, app);
 
-                    writePresentation(pp.getTrimmedXML(), appId);
-
-                    var labels = pp.getLabels();
-                    var labelSet;
-                    try {
-                        labelSet = MXServer.getMXServer().getMboSet('MAXLABELS', MXServer.getMXServer().getSystemUserInfo());
-                        labelSet.setQbe('app', appId);
-                        labelSet.setQbeExactMatch(true);
-                        labelSet.reset();
-                        labelSet.setLogLargFetchResultDisabled(true);
-
-                        var label = labelSet.moveFirst();
-                        while (label) {
-                            var existingLabel = new IdProperty(label.getString('id'), label.getString('property'));
-                            newValue = labels.get(existingLabel);
-                            if (newValue == null) {
-                                label.delete();
-                            } else {
-                                label.setValue('APP', appId, MboConstants.NOACCESSCHECK | MboConstants.NOVALIDATION_AND_NOACTION);
-                                label.setValue('ID', existingLabel.getId(), MboConstants.NOACCESSCHECK | MboConstants.NOVALIDATION_AND_NOACTION);
-                                label.setValue('PROPERTY', existingLabel.getProperty(), MboConstants.NOACCESSCHECK | MboConstants.NOVALIDATION_AND_NOACTION);
-                                label.setValue('VALUE', newValue, MboConstants.NOACCESSCHECK | MboConstants.NOVALIDATION_AND_NOACTION);
-                            }
-
-                            labels.remove(existingLabel);
-
-                            label = labelSet.moveNext();
-                        }
-                        labelSet.save();
-
-                        for (var iterator = labels.entrySet().iterator(); iterator.hasNext(); ) {
-                            entry = iterator.next();
-                            var l = entry.getKey();
-                            var v = entry.getValue();
-                            labelSet.resetQbe();
-                            labelSet.setQbe('APP', appId);
-                            labelSet.setQbe('ID', l.getId());
-                            labelSet.setQbe('PROPERTY', l.getProperty());
-
-                            labelSet.reset();
-                            if (labelSet.isEmpty()) {
-                                var labelMbo = labelSet.add();
-                                labelMbo.setValue('APP', appId, MboConstants.NOVALIDATION_AND_NOACTION);
-                                labelMbo.setValue('ID', l.getId());
-                                labelMbo.setValue('PROPERTY', l.getProperty());
-                                labelMbo.setValue('VALUE', v);
-                            }
-                            labelSet.save();
-                        }
-                    } finally {
-                        _close(labelSet);
-                    }
-
-                    LabelCacheMgr.clearAll();
-                    MXServer.getMXServer().reloadMaximoCache('PRESENTATION', true);
-                } else {
-                    writePresentation(xml, app);
-                    MXServer.getMXServer().reloadMaximoCache('PRESENTATION', true);
-                }
-
+                response.outcome = presentationExisted ? 'updated' : 'created';
                 response.status = 'success';
                 responseBody = JSON.stringify(response);
             } else {
@@ -241,25 +187,37 @@ function main() {
     }
 }
 
-function writePresentation(xml, app) {
-    var maxPresentationSet;
+/** Runs the library script with the given context, which it reads its input from and writes its output to. */
+function runLibrary(context) {
+    if (!ScriptCache.getInstance().getScriptInfo(LIBRARY_SCRIPT)) {
+        throw new ScreenError(
+            'no_library_script',
+            'The ' + LIBRARY_SCRIPT + ' script is not installed. Deploy the Maximo Development Tools scripts, then try again.'
+        );
+    }
+    ScriptDriverFactory.getInstance().getScriptDriver(LIBRARY_SCRIPT).runScript(LIBRARY_SCRIPT, context);
+    return context;
+}
+
+/** The functions the library script shares through its NaviamAutoscriptLibrary global. */
+function library() {
+    if (!libraryExports) {
+        libraryExports = runLibrary(new HashMap()).get('NaviamAutoscriptLibrary');
+    }
+    return libraryExports;
+}
+
+/**
+ * CTRLCONDPROP.PROPERTY is validated against the conditional properties of the control registry, which Maximo
+ * only loads with the UI runtime. See docs/modules/maximo-scripts.md.
+ */
+function loadConditionalProperties() {
     try {
-        maxPresentationSet = MXServer.getMXServer().getMboSet('MAXPRESENTATION', MXServer.getMXServer().getSystemUserInfo());
-
-        // Query to see if the option has already been assigned to the group.
-        var sqlFormat = new SqlFormat('app = :1 ');
-        sqlFormat.setObject(1, 'MAXPRESENTATION', 'APP', app);
-
-        maxPresentationSet.setWhere(sqlFormat.format());
-        maxPresentation = maxPresentationSet.moveFirst();
-        if (maxPresentation) {
-            maxPresentation.setValue('PRESENTATION', xml);
-            maxPresentationSet.save();
-        } else {
-            throw new MXApplicationException('designer', 'noapp', Java.to([app.toUpperCase()], 'java.lang.String[]'));
+        if (Java.type('psdi.app.appsetup.CtrlCondPropCacheFactory').getInstance().getPropertyList().isEmpty()) {
+            Java.type('psdi.webclient.system.runtime.WebClientRuntime').getWebClientRuntime();
         }
-    } finally {
-        _close(maxPresentationSet);
+    } catch (error) {
+        logger.warn('Unable to load the conditional UI properties of the control registry: ' + error);
     }
 }
 
@@ -287,22 +245,25 @@ function createControlGroup(ctrlGroupInfo) {
         ctrlGroupSet = MXServer.getMXServer().getMboSet('CTRLGROUP', userInfo);
 
         var ctrlGroup = ctrlGroupSet.add();
-        ctrlGroup.setValue('GROUPNAME', ctrlGroupInfo.getAttributeValue('groupname'));
-        ctrlGroup.setValue('OPTIONNAME', ctrlGroupInfo.getAttributeValue('optionname'), MboConstants.NOACCESSCHECK);
-        ctrlGroup.setValue('APP', ctrlGroupInfo.getAttributeValue('app'), MboConstants.NOACCESSCHECK);
-
-        // This normally relies on being part of a set that is attached to the application.
-        // Since we are confident that the values being added are correct, allow no-validation.
-        ctrlGroup.setValue('GROUPSEQ', ctrlGroupInfo.getAttributeValue('groupseq'), MboConstants.NOVALIDATION);
+        library().applyValues(ctrlGroup, [
+            ['GROUPNAME', ctrlGroupInfo.getAttributeValue('groupname')],
+            ['OPTIONNAME', ctrlGroupInfo.getAttributeValue('optionname'), MboConstants.NOACCESSCHECK],
+            ['APP', ctrlGroupInfo.getAttributeValue('app'), MboConstants.NOACCESSCHECK],
+            // This normally relies on being part of a set that is attached to the application.
+            // Since we are confident that the values being added are correct, allow no-validation.
+            ['GROUPSEQ', ctrlGroupInfo.getAttributeValue('groupseq'), MboConstants.NOVALIDATION]
+        ]);
 
         var ctrlConditionSet = ctrlGroup.getMboSet('CTRLCONDITION');
         var controlConditions = ctrlGroupInfo.getChildren('ctrlcondition');
         if (controlConditions) {
             controlConditions.forEach(function (controlConditionInfo) {
                 ctrlCondition = ctrlConditionSet.add();
-                ctrlCondition.setValue('CONDITIONNUM', controlConditionInfo.getAttributeValue('conditionnum'));
-                ctrlCondition.setValue('CONDITIONSEQ', controlConditionInfo.getAttributeValue('conditionseq'));
-                ctrlCondition.setValue('REEVALUATE', controlConditionInfo.getAttributeValue('reevaluate'));
+                library().applyValues(ctrlCondition, [
+                    ['CONDITIONNUM', controlConditionInfo.getAttributeValue('conditionnum')],
+                    ['CONDITIONSEQ', controlConditionInfo.getAttributeValue('conditionseq')],
+                    ['REEVALUATE', controlConditionInfo.getAttributeValue('reevaluate')]
+                ]);
 
                 var controlCondProps = controlConditionInfo.getChildren('ctrlcondprop');
 
@@ -310,9 +271,11 @@ function createControlGroup(ctrlGroupInfo) {
                     var ctrlCondPropSet = ctrlCondition.getMboSet('CTRLCONDPROP');
                     controlCondProps.forEach(function (controlCondPropInfo) {
                         var ctrlCondProp = ctrlCondPropSet.add();
-                        ctrlCondProp.setValue('CONDITIONRESULT', controlCondPropInfo.getAttributeValue('conditionresult'));
-                        ctrlCondProp.setValue('PROPERTY', controlCondPropInfo.getAttributeValue('property'));
-                        ctrlCondProp.setValue('PROPERTYVALUE', controlCondPropInfo.getAttributeValue('propertyvalue'));
+                        library().applyValues(ctrlCondProp, [
+                            ['CONDITIONRESULT', controlCondPropInfo.getAttributeValue('conditionresult')],
+                            ['PROPERTY', controlCondPropInfo.getAttributeValue('property')],
+                            ['PROPERTYVALUE', controlCondPropInfo.getAttributeValue('propertyvalue')]
+                        ]);
                     });
                 }
             });
@@ -337,15 +300,17 @@ function createOrUpdateCondition(conditionInfo) {
 
             if (conditionSet.isEmpty()) {
                 condition = conditionSet.add();
-                condition.setValue('CONDITIONNUM', conditionInfo.getAttributeValue('conditionnum'));
+                library().applyValues(condition, [['CONDITIONNUM', conditionInfo.getAttributeValue('conditionnum')]]);
             } else {
                 condition = conditionSet.moveFirst();
             }
-            condition.setValue('DESCRIPTION', conditionInfo.getAttributeValue('description'));
-            condition.setValue('TYPE', conditionInfo.getAttributeValue('type'));
-            condition.setValue('EXPRESSION', conditionInfo.getAttributeValue('expression'));
-            condition.setValue('CLASSNAME', conditionInfo.getAttributeValue('classname'), MboConstants.NOACCESSCHECK);
-            condition.setValue('NOCACHING', conditionInfo.getAttributeValue('nocaching'));
+            library().applyOptionalValues(condition, [['TYPE', conditionInfo.getAttributeValue('type')]]);
+            library().applyValues(condition, [
+                ['DESCRIPTION', conditionInfo.getAttributeValue('description')],
+                ['EXPRESSION', conditionInfo.getAttributeValue('expression')],
+                ['CLASSNAME', conditionInfo.getAttributeValue('classname'), MboConstants.NOACCESSCHECK],
+                ['NOCACHING', conditionInfo.getAttributeValue('nocaching')]
+            ]);
 
             conditionSet.save();
         } finally {
@@ -369,47 +334,59 @@ function createOrUpdateSigOption(sigOptionInfo) {
             var sigOptFlagSet;
             if (sigOptionSet.isEmpty()) {
                 sigOption = sigOptionSet.add();
-                sigOption.setValue('APP', sigOptionInfo.getAttributeValue('app'));
-                sigOption.setValue('OPTIONNAME', sigOptionInfo.getAttributeValue('optionname'));
-                sigOption.setValue('DESCRIPTION', sigOptionInfo.getAttributeValue('description'));
-                sigOption.setValue('ESIGENABLED', sigOptionInfo.getAttributeValue('esigenabled'));
-                sigOption.setValue('VISIBLE', sigOptionInfo.getAttributeValue('visible'));
-                sigOption.setValue('ALSOGRANTS', sigOptionInfo.getAttributeValue('alsogrants'));
-                sigOption.setValue('ALSOREVOKES', sigOptionInfo.getAttributeValue('alsorevokes'));
-                sigOption.setValue('PREREQUISITE', sigOptionInfo.getAttributeValue('prerequisite'));
-                sigOption.setValue('LANGCODE', sigOptionInfo.getAttributeValue('langcode'));
+                library().applyValues(sigOption, [
+                    ['APP', sigOptionInfo.getAttributeValue('app')],
+                    ['OPTIONNAME', sigOptionInfo.getAttributeValue('optionname')],
+                    ['DESCRIPTION', sigOptionInfo.getAttributeValue('description')],
+                    ['ESIGENABLED', sigOptionInfo.getAttributeValue('esigenabled')],
+                    ['ALSOGRANTS', sigOptionInfo.getAttributeValue('alsogrants')],
+                    ['ALSOREVOKES', sigOptionInfo.getAttributeValue('alsorevokes')],
+                    ['PREREQUISITE', sigOptionInfo.getAttributeValue('prerequisite')]
+                ]);
+                library().applyOptionalValues(sigOption, [
+                    ['VISIBLE', sigOptionInfo.getAttributeValue('visible')],
+                    ['LANGCODE', sigOptionInfo.getAttributeValue('langcode')]
+                ]);
 
                 sigoptFlagInfo = sigOptionInfo.getChild('sigoptflag');
                 if (sigoptFlagInfo) {
                     sigOptFlag = sigOption.getMboSet('SIGOPTFLAG').add();
-                    sigOptFlag.setValue('APP', sigoptFlagInfo.getAttributeValue('app'));
-                    sigOptFlag.setValue('OPTIONNAME', sigoptFlagInfo.getAttributeValue('optionname'));
-                    sigOptFlag.setValue('FLAGNAME', sigoptFlagInfo.getAttributeValue('flagname'));
-                    sigOptFlag.setValue('VALUE', sigoptFlagInfo.getAttributeValue('value'));
+                    library().applyValues(sigOptFlag, [
+                        ['APP', sigoptFlagInfo.getAttributeValue('app')],
+                        ['OPTIONNAME', sigoptFlagInfo.getAttributeValue('optionname')],
+                        ['FLAGNAME', sigoptFlagInfo.getAttributeValue('flagname')],
+                        ['VALUE', sigoptFlagInfo.getAttributeValue('value')]
+                    ]);
                 }
                 sigOptionSet.save();
             } else {
                 sigOption = sigOptionSet.moveFirst();
-                sigOption.setValue('DESCRIPTION', sigOptionInfo.getAttributeValue('description'));
-                sigOption.setValue('ESIGENABLED', sigOptionInfo.getAttributeValue('esigenabled'));
-                sigOption.setValue('VISIBLE', sigOptionInfo.getAttributeValue('visible'));
-                sigOption.setValue('ALSOGRANTS', sigOptionInfo.getAttributeValue('alsogrants'));
-                sigOption.setValue('ALSOREVOKES', sigOptionInfo.getAttributeValue('alsorevokes'));
-                sigOption.setValue('PREREQUISITE', sigOptionInfo.getAttributeValue('prerequisite'));
+                library().applyValues(sigOption, [
+                    ['DESCRIPTION', sigOptionInfo.getAttributeValue('description')],
+                    ['ESIGENABLED', sigOptionInfo.getAttributeValue('esigenabled')],
+                    ['ALSOGRANTS', sigOptionInfo.getAttributeValue('alsogrants')],
+                    ['ALSOREVOKES', sigOptionInfo.getAttributeValue('alsorevokes')],
+                    ['PREREQUISITE', sigOptionInfo.getAttributeValue('prerequisite')]
+                ]);
+                library().applyOptionalValues(sigOption, [['VISIBLE', sigOptionInfo.getAttributeValue('visible')]]);
 
                 sigoptFlagInfo = sigOptionInfo.getChild('sigoptflag');
                 if (sigoptFlagInfo) {
                     sigOptFlagSet = sigOption.getMboSet('SIGOPTFLAG');
                     if (!sigOptFlagSet.isEmpty()) {
                         sigOptFlag = sigOptFlagSet.moveFirst();
-                        sigOptFlag.setValue('FLAGNAME', sigoptFlagInfo.getAttributeValue('flagname'));
-                        sigOptFlag.setValue('VALUE', sigoptFlagInfo.getAttributeValue('value'));
+                        library().applyValues(sigOptFlag, [
+                            ['FLAGNAME', sigoptFlagInfo.getAttributeValue('flagname')],
+                            ['VALUE', sigoptFlagInfo.getAttributeValue('value')]
+                        ]);
                     } else {
                         sigOptFlag = sigOption.getMboSet('SIGOPTFLAG').add();
-                        sigOptFlag.setValue('APP', sigoptFlagInfo.getAttributeValue('app'));
-                        sigOptFlag.setValue('OPTIONNAME', sigoptFlagInfo.getAttributeValue('optionname'));
-                        sigOptFlag.setValue('FLAGNAME', sigoptFlagInfo.getAttributeValue('flagname'));
-                        sigOptFlag.setValue('VALUE', sigoptFlagInfo.getAttributeValue('value'));
+                        library().applyValues(sigOptFlag, [
+                            ['APP', sigoptFlagInfo.getAttributeValue('app')],
+                            ['OPTIONNAME', sigoptFlagInfo.getAttributeValue('optionname')],
+                            ['FLAGNAME', sigoptFlagInfo.getAttributeValue('flagname')],
+                            ['VALUE', sigoptFlagInfo.getAttributeValue('value')]
+                        ]);
                     }
                 } else {
                     sigOptFlagSet = sigOption.getMboSet('SIGOPTFLAG');
@@ -417,6 +394,7 @@ function createOrUpdateSigOption(sigOptionInfo) {
                         sigOptFlagSet.deleteAll();
                     }
                 }
+                sigOptionSet.save();
             }
         } finally {
             _close(sigOptionSet);
@@ -435,32 +413,33 @@ function createGroupIfNotExists(groupInfo) {
             groupSet.setWhere(sqlf.format());
             if (groupSet.isEmpty()) {
                 var group = groupSet.add();
-                group.setValue('GROUPNAME', groupInfo.getAttributeValue('groupname'));
-                group.setValue('DESCRIPTION', groupInfo.getAttributeValue('description'));
-                group.setValue('PASSWORDDURATION', groupInfo.getAttributeValue('passwordduration'));
-                group.setValue('PASSWORDWARNING', groupInfo.getAttributeValue('passwordwarning'));
-                group.setValue('INDEPENDENT', groupInfo.getAttributeValue('independent'));
-                group.setValue('AUTHALLSITES', groupInfo.getAttributeValue('authallsites'));
-                group.setValue('AUTHALLGLS', groupInfo.getAttributeValue('authallgls'));
-                group.setValue('AUTHALLSTOREROOMS', groupInfo.getAttributeValue('authallstorerooms'));
-                group.setValue('AUTHLABORALL', groupInfo.getAttributeValue('authlaborall'));
-                group.setValue('AUTHLABORCREW', groupInfo.getAttributeValue('authlaborcrew'));
-                group.setValue('AUTHLABORSELF', groupInfo.getAttributeValue('authlaborself'));
-                group.setValue('AUTHLABORSUPER', groupInfo.getAttributeValue('authlaborsuper'));
-                group.setValue('LANGCODE', groupInfo.getAttributeValue('langcode'));
-                group.setValue(
-                    'SCTEMPLATEID',
-                    scTemplateExists(groupInfo.getAttributeValue('sctemplateid')) ? groupInfo.getAttributeValue('sctemplateid') : ''
-                );
-                group.setValue('AUTHPERSONGROUP', groupInfo.getAttributeValue('authpersongroup'));
-                group.setValue('NULLREPFAC', groupInfo.getAttributeValue('nullrepfac'));
-                group.setValue('AUTHALLREPFACS', groupInfo.getAttributeValue('authallrepfacs'));
-                group.setValue('MAXSCHEDREPORT', groupInfo.getAttributeValue('maxschedreport'));
-                group.setValue('DFLTAPP', groupInfo.getAttributeValue('dfltapp'));
-                group.setValue('ADHOCCREATELIMIT', groupInfo.getAttributeValue('adhoccreatelimit'));
-                group.setValue('REPORTSTOPLIMIT', groupInfo.getAttributeValue('reportstoplimit'));
-                group.setValue('SIDENAV', groupInfo.getAttributeValue('sidenav'));
-                group.setValue('WORKCENTER', groupInfo.getAttributeValue('workcenter'));
+                library().applyValues(group, [
+                    ['GROUPNAME', groupInfo.getAttributeValue('groupname')],
+                    ['DESCRIPTION', groupInfo.getAttributeValue('description')],
+                    ['PASSWORDDURATION', groupInfo.getAttributeValue('passwordduration')],
+                    ['PASSWORDWARNING', groupInfo.getAttributeValue('passwordwarning')],
+                    ['SCTEMPLATEID', scTemplateExists(groupInfo.getAttributeValue('sctemplateid')) ? groupInfo.getAttributeValue('sctemplateid') : ''],
+                    ['MAXSCHEDREPORT', groupInfo.getAttributeValue('maxschedreport')],
+                    ['DFLTAPP', groupInfo.getAttributeValue('dfltapp')],
+                    ['ADHOCCREATELIMIT', groupInfo.getAttributeValue('adhoccreatelimit')],
+                    ['REPORTSTOPLIMIT', groupInfo.getAttributeValue('reportstoplimit')],
+                    ['WORKCENTER', groupInfo.getAttributeValue('workcenter')]
+                ]);
+                library().applyOptionalValues(group, [
+                    ['INDEPENDENT', groupInfo.getAttributeValue('independent')],
+                    ['AUTHALLSITES', groupInfo.getAttributeValue('authallsites')],
+                    ['AUTHALLGLS', groupInfo.getAttributeValue('authallgls')],
+                    ['AUTHALLSTOREROOMS', groupInfo.getAttributeValue('authallstorerooms')],
+                    ['AUTHLABORALL', groupInfo.getAttributeValue('authlaborall')],
+                    ['AUTHLABORCREW', groupInfo.getAttributeValue('authlaborcrew')],
+                    ['AUTHLABORSELF', groupInfo.getAttributeValue('authlaborself')],
+                    ['AUTHLABORSUPER', groupInfo.getAttributeValue('authlaborsuper')],
+                    ['LANGCODE', groupInfo.getAttributeValue('langcode')],
+                    ['AUTHPERSONGROUP', groupInfo.getAttributeValue('authpersongroup')],
+                    ['NULLREPFAC', groupInfo.getAttributeValue('nullrepfac')],
+                    ['AUTHALLREPFACS', groupInfo.getAttributeValue('authallrepfacs')],
+                    ['SIDENAV', groupInfo.getAttributeValue('sidenav')]
+                ]);
 
                 groupSet.save();
             }
@@ -724,6 +703,25 @@ function isInAdminGroup() {
 }
 
 // Cleans up the MboSet connections and closes the set.
+/** Whether the request asks to leave an existing item unchanged: see docs/flows/deploy.md. */
+function isCreateOnlyRequest() {
+    return typeof request !== 'undefined' && request !== null && String(request.getQueryParam('createOnly')) === 'true';
+}
+
+/** Whether Maximo holds a presentation for this application or system presentation. */
+function presentationExists(app) {
+    var presentationSet;
+    try {
+        presentationSet = MXServer.getMXServer().getMboSet('MAXPRESENTATION', userInfo);
+        var sqlf = new SqlFormat('app = :1');
+        sqlf.setObject(1, 'MAXPRESENTATION', 'APP', app);
+        presentationSet.setWhere(sqlf.format());
+        return !presentationSet.isEmpty();
+    } finally {
+        _close(presentationSet);
+    }
+}
+
 function _close(set) {
     if (set) {
         try {

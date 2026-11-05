@@ -6,20 +6,29 @@ import {
     applyOptionalValues,
     applyValues,
     applyWritableValues,
+    arrayOrEmpty,
     close,
     isWritable,
+    requireKeys,
     setValue,
     toExternalSynonymValue,
     updateProgress,
     valueOrDefault
 } from '../core/util';
+import { applyRetainedValues, hasRetainDeclarations, retainIdentityOf } from '../core/retained-values';
+import { deleteSnapshot, readSnapshot, snapshotKey, writeSnapshot } from '../core/snapshot-store';
+import { captureExistingState } from '../core/capture';
 
 var MXServer = Java.type('psdi.server.MXServer');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
 var MboConstants = Java.type('psdi.mbo.MboConstants');
 
+/** The Maximo object an object snapshot is keyed by. */
+export const SNAPSHOT_OBJECT = 'MAXOBJECTCFG';
+
 export function process(maxObject: MaximoObject): void {
     const maximo: psdi.server.MXServer = MXServer.getMXServer();
+    const key = snapshotKey(SNAPSHOT_OBJECT, retainIdentityOf(maxObject));
     let mboSet: psdi.mbo.MboSetRemote | null = null;
     try {
         mboSet = maximo.getMboSet('MAXOBJECTCFG', maximo.getSystemUserInfo());
@@ -27,10 +36,12 @@ export function process(maxObject: MaximoObject): void {
         if (maxObject._delete) {
             updateProgress('Deleting Maximo Object ' + maxObject.object);
             deleteObject(mboSet, maxObject);
+            deleteSnapshot(key);
             updateProgress('Deleted Maximo Object ' + maxObject.object);
         } else {
             updateProgress('Adding/Updating Maximo Object ' + maxObject.object);
-            addOrUpdateObject(mboSet, maxObject);
+            addOrUpdateObject(mboSet, maxObject, key);
+            deleteSnapshot(key);
             updateProgress('Added/Updated Maximo Object ' + maxObject.object);
         }
     } finally {
@@ -47,8 +58,25 @@ function deleteObject(mboSet: psdi.mbo.MboSetRemote, maxObject: MaximoObject): v
     mboSet.save();
 }
 
-function addOrUpdateObject(mboSet: psdi.mbo.MboSetRemote, maxObject: MaximoObject): void {
+function addOrUpdateObject(mboSet: psdi.mbo.MboSetRemote, maxObject: MaximoObject, key: string): void {
     let mbo = findObject(mboSet, maxObject.object);
+
+    if (hasRetainDeclarations(maxObject)) {
+        let snapshot = readSnapshot(key);
+        // An object marked for removal is gone as far as the customer is concerned, so the shipped values apply.
+        if (!snapshot && mbo && mbo.getString('CHANGED') !== 'R') {
+            snapshot = captureExistingState('objects', mbo.getUniqueIDValue());
+            if (!snapshot) {
+                throw Error(
+                    'Maximo object ' + maxObject.object + ' has an existing record whose state could not be captured, so its retained values cannot be preserved.'
+                );
+            }
+            writeSnapshot(key, snapshot);
+        }
+
+        maxObject = applyRetainedValues(maxObject, snapshot ? new MaximoObject(snapshot) : null);
+    }
+
     if (!mbo) {
         mbo = mboSet.add();
     } else if (mbo.getString('CHANGED') === 'R') {
@@ -318,6 +346,11 @@ function applyRelationships(mbo: psdi.mbo.MboRemote, maxObject: MaximoObject): v
     });
 }
 
+/** Maximo stores object, attribute and relationship names upper case and has always matched them case insensitively. */
+function upperCaseKey(value: any): any {
+    return typeof value === 'string' ? value.toUpperCase() : value;
+}
+
 function equalsIgnoreCase(left: any, right: any): boolean {
     if (left === null || typeof left === 'undefined' || right === null || typeof right === 'undefined') {
         return false;
@@ -347,9 +380,12 @@ export interface RelationshipInput {
     cardinality?: string | null;
     dbJoinRequired?: number | null;
     isDefault?: boolean;
+    _retain?: any;
 }
 
 export class Relationship {
+    static _keys = ['relationship'];
+
     _delete: boolean = false;
     relationship: string;
     remarks: string | null = null;
@@ -358,16 +394,18 @@ export class Relationship {
     cardinality: string | null = null;
     dbJoinRequired: number | null = null;
     isDefault: boolean = false;
+    _retain: any = [];
 
     constructor(input: RelationshipInput) {
         this._delete = valueOrDefault(input._delete, this._delete);
-        this.relationship = input.relationship;
+        this.relationship = upperCaseKey(input.relationship);
         this.remarks = valueOrDefault(input.remarks, this.remarks);
         this.child = input.child;
         this.whereClause = valueOrDefault(input.whereClause, this.whereClause);
         this.cardinality = valueOrDefault(input.cardinality, this.cardinality);
         this.dbJoinRequired = valueOrDefault(input.dbJoinRequired, this.dbJoinRequired);
         this.isDefault = valueOrDefault(input.isDefault, this.isDefault);
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -418,7 +456,7 @@ export class Index {
         this.required = valueOrDefault(input.required, this.required);
         this.textSearchIndex = valueOrDefault(input.textSearchIndex, this.textSearchIndex);
         this.storagePartition = valueOrDefault(input.storagePartition, this.storagePartition);
-        this.columns = Array.isArray(input.columns) ? input.columns.map((column) => new Column(column)) : [];
+        this.columns = arrayOrEmpty(input.columns).map((column) => new Column(column));
     }
 }
 
@@ -454,9 +492,12 @@ export interface MaximoAttributeInput {
     eSignatureEnabled?: boolean;
     primaryColumn?: number | null;
     searchType?: SearchType;
+    _retain?: any;
 }
 
 export class MaximoAttribute {
+    static _keys = ['attribute'];
+
     _delete: boolean = false;
     attribute: string;
     description: string;
@@ -488,10 +529,11 @@ export class MaximoAttribute {
     eSignatureEnabled: boolean = false;
     primaryColumn: number | null = null;
     searchType?: SearchType;
+    _retain: any = [];
 
     constructor(input: MaximoAttributeInput) {
         this._delete = valueOrDefault(input._delete, this._delete);
-        this.attribute = input.attribute;
+        this.attribute = upperCaseKey(input.attribute);
         this.description = input.description;
         this.title = input.title;
         this.type = valueOrDefault(input.type, this.type);
@@ -521,6 +563,7 @@ export class MaximoAttribute {
         this.eSignatureEnabled = valueOrDefault(input.eSignatureEnabled, this.eSignatureEnabled);
         this.primaryColumn = valueOrDefault(input.primaryColumn, this.primaryColumn);
         this.searchType = valueOrDefault(input.searchType, this.searchType);
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }
 
@@ -558,9 +601,12 @@ export interface MaximoObjectInput {
     attributes?: MaximoAttributeInput[] | null;
     relationships?: RelationshipInput[] | null;
     indexes?: IndexInput[] | null;
+    _retain?: any;
 }
 
 export class MaximoObject {
+    static _keys = ['object'];
+
     _delete = false;
     object: string;
     description: string | null = null;
@@ -594,10 +640,12 @@ export class MaximoObject {
     attributes: MaximoAttribute[] = [];
     relationships: Relationship[] = [];
     indexes: Index[] = [];
+    _retain: any = [];
 
     constructor(input: MaximoObjectInput) {
+        requireKeys(MaximoObject, input, 'Maximo object');
         this._delete = valueOrDefault(input._delete, this._delete);
-        this.object = input.object;
+        this.object = upperCaseKey(input.object);
         this.description = valueOrDefault(input.description, this.description);
         this.service = valueOrDefault(input.service, this.service);
         this.entity = valueOrDefault(input.entity, this.entity);
@@ -626,8 +674,9 @@ export class MaximoObject {
         this.auditTable = valueOrDefault(input.auditTable, this.auditTable);
         this.eAuditFilter = valueOrDefault(input.eAuditFilter, this.eAuditFilter);
         this.eSignatureFilter = valueOrDefault(input.eSignatureFilter, this.eSignatureFilter);
-        this.attributes = Array.isArray(input.attributes) ? input.attributes.map((attribute) => new MaximoAttribute(attribute)) : [];
-        this.relationships = Array.isArray(input.relationships) ? input.relationships.map((relationship) => new Relationship(relationship)) : [];
-        this.indexes = Array.isArray(input.indexes) ? input.indexes.map((index) => new Index(index)) : [];
+        this.attributes = arrayOrEmpty(input.attributes).map((attribute) => new MaximoAttribute(attribute));
+        this.relationships = arrayOrEmpty(input.relationships).map((relationship) => new Relationship(relationship));
+        this.indexes = arrayOrEmpty(input.indexes).map((index) => new Index(index));
+        this._retain = valueOrDefault(input._retain, this._retain);
     }
 }

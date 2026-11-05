@@ -1,0 +1,56 @@
+{
+    "productV1": {
+        "messages": [
+            {
+                "msgGroup": "NVTEST",
+                "msgKey": "RETAINMSG",
+                "value": "Retained values test, release 1",
+                "displayMethod": "MSGBOX",
+                "options": ["ok"],
+                "explanation": "Release 1 explanation",
+                "adminResponse": "Release 1 admin response",
+                "_retain": ["value", "options", "explanation"]
+            }
+        ]
+    },
+    "customerEdit": {
+        "messages": [
+            {
+                "msgGroup": "NVTEST",
+                "msgKey": "RETAINMSG",
+                "value": "Text written by the customer",
+                "displayMethod": "MSGBOX",
+                "options": ["yes", "no"],
+                "explanation": "Explanation written by the customer",
+                "adminResponse": "Release 1 admin response"
+            }
+        ]
+    },
+    "customerEditCleared": {
+        "messages": [
+            {
+                "msgGroup": "NVTEST",
+                "msgKey": "RETAINMSG",
+                "value": "Second text written by the customer",
+                "displayMethod": "MSGBOX",
+                "options": ["close"],
+                "explanation": null,
+                "adminResponse": "Release 1 admin response"
+            }
+        ]
+    },
+    "productV2": {
+        "messages": [
+            {
+                "msgGroup": "NVTEST",
+                "msgKey": "RETAINMSG",
+                "value": "Retained values test, release 2",
+                "displayMethod": "STATUS",
+                "options": ["ok", "cancel"],
+                "explanation": "Release 2 explanation",
+                "adminResponse": "Release 2 admin response",
+                "_retain": ["value", "options", "explanation"]
+            }
+        ]
+    }
+}

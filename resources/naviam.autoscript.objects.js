@@ -1,10 +1,10 @@
 /* eslint-disable indent */
 // @ts-nocheck
 /* eslint-disable no-undef */
+var DBShortcut = Java.type('psdi.mbo.DBShortcut');
 var HashMap = Java.type('java.util.HashMap');
 var MXServer = Java.type('psdi.server.MXServer');
 
-var MboConstants = Java.type('psdi.mbo.MboConstants');
 var ScriptCache = Java.type('com.ibm.tivoli.maximo.script.ScriptCache');
 var ScriptDriverFactory = Java.type('com.ibm.tivoli.maximo.script.ScriptDriverFactory');
 var SqlFormat = Java.type('psdi.mbo.SqlFormat');
@@ -72,6 +72,16 @@ function main() {
                     response.data = getIntObjects();
                 } else if (objectType === 'queries') {
                     response.data = getQueries();
+                } else if (objectType === 'endpoints') {
+                    response.data = getEndPoints();
+                } else if (objectType === 'publishchannels') {
+                    response.data = getPublishChannels();
+                } else if (objectType === 'enterpriseservices') {
+                    response.data = getEnterpriseServices();
+                } else if (objectType === 'externalsystems') {
+                    response.data = getExternalSystems();
+                } else if (objectType === 'objects') {
+                    response.data = getMaximoObjects();
                 }
             } else if (action == 'detail') {
                 var id = request.getQueryParam('id');
@@ -137,32 +147,23 @@ function getObjectDetail(objectType, id) {
         return getIntObject(id);
     } else if (objectType === 'queries') {
         return getQuery(id);
+    } else if (objectType === 'endpoints') {
+        return getEndPoint(id);
+    } else if (objectType === 'publishchannels') {
+        return getPublishChannel(id);
+    } else if (objectType === 'enterpriseservices') {
+        return getEnterpriseService(id);
+    } else if (objectType === 'externalsystems') {
+        return getExternalSystem(id);
+    } else if (objectType === 'objects') {
+        return getMaximoObject(id);
     }
 
     return undefined;
 }
 
 function getActions() {
-    var actionSet = MXServer.getMXServer().getMboSet('ACTION', MXServer.getMXServer().getSystemUserInfo());
-    try {
-        actionSet.setOrderBy('ACTION');
-        actionSet.setFlag(MboConstants.DISCARDABLE, true);
-        var actionMbo = actionSet.moveFirst();
-        var actions = [];
-        while (actionMbo != null) {
-            var action = {
-                id: actionMbo.getUniqueIDValue(),
-                label: actionMbo.getString('ACTION'),
-                description: actionMbo.getString('DESCRIPTION'),
-            };
-
-            actions.push(action);
-            actionMbo = actionSet.moveNext();
-        }
-        return actions;
-    } finally {
-        _close(actionSet);
-    }
+    return _listRecords('ACTION', ['ACTION', 'DESCRIPTION'], 'ACTION');
 }
 
 function getAction(id) {
@@ -191,11 +192,11 @@ function getAction(id) {
                 action.value = actionMbo.getString('VALUE2');
             }
 
-            if (actionType !== 'GROUP') {
-                if (!actionMbo.isNull('OBJECTNAME')) {
-                    action.objectName = actionMbo.getString('OBJECTNAME');
-                }
+            if (!actionMbo.isNull('OBJECTNAME')) {
+                action.objectName = actionMbo.getString('OBJECTNAME');
+            }
 
+            if (actionType !== 'GROUP') {
                 if (!actionMbo.isNull('PARAMETER')) {
                     action.parameter = actionMbo.getString('PARAMETER');
                 }
@@ -230,26 +231,9 @@ function getAction(id) {
 }
 
 function getQueries() {
-    var querySet = MXServer.getMXServer().getMboSet('QUERY', MXServer.getMXServer().getSystemUserInfo());
-    try {
-        querySet.setOrderBy('APP, CLAUSENAME, OWNER');
-        querySet.setFlag(MboConstants.DISCARDABLE, true);
-        var queryMbo = querySet.moveFirst();
-        var queries = [];
-        while (queryMbo != null) {
-            var query = {
-                id: queryMbo.getUniqueIDValue(),
-                label: queryMbo.getString('APP') + ': ' + queryMbo.getString('CLAUSENAME'),
-                description: queryMbo.getString('DESCRIPTION'),
-            };
-
-            queries.push(query);
-            queryMbo = querySet.moveNext();
-        }
-        return queries;
-    } finally {
-        _close(querySet);
-    }
+    return _listRecords('QUERY', ['APP', 'CLAUSENAME', 'DESCRIPTION'], 'APP, CLAUSENAME, OWNER', function (values) {
+        return { label: values[0] + ': ' + values[1], description: values[2] };
+    });
 }
 
 function getQuery(id) {
@@ -287,27 +271,428 @@ function getQuery(id) {
     }
 }
 
-function getIntObjects() {
-    var maxIntObjectSet = MXServer.getMXServer().getMboSet('MAXINTOBJECT', MXServer.getMXServer().getSystemUserInfo());
+function getEndPoints() {
+    return _listRecords('MAXENDPOINT', ['ENDPOINTNAME', 'DESCRIPTION'], 'ENDPOINTNAME');
+}
+
+/** An encrypted property, whose VALUE is read only, is extracted as its decrypted PASSWORD. */
+function getEndPoint(id) {
+    var endPointSet = MXServer.getMXServer().getMboSet('MAXENDPOINT', MXServer.getMXServer().getSystemUserInfo());
     try {
-        maxIntObjectSet.setOrderBy('intobjectname');
-        maxIntObjectSet.setFlag(MboConstants.DISCARDABLE, true);
-        var maxIntObject = maxIntObjectSet.moveFirst();
-        var integrationObjects = [];
-        while (maxIntObject != null) {
-            var intObject = {
-                id: maxIntObject.getUniqueIDValue(),
-                label: maxIntObject.getString('INTOBJECTNAME'),
-                description: maxIntObject.getString('DESCRIPTION'),
+        var endPointMbo = endPointSet.getMboForUniqueId(id);
+
+        if (endPointMbo != null) {
+            var endPoint = {
+                endPointName: endPointMbo.getString('ENDPOINTNAME'),
+                description: endPointMbo.getString('DESCRIPTION'),
+                handlerName: endPointMbo.getString('HANDLERNAME'),
             };
 
-            integrationObjects.push(intObject);
-            maxIntObject = maxIntObjectSet.moveNext();
+            var properties = _getChildren(endPointMbo, 'MAXENDPOINTDTL', null, 'PROPERTY', function (detail) {
+                var property = { property: detail.getString('PROPERTY') };
+                if (detail.getMboValueData('VALUE').isReadOnly()) {
+                    property.password = detail.getString('PASSWORD');
+                } else {
+                    property.value = detail.getString('VALUE');
+                }
+                property.allowOverride = detail.getBoolean('ALLOWOVERRIDE');
+                return property;
+            });
+
+            if (properties.length > 0) {
+                endPoint.properties = properties;
+            }
+
+            return endPoint;
         }
-        return integrationObjects;
     } finally {
-        _close(maxIntObjectSet);
+        _close(endPointSet);
     }
+}
+
+function getPublishChannels() {
+    return _listRecords('MAXIFACEOUT', ['IFACENAME', 'DESCRIPTION'], 'IFACENAME');
+}
+
+function getPublishChannel(id) {
+    var channelSet = MXServer.getMXServer().getMboSet('MAXIFACEOUT', MXServer.getMXServer().getSystemUserInfo());
+    try {
+        var channelMbo = channelSet.getMboForUniqueId(id);
+
+        if (channelMbo != null) {
+            var channel = { ifaceName: channelMbo.getString('IFACENAME'), intObjectName: channelMbo.getString('INTOBJECTNAME') };
+            _putValues(channel, channelMbo, [
+                ['description', 'DESCRIPTION'],
+                ['listener', 'LISTENER', 'boolean'],
+                ['publishJson', 'PUBLISHJSON', 'boolean'],
+                ['retainMbos', 'RETAINMBOS', 'boolean'],
+                ['skipDiffObject', 'SKIPDIFFOBJECT', 'boolean'],
+                ['storeMsg', 'STOREMSG', 'boolean'],
+                ['useTxnTracking', 'USETXNTRACKING', 'boolean'],
+                ['eventFilterClass', 'EVENTFILTERCLASS'],
+                ['extMsgIdField', 'EXTMSGIDFIELD'],
+                ['ifaceExitClass', 'IFACEEXITCLASS'],
+                ['ifaceMapName', 'IFACEMAPNAME'],
+                ['ifaceUserExitClass', 'IFACEUSEREXITCLASS'],
+                ['ifaceTbName', 'IFACETBNAME'],
+                ['searchField', 'SEARCHFIELD'],
+                ['templateName', 'TEMPLATENAME'],
+            ]);
+
+            var controls = _getChildren(channelMbo, 'MAXIFACEOUTCNTL', null, 'IFACECONTROL', function (control) {
+                return { control: control.getString('IFACECONTROL') };
+            });
+            if (controls.length > 0) {
+                channel.integrationControls = controls;
+            }
+
+            var rules = _getProcessingRules(channelMbo, 'MAXIFACEPROC');
+            if (rules.length > 0) {
+                channel.processingRules = rules;
+            }
+
+            var objectStructure = channelMbo.getMboSet('$OBJECTSTRUCTURE', 'MAXINTOBJECT', 'intobjectname = :intobjectname').moveFirst();
+            if (objectStructure != null && objectStructure.getBoolean('USERDEFINED')) {
+                delete channel.intObjectName;
+                channel.objectStructure = getIntObject(objectStructure.getUniqueIDValue());
+            }
+
+            return channel;
+        }
+    } finally {
+        _close(channelSet);
+    }
+}
+
+function getEnterpriseServices() {
+    return _listRecords('MAXIFACEIN', ['IFACENAME', 'DESCRIPTION'], 'IFACENAME');
+}
+
+function getEnterpriseService(id) {
+    var serviceSet = MXServer.getMXServer().getMboSet('MAXIFACEIN', MXServer.getMXServer().getSystemUserInfo());
+    try {
+        var serviceMbo = serviceSet.getMboForUniqueId(id);
+
+        if (serviceMbo != null) {
+            var service = { ifaceName: serviceMbo.getString('IFACENAME'), intObjectName: serviceMbo.getString('INTOBJECTNAME') };
+            _putValues(service, serviceMbo, [
+                ['description', 'DESCRIPTION'],
+                ['ifaceType', 'IFACETYPE'],
+                ['messageType', 'MESSAGETYPE'],
+                ['ifaceControl', 'IFACECONTROL'],
+                ['ifaceTbName', 'IFACETBNAME'],
+                ['useExternalSchema', 'USEEXTERNALSCHEMA', 'boolean'],
+                ['splitTag', 'SPLITTAG'],
+                ['schemaLocation', 'SCHEMALOCATION'],
+                ['elementName', 'ELEMENTNAME'],
+                ['replySchemaLoc', 'REPLYSCHEMALOC'],
+                ['replyElementName', 'REPLYELEMENTNAME'],
+                ['ifaceExitClass', 'IFACEEXITCLASS'],
+                ['ifaceUserExitClass', 'IFACEUSEREXITCLASS'],
+                ['ifaceMapName', 'IFACEMAPNAME'],
+                ['replyExitClass', 'REPLYEXITCLASS'],
+                ['replyUserExitClass', 'REPLYUSEREXITCLASS'],
+                ['replyMapName', 'REPLYMAPNAME'],
+                ['useTxnTracking', 'USETXNTRACKING', 'boolean'],
+                ['storeMsg', 'STOREMSG', 'boolean'],
+                ['extMsgIdField', 'EXTMSGIDFIELD'],
+                ['searchField', 'SEARCHFIELD'],
+                ['interpreterClass', 'INTERPRETERCLASS'],
+            ]);
+
+            var structures = _getChildren(serviceMbo, 'MAXIFACEINDETAIL', null, 'IFACEMAPORDER', function (detailMbo) {
+                var detail = { intObjectName: detailMbo.getString('INTOBJECTNAME') };
+                _putValues(detail, detailMbo, [
+                    ['ifaceMapOrder', 'IFACEMAPORDER', 'int'],
+                    ['ifaceExitClass', 'IFACEEXITCLASS'],
+                    ['ifaceUserExitClass', 'IFACEUSEREXITCLASS'],
+                    ['ifaceMapName', 'IFACEMAPNAME'],
+                    ['ifaceControl', 'IFACECONTROL'],
+                ]);
+                return detail;
+            });
+            if (structures.length > 0) {
+                service.additionalObjectStructures = structures;
+            }
+
+            var properties = _getChildren(serviceMbo, 'MAXIFACETYPEPROP', null, 'PARAM', function (propertyMbo) {
+                var property = { param: propertyMbo.getString('PARAM') };
+                _putValues(property, propertyMbo, [
+                    ['value', 'VALUE'],
+                    ['isXmlTag', 'ISXMLTAG', 'boolean'],
+                ]);
+                return property;
+            });
+            if (properties.length > 0) {
+                service.gatewayProperties = properties;
+            }
+
+            var controls = _getChildren(serviceMbo, 'MAXIFACEINCNTLDETAIL', null, 'IFACECONTROL', function (control) {
+                return { control: control.getString('IFACECONTROL') };
+            });
+            if (controls.length > 0) {
+                service.integrationControls = controls;
+            }
+
+            // MAXIFACEPROC holds both kinds of rules, which the screens show on separate tabs.
+            var rules = _getProcessingRules(serviceMbo, 'MAXIFACEPROC', 'ESOBJECTSTRUCTURE');
+            if (rules.length > 0) {
+                service.processingRules = rules;
+            }
+
+            var objectRules = _getProcessingRules(serviceMbo, 'MAXIFACEPROC', 'ESOBJECT');
+            if (objectRules.length > 0) {
+                service.objectProcessingRules = objectRules;
+            }
+
+            var objectStructure = serviceMbo.getMboSet('$OBJECTSTRUCTURE', 'MAXINTOBJECT', 'intobjectname = :intobjectname').moveFirst();
+            if (objectStructure != null && objectStructure.getBoolean('USERDEFINED')) {
+                delete service.intObjectName;
+                service.objectStructure = getIntObject(objectStructure.getUniqueIDValue());
+            }
+
+            return service;
+        }
+    } finally {
+        _close(serviceSet);
+    }
+}
+
+function getExternalSystems() {
+    return _listRecords('MAXEXTSYSTEM', ['EXTSYSNAME', 'DESCRIPTION'], 'EXTSYSNAME');
+}
+
+function getExternalSystem(id) {
+    var systemSet = MXServer.getMXServer().getMboSet('MAXEXTSYSTEM', MXServer.getMXServer().getSystemUserInfo());
+    try {
+        var systemMbo = systemSet.getMboForUniqueId(id);
+
+        if (systemMbo != null) {
+            var system = { extSysName: systemMbo.getString('EXTSYSNAME') };
+            _putValues(system, systemMbo, [
+                ['description', 'DESCRIPTION'],
+                ['endPointName', 'ENDPOINTNAME'],
+                ['langCode', 'LANGCODE'],
+                ['bidiConfig', 'BIDICONFIG'],
+                ['jmsMsgEncoding', 'JMSMSGENCODING'],
+                ['outSeqQueueName', 'OUTSEQQUEUENAME'],
+                ['outContQueueName', 'OUTCONTQUEUENAME'],
+                ['inSeqQueueName', 'INSEQQUEUENAME'],
+                ['inContQueueName', 'INCONTQUEUENAME'],
+                ['enabled', 'ENABLED', 'boolean'],
+            ]);
+
+            var channels = _getChildren(systemMbo, 'MAXEXTIFACEOUT', null, 'IFACENAME', function (linkMbo) {
+                var link = _getExternalSystemLink(linkMbo, 'MAXIFACEOUT', 'publishChannel', getPublishChannel);
+                _putValues(link, linkMbo, [
+                    ['enabled', 'ENABLED', 'boolean'],
+                    ['endPointName', 'ENDPOINTNAME'],
+                ]);
+                if (!linkMbo.isNull('ISCONTINUOUSQUEUE')) {
+                    link.isContinuousQueue = linkMbo.getBoolean('ISCONTINUOUSQUEUE');
+                }
+                return link;
+            });
+            if (channels.length > 0) {
+                system.publishChannels = channels;
+            }
+
+            var services = _getChildren(systemMbo, 'MAXEXTIFACEIN', null, 'IFACENAME', function (linkMbo) {
+                var link = _getExternalSystemLink(linkMbo, 'MAXIFACEIN', 'enterpriseService', getEnterpriseService);
+                _putValues(link, linkMbo, [
+                    ['enabled', 'ENABLED', 'boolean'],
+                    ['isContinuousQueue', 'ISCONTINUOUSQUEUE', 'boolean'],
+                ]);
+                return link;
+            });
+            if (services.length > 0) {
+                system.enterpriseServices = services;
+            }
+
+            var controls = _getChildren(systemMbo, 'MAXEXTSYSCONTROL', null, 'IFACECONTROL', _getExternalSystemControl);
+            if (controls.length > 0) {
+                system.integrationControls = controls;
+            }
+
+            return system;
+        }
+    } finally {
+        _close(systemSet);
+    }
+}
+
+/** A userdefined channel or service that only this system links is embedded, any other is referenced by name. */
+function _getExternalSystemLink(linkMbo, object, property, getRecord) {
+    var ifaceName = linkMbo.getString('IFACENAME');
+    var record = linkMbo.getMboSet('$NV' + object, object, 'ifacename = :ifacename').moveFirst();
+    if (record != null && record.getBoolean('USERDEFINED')) {
+        if (linkMbo.getMboSet('$NVOTHERLINKS', linkMbo.getName(), 'ifacename = :ifacename and extsysname != :extsysname').isEmpty()) {
+            var link = {};
+            link[property] = getRecord(record.getUniqueIDValue());
+            return link;
+        }
+    }
+    return { ifaceName: ifaceName };
+}
+
+/** Values are extracted as stored, the localized value the screens show. Only the rows of the control's type are read. */
+function _getExternalSystemControl(controlMbo) {
+    var control = { control: controlMbo.getString('IFACECONTROL') };
+    var type = toInternalSynonymValue('CONTROLTYPE', controlMbo.getString('CONTROLTYPE'), controlMbo);
+    var overrides = [];
+    if (type === 'VALUE') {
+        _putValues(control, controlMbo, [['value', 'VALUE']]);
+        overrides = _getChildren(controlMbo, 'MAXEXTCTLVAL', null, 'ORGID, SITEID', function (valueMbo) {
+            var override = _getOverrideKeys(valueMbo);
+            _putValues(override, valueMbo, [['value', 'VALUE']]);
+            return override;
+        });
+    } else if (type === 'BOOLEAN') {
+        _putValues(control, controlMbo, [['isTrue', 'ISTRUE', 'boolean']]);
+        overrides = _getChildren(controlMbo, 'MAXEXTBOOLVAL', null, 'ORGID, SITEID', function (valueMbo) {
+            var override = _getOverrideKeys(valueMbo);
+            _putValues(override, valueMbo, [['isTrue', 'ISTRUE', 'boolean']]);
+            return override;
+        });
+    } else {
+        _putOverrideValues(control, type, controlMbo.getMboSet('MAXEXTLISTVAL'), controlMbo.getMboSet('MAXEXTXREFVAL'));
+        overrides = _getChildren(controlMbo, 'MAXEXTOVER', null, 'ORGID, SITEID', function (overMbo) {
+            var override = _getOverrideKeys(overMbo);
+            // The relationships match on orgid and siteid, so they miss the rows where either is blank.
+            var where =
+                'extsysname = :extsysname and ifacecontrol = :ifacecontrol and ' +
+                (overMbo.isNull('ORGID') ? 'orgid is null' : 'orgid = :orgid') +
+                ' and ' +
+                (overMbo.isNull('SITEID') ? 'siteid is null' : 'siteid = :siteid');
+            _putOverrideValues(
+                override,
+                type,
+                overMbo.getMboSet('$NVLISTOVERVAL', 'MAXLISTOVERVAL', where),
+                overMbo.getMboSet('$NVXREFOVERVAL', 'MAXXREFOVERVAL', where)
+            );
+            return override;
+        });
+    }
+    if (overrides.length > 0) {
+        control.overrides = overrides;
+    }
+    return control;
+}
+
+function _getOverrideKeys(mbo) {
+    var override = {};
+    _putValues(override, mbo, [
+        ['orgId', 'ORGID'],
+        ['siteId', 'SITEID'],
+    ]);
+    return override;
+}
+
+function _putOverrideValues(target, type, listSet, crossReferenceSet) {
+    var rows = [];
+    var mboSet = type === 'LIST' ? listSet : crossReferenceSet;
+    mboSet.setOrderBy('VALUE');
+    mboSet.reset();
+    var mappings =
+        type === 'LIST'
+            ? [['value', 'VALUE']]
+            : [
+                  ['value', 'VALUE'],
+                  ['newValue', 'NEWVALUE'],
+              ];
+    var mbo = mboSet.moveFirst();
+    while (mbo != null) {
+        var row = {};
+        _putValues(row, mbo, mappings);
+        rows.push(row);
+        mbo = mboSet.moveNext();
+    }
+    if (rows.length > 0) {
+        target[type === 'LIST' ? 'listValues' : 'crossReferenceValues'] = rows;
+    }
+}
+
+/** Shared by the integration channels that carry processing rules. Synonym values are extracted localized, as the screens show them. */
+function _getProcessingRules(owner, relationship, useWith) {
+    var whereClause = null;
+    if (useWith) {
+        var sqlf = new SqlFormat('usewith = :1');
+        sqlf.setObject(1, 'MAXIFACEPROC', 'USEWITH', useWith);
+        whereClause = sqlf.format();
+    }
+    return _getChildren(owner, relationship, whereClause, 'PROCSEQUENCE', function (ruleMbo) {
+        var rule = { procName: ruleMbo.getString('PROCNAME') };
+        _putValues(rule, ruleMbo, [
+            ['action', 'PROCTYPE'],
+            ['objectName', 'OBJECTNAME'],
+            ['hierarchyPath', 'HIERARCHYPATH'],
+            ['description', 'DESCRIPTION'],
+            ['className', 'CLASSNAME'],
+            ['procMessage', 'PROCMESSAGE'],
+            ['enabled', 'ENABLED', 'boolean'],
+            ['applyOnInsert', 'APPLYONINSERT', 'boolean'],
+            ['applyOnUpdate', 'APPLYONUPDATE', 'boolean'],
+            ['applyOnDelete', 'APPLYONDELETE', 'boolean'],
+        ]);
+
+        var conditions = _getChildren(ruleMbo, 'MAXIFACECOND', null, 'CONDITION', function (conditionMbo) {
+            var condition = { condition: conditionMbo.getInt('CONDITION') };
+            var details = _getChildren(conditionMbo, 'MAXCONDDETAIL', null, 'CONDSEQUENCE', function (detailMbo) {
+                var detail = {};
+                _putValues(detail, detailMbo, [
+                    ['condSequence', 'CONDSEQUENCE', 'int'],
+                    ['condType', 'CONDTYPE'],
+                    ['evalType', 'EVALTYPE'],
+                    ['changeType', 'CHANGETYPE'],
+                    ['compareType', 'COMPARETYPE'],
+                    ['columnName', 'COLUMNNAME'],
+                    ['mboName', 'MBONAME'],
+                    ['mboColumnName', 'MBOCOLUMNNAME'],
+                    ['relation', 'RELATION'],
+                    ['value', 'VALUE'],
+                    ['glOrder', 'GLORDER', 'int'],
+                ]);
+                return detail;
+            });
+            if (details.length > 0) {
+                condition.details = details;
+            }
+            return condition;
+        });
+        if (conditions.length > 0) {
+            rule.conditions = conditions;
+        }
+
+        var fields = _getChildren(ruleMbo, 'MAXREPLACEPROC', null, 'FIELDNAME', function (fieldMbo) {
+            var field = { fieldName: fieldMbo.getString('FIELDNAME') };
+            _putValues(field, fieldMbo, [
+                ['replaceNull', 'REPLACENULL', 'boolean'],
+                ['valueType', 'VALUETYPE'],
+                ['value', 'VALUE'],
+                ['mboName', 'MBONAME'],
+                ['relation', 'RELATION'],
+            ]);
+            return field;
+        });
+        if (fields.length > 0) {
+            rule.fields = fields;
+        }
+
+        var columns = _getChildren(ruleMbo, 'MAXPROCCOLS', null, 'FIELDNAME', function (columnMbo) {
+            var column = { fieldName: columnMbo.getString('FIELDNAME') };
+            _putValues(column, columnMbo, [['ifaceControl', 'IFACECONTROL']]);
+            return column;
+        });
+        if (columns.length > 0) {
+            rule.columns = columns;
+        }
+
+        return rule;
+    });
+}
+
+function getIntObjects() {
+    return _listRecords('MAXINTOBJECT', ['INTOBJECTNAME', 'DESCRIPTION'], 'INTOBJECTNAME');
 }
 
 function getIntObject(id) {
@@ -366,11 +751,13 @@ function getIntObject(id) {
                 intObject.module = maxIntObject.getString('MODULE');
             }
 
-            if (_attributeExists('MAXINTOBJECT', 'AUTOPAGINGTHRESHOLD') && !maxIntObject.getInt('AUTOPAGINGTHRESHOLD') != -1) {
+            if (_attributeExists('MAXINTOBJECT', 'AUTOPAGINGTHRESHOLD') && maxIntObject.getInt('AUTOPAGINGTHRESHOLD') != -1) {
                 intObject.autoPagingThreshold = maxIntObject.getInt('AUTOPAGINGTHRESHOLD');
             }
 
             var maxIntObjDetailSet = maxIntObject.getMboSet('MAXINTOBJDETAIL');
+            maxIntObjDetailSet.setOrderBy('PROCESSORDER');
+            maxIntObjDetailSet.reset();
             var maxIntObjDetail = maxIntObjDetailSet.moveFirst();
             if (maxIntObjDetail != null) {
                 intObject.maxIntObjDetail = [];
@@ -509,7 +896,7 @@ function getIntObject(id) {
                 }
 
                 if (!sigOption.getBoolean('VISIBLE')) {
-                    option.esigEnabled = false;
+                    option.visible = false;
                 }
 
                 intObject.sigOption.push(option);
@@ -550,7 +937,7 @@ function getIntObject(id) {
                 }
 
                 if (!osOSLCAction.isNull('COLLECTION')) {
-                    action.collection = osOSLCAction.getString('COLLECTION');
+                    action.collection = osOSLCAction.getBoolean('COLLECTION');
                 }
 
                 intObject.osOSLCAction.push(action);
@@ -587,7 +974,7 @@ function getIntObject(id) {
                         query.isPublic = oslcQuery.getBoolean('ISPUBLIC');
                         break;
                     case 'script':
-                        query.script = oslcQuery.getString('SCRIPT');
+                        query.script = oslcQuery.getString('SCRIPTNAME');
                         break;
                 }
 
@@ -607,6 +994,7 @@ function getIntObject(id) {
                 var template = {
                     templateName: queryTemplate.getString('TEMPLATENAME'),
                     description: queryTemplate.getString('DESCRIPTION'),
+                    owner: queryTemplate.getString('OWNER'),
                 };
 
                 if (!queryTemplate.isNull('PAGESIZE')) {
@@ -672,27 +1060,7 @@ function getIntObject(id) {
 }
 
 function getLoggers() {
-    var maxLoggerSet = MXServer.getMXServer().getMboSet('MAXLOGGER', MXServer.getMXServer().getSystemUserInfo());
-    try {
-        maxLoggerSet.setOrderBy('logger');
-        maxLoggerSet.setFlag(MboConstants.DISCARDABLE, true);
-        var maxLogger = maxLoggerSet.moveFirst();
-        var loggers = [];
-        while (maxLogger != null) {
-            var logger = {
-                id: maxLogger.getUniqueIDValue(),
-                label: maxLogger.getString('LOGGER'),
-                description: maxLogger.getString('LOGKEY'),
-            };
-
-            loggers.push(logger);
-
-            maxLogger = maxLoggerSet.moveNext();
-        }
-        return loggers;
-    } finally {
-        _close(maxLoggerSet);
-    }
+    return _listRecords('MAXLOGGER', ['LOGGER', 'LOGKEY'], 'LOGGER');
 }
 
 function getLogger(id) {
@@ -726,27 +1094,7 @@ function getLogger(id) {
 }
 
 function getCronTasks() {
-    var cronTaskDefSet = MXServer.getMXServer().getMboSet('CRONTASKDEF', MXServer.getMXServer().getSystemUserInfo());
-    try {
-        cronTaskDefSet.setOrderBy('CRONTASKNAME');
-        cronTaskDefSet.setFlag(MboConstants.DISCARDABLE, true);
-        var cronTaskDef = cronTaskDefSet.moveFirst();
-        var cronTasks = [];
-        while (cronTaskDef != null) {
-            var cronTask = {
-                id: cronTaskDef.getUniqueIDValue(),
-                label: cronTaskDef.getString('CRONTASKNAME'),
-                description: cronTaskDef.getString('DESCRIPTION'),
-            };
-
-            cronTasks.push(cronTask);
-
-            cronTaskDef = cronTaskDefSet.moveNext();
-        }
-        return cronTasks;
-    } finally {
-        _close(cronTaskDefSet);
-    }
+    return _listRecords('CRONTASKDEF', ['CRONTASKNAME', 'DESCRIPTION'], 'CRONTASKNAME');
 }
 
 function getCronTask(id) {
@@ -805,26 +1153,7 @@ function getCronTask(id) {
 }
 
 function getEscalations() {
-    var escalationSet = MXServer.getMXServer().getMboSet('ESCALATION', MXServer.getMXServer().getSystemUserInfo());
-    try {
-        escalationSet.setOrderBy('ESCALATION');
-        escalationSet.setFlag(MboConstants.DISCARDABLE, true);
-        var escalationMbo = escalationSet.moveFirst();
-        var escalations = [];
-        while (escalationMbo != null) {
-            var escalation = {
-                id: escalationMbo.getUniqueIDValue(),
-                label: escalationMbo.getString('ESCALATION'),
-                description: escalationMbo.getString('DESCRIPTION'),
-            };
-
-            escalations.push(escalation);
-            escalationMbo = escalationSet.moveNext();
-        }
-        return escalations;
-    } finally {
-        _close(escalationSet);
-    }
+    return _listRecords('ESCALATION', ['ESCALATION', 'DESCRIPTION'], 'ESCALATION');
 }
 
 function getEscalation(id) {
@@ -882,11 +1211,40 @@ function getEscalation(id) {
             while (escRefPointMbo != null) {
                 var refPoint = {
                     refPointNum: escRefPointMbo.getInt('REFPOINTNUM'),
-                    eventAttribute: escRefPointMbo.getString('EVENTATTRIBUTE'),
-                    elapsedInterval: escRefPointMbo.getDouble('ELAPSEDINTERVAL'),
-                    intervalUom: escRefPointMbo.getString('INTERVALUOM'),
                     repeat: escRefPointMbo.getBoolean('REPEAT'),
                 };
+
+                if (!escRefPointMbo.isNull('EVENTATTRIBUTE')) {
+                    refPoint.eventAttribute = escRefPointMbo.getString('EVENTATTRIBUTE');
+                }
+
+                if (!escRefPointMbo.isNull('ELAPSEDINTERVAL')) {
+                    refPoint.elapsedInterval = escRefPointMbo.getDouble('ELAPSEDINTERVAL');
+                }
+
+                if (!escRefPointMbo.isNull('INTERVALUOM')) {
+                    refPoint.intervalUom = escRefPointMbo.getString('INTERVALUOM');
+                }
+
+                if (!escRefPointMbo.isNull('EVENTCONDITION')) {
+                    refPoint.eventCondition = escRefPointMbo.getString('EVENTCONDITION');
+                }
+
+                if (!escRefPointMbo.isNull('ACTION')) {
+                    refPoint.action = escRefPointMbo.getString('ACTION');
+                }
+
+                if (!escRefPointMbo.isNull('CALCCALENDAR')) {
+                    refPoint.calcCalendar = escRefPointMbo.getString('CALCCALENDAR');
+                }
+
+                if (!escRefPointMbo.isNull('CALCSHIFT')) {
+                    refPoint.calcShift = escRefPointMbo.getString('CALCSHIFT');
+                }
+
+                if (!escRefPointMbo.isNull('CALCORGID')) {
+                    refPoint.calcOrgId = escRefPointMbo.getString('CALCORGID');
+                }
 
                 var escNotificationSet = escRefPointMbo.getMboSet('ESCNOTIFICATION');
                 var escNotificationMbo = escNotificationSet.moveFirst();
@@ -915,27 +1273,9 @@ function getEscalation(id) {
 }
 
 function getDomains() {
-    var maxDomainSet = MXServer.getMXServer().getMboSet('MAXDOMAIN', MXServer.getMXServer().getSystemUserInfo());
-    try {
-        maxDomainSet.setOrderBy('DOMAINID');
-        maxDomainSet.setFlag(MboConstants.DISCARDABLE, true);
-        var maxDomain = maxDomainSet.moveFirst();
-        var domains = [];
-        while (maxDomain != null) {
-            var domain = {
-                id: maxDomain.getUniqueIDValue(),
-                label: maxDomain.getString('DOMAINID') + ' (' + maxDomain.getString('DOMAINTYPE') + ')',
-                description: maxDomain.getString('DESCRIPTION'),
-            };
-
-            domains.push(domain);
-
-            maxDomain = maxDomainSet.moveNext();
-        }
-        return domains;
-    } finally {
-        _close(maxDomainSet);
-    }
+    return _listRecords('MAXDOMAIN', ['DOMAINID', 'DOMAINTYPE', 'DESCRIPTION'], 'DOMAINID', function (values) {
+        return { label: values[0] + ' (' + values[1] + ')', description: values[2] };
+    });
 }
 
 function getDomain(id) {
@@ -1249,34 +1589,7 @@ function getDomain(id) {
 }
 
 function getProperties() {
-    var maxPropSet = MXServer.getMXServer().getMboSet('MAXPROP', MXServer.getMXServer().getSystemUserInfo());
-
-    var properties = [];
-    try {
-        var sqlf = new SqlFormat('propname != :1');
-        sqlf.setObject(1, 'MAXPROP', 'PROPNAME', 'mxe.sec.header.Content_Security_Policy');
-        maxPropSet.setWhere(sqlf.format());
-        maxPropSet.setOrderBy('PROPNAME');
-
-        maxPropSet.setFlag(MboConstants.DISCARDABLE, true);
-        var maxProp = maxPropSet.moveFirst();
-
-        while (maxProp != null) {
-            var property = {
-                id: maxProp.getUniqueIDValue(),
-                label: maxProp.getString('PROPNAME'),
-                description: maxProp.getString('DESCRIPTION'),
-            };
-
-            properties.push(property);
-
-            maxProp = maxPropSet.moveNext();
-        }
-
-        return properties;
-    } finally {
-        _close(maxPropSet);
-    }
+    return _listRecords('MAXPROP', ['PROPNAME', 'DESCRIPTION'], 'PROPNAME');
 }
 
 function getProperty(id) {
@@ -1421,31 +1734,212 @@ function getMessageOptions(maxMessage) {
 }
 
 function getMessages() {
-    var maxMessageSet = MXServer.getMXServer().getMboSet('MAXMESSAGES', MXServer.getMXServer().getSystemUserInfo());
+    return _listRecords('MAXMESSAGES', ['MSGGROUP', 'MSGKEY', 'VALUE'], 'MSGGROUP, MSGKEY', function (values) {
+        return { label: values[0] + ':' + values[1], description: values[2] };
+    });
+}
 
-    var messages = [];
+function getMaximoObjects() {
+    return _listRecords('MAXOBJECTCFG', ['OBJECTNAME', 'DESCRIPTION'], 'OBJECTNAME', null, "CHANGED != 'R'");
+}
+
+/**
+ * Returns a Maximo object in the shape of the "objects" deployment payload. An object, attribute or
+ * index marked for removal by Database Configuration is treated as already gone.
+ */
+function getMaximoObject(id) {
+    var maxObjectSet = MXServer.getMXServer().getMboSet('MAXOBJECTCFG', MXServer.getMXServer().getSystemUserInfo());
     try {
-        maxMessageSet.setFlag(MboConstants.READONLY, false);
-        maxMessageSet.setFlag(MboConstants.DISCARDABLE, true);
-        maxMessageSet.setOrderBy('MSGGROUP, MSGKEY');
-        var maxMessage = maxMessageSet.getMbo(0);
-
-        while (maxMessage != null) {
-            var message = {
-                id: maxMessage.getUniqueIDValue(),
-                label: maxMessage.getString('MSGGROUP') + ':' + maxMessage.getString('MSGKEY'),
-                description: maxMessage.getString('VALUE'),
-            };
-
-            messages.push(message);
-
-            maxMessage = maxMessageSet.moveNext();
+        var mbo = maxObjectSet.getMboForUniqueId(id);
+        if (mbo == null || _markedForRemoval(mbo)) {
+            return undefined;
         }
 
-        return messages;
+        var maxObject = { object: mbo.getString('OBJECTNAME') };
+        _putValues(maxObject, mbo, [
+            ['description', 'DESCRIPTION'],
+            ['service', 'SERVICENAME'],
+            ['entity', 'ENTITYNAME'],
+            ['class', 'CLASSNAME'],
+            ['extendsObject', 'EXTENDSOBJECT'],
+            ['level', 'SITEORGTYPE'],
+            ['textDirection', 'TEXTDIRECTION'],
+            ['mainObject', 'MAINOBJECT', 'boolean'],
+            ['persistent', 'PERSISTENT', 'boolean'],
+            ['storagePartition', 'STORAGEPARTITION'],
+            ['uniqueColumn', 'UNIQUECOLUMNNAME'],
+            ['languageTable', 'LANGTABLENAME'],
+            ['languageColumn', 'LANGCOLUMNNAME'],
+            ['alternateIndex', 'ALTIXNAME'],
+            ['triggerRoot', 'TRIGROOT'],
+            ['addRowstamp', 'ADDROWSTAMP', 'boolean'],
+            ['textSearchEnabled', 'TEXTSEARCHENABLED', 'boolean'],
+            ['view', 'ISVIEW', 'boolean'],
+            ['viewWhere', 'VIEWWHERE'],
+            ['joinToObject', 'JOINOBJECT'],
+            ['viewSelect', 'VIEWSELECT'],
+            ['automaticallySelect', 'AUTOSELECT', 'boolean'],
+            ['viewFrom', 'VIEWFROM'],
+            ['auditEnabled', 'EAUDITENABLED', 'boolean'],
+            ['auditTable', 'EAUDITTBNAME'],
+            ['eAuditFilter', 'EAUDITFILTER'],
+            ['eSignatureFilter', 'ESIGFILTER'],
+        ]);
+
+        maxObject.attributes = _getChildren(mbo, 'MAXATTRIBUTECFG', null, 'ATTRIBUTENO', function (attribute) {
+            var result = { attribute: attribute.getString('ATTRIBUTENAME') };
+            _putValues(result, attribute, [
+                ['description', 'REMARKS'],
+                ['title', 'TITLE'],
+                ['type', 'MAXTYPE'],
+                ['length', 'LENGTH', 'int'],
+                ['scale', 'SCALE', 'int'],
+                ['searchType', 'SEARCHTYPE'],
+                ['required', 'REQUIRED', 'boolean'],
+                ['class', 'CLASSNAME'],
+                ['domain', 'DOMAINID'],
+                ['defaultValue', 'DEFAULTVALUE'],
+                ['alias', 'ALIAS'],
+                ['column', 'COLUMNNAME'],
+                ['sameAsObject', 'SAMEASOBJECT'],
+                ['sameAsAttribute', 'SAMEASATTRIBUTE'],
+                ['autonumber', 'AUTOKEYNAME'],
+                ['localizable', 'LOCALIZABLE', 'boolean'],
+                ['textDirection', 'TEXTDIRECTION'],
+                ['persistent', 'PERSISTENT', 'boolean'],
+                ['mustBe', 'MUSTBE', 'boolean'],
+                ['positive', 'ISPOSITIVE', 'boolean'],
+                ['canAutonumber', 'CANAUTONUM', 'boolean'],
+                ['longDescriptionOwner', 'ISLDOWNER', 'boolean'],
+                ['sequenceName', 'SEQUENCENAME'],
+                ['typeOfComplexExpression', 'COMPLEXEXPRESSION'],
+                ['auditEnabled', 'EAUDITENABLED', 'boolean'],
+                ['multilanguageSupported', 'MLSUPPORTED', 'boolean'],
+                ['multilanguageInUse', 'MLINUSE', 'boolean'],
+                ['eSignatureEnabled', 'ESIGENABLED', 'boolean'],
+                ['primaryColumn', 'PRIMARYKEYCOLSEQ', 'int'],
+            ]);
+            return result;
+        });
+
+        maxObject.relationships = _getChildren(mbo, 'MAXRELATIONSHIP', null, 'NAME', function (relationship) {
+            var result = { relationship: relationship.getString('NAME') };
+            _putValues(result, relationship, [
+                ['child', 'CHILD'],
+                ['remarks', 'REMARKS'],
+                ['whereClause', 'WHERECLAUSE'],
+                ['cardinality', 'CARDINALITY'],
+                ['dbJoinRequired', 'DBJOINREQUIRED', 'int'],
+                ['isDefault', 'ISDEFAULT', 'boolean'],
+            ]);
+            return result;
+        });
+
+        maxObject.indexes = _getChildren(mbo, 'MAXSYSINDEXES', null, 'NAME', function (index) {
+            var result = { index: index.getString('NAME') };
+            _putValues(result, index, [
+                ['enforceUniqueness', 'UNIQUE', 'boolean'],
+                ['clusteredIndex', 'CLUSTERRULE', 'boolean'],
+                ['required', 'REQUIRED', 'boolean'],
+                ['textSearchIndex', 'TEXTSEARCH', 'boolean'],
+                ['storagePartition', 'STORAGEPARTITION'],
+            ]);
+            result.columns = _getChildren(index, 'MAXSYSKEYS', null, 'COLSEQ', function (key) {
+                var column = { column: key.getString('COLNAME') };
+                _putValues(column, key, [
+                    ['ascending', 'ASCENDING', 'boolean'],
+                    ['sequence', 'COLSEQ', 'int'],
+                ]);
+                return column;
+            });
+            return result;
+        });
+
+        return maxObject;
     } finally {
-        _close(maxMessageSet);
+        _close(maxObjectSet);
     }
+}
+
+/**
+ * Lists an object's records as { id, label, description } with plain SQL rather than an MboSet, because
+ * building an Mbo for each of thousands of records is slow. The id is the object's unique id. toItem
+ * receives the selected column values in order; by default the first is the label and the second the
+ * description.
+ */
+function _listRecords(objectName, columns, orderBy, toItem, whereClause) {
+    var uniqueIdName = MXServer.getMXServer().getMaximoDD().getMboSetInfo(objectName).getUniqueIDName();
+    var sql = 'select ' + uniqueIdName + ', ' + columns.join(', ') + ' from ' + objectName;
+    if (whereClause) {
+        sql += ' where ' + whereClause;
+    }
+    sql += ' order by ' + orderBy;
+
+    var db = new DBShortcut();
+    var resultSet = null;
+    try {
+        db.connect(MXServer.getMXServer().getSystemUserInfo().getConnectionKey());
+        resultSet = db.executeQuery(sql);
+        var records = [];
+        while (resultSet.next()) {
+            var values = [];
+            for (var i = 0; i < columns.length; i++) {
+                values.push(resultSet.getString(i + 2) || '');
+            }
+            var record = toItem ? toItem(values) : { label: values[0], description: values[1] };
+            record.id = Number(resultSet.getLong(1));
+            records.push(record);
+        }
+        return records;
+    } finally {
+        if (resultSet != null) {
+            resultSet.close();
+        }
+        db.close();
+    }
+}
+
+/** The optional where clause narrows the related set. It is always set, because the owner caches the set across calls. */
+function _getChildren(mbo, relationship, whereClause, orderBy, toPayload) {
+    var children = [];
+    var childSet = mbo.getMboSet(relationship);
+    childSet.setWhere(whereClause || '');
+    childSet.setOrderBy(orderBy);
+    childSet.reset();
+    var child = childSet.moveFirst();
+    while (child != null) {
+        if (!_markedForRemoval(child)) {
+            children.push(toPayload(child));
+        }
+        child = childSet.moveNext();
+    }
+    return children;
+}
+
+function _markedForRemoval(mbo) {
+    return _hasAttribute(mbo, 'CHANGED') && mbo.getString('CHANGED') === 'R';
+}
+
+function _hasAttribute(mbo, attribute) {
+    return _attributeExists(mbo.getName(), attribute);
+}
+
+/**
+ * Copies [property, attribute, type] triples from the record. Booleans are always written, other
+ * values only when set, and attributes this Maximo version lacks are skipped.
+ */
+function _putValues(target, mbo, mappings) {
+    mappings.forEach(function (mapping) {
+        var attribute = mapping[1];
+        if (!_hasAttribute(mbo, attribute)) {
+            return;
+        }
+        if (mapping[2] === 'boolean') {
+            target[mapping[0]] = mbo.getBoolean(attribute);
+        } else if (!mbo.isNull(attribute)) {
+            target[mapping[0]] = mapping[2] === 'int' ? mbo.getInt(attribute) : mbo.getString(attribute);
+        }
+    });
 }
 
 function _attributeExists(objectName, attributeName) {

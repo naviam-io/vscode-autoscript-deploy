@@ -5,10 +5,9 @@
  *
  * See docs/modules/nashorn-library.md for what a snapshot is and when one is left behind.
  */
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
-
-const { declaresRetainMarkers, describeSnapshotRecord, formatSnapshotAge } = require('../../../src/deploy/retained-snapshots');
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import { declaresRetainMarkers, describeSnapshotRecord, formatSnapshotAge } from '../../../src/core/deploy/retained-snapshots.js';
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -69,9 +68,19 @@ describe('describeSnapshotRecord', () => {
     it('names the record the way the configuration type is spoken about', () => {
         assert.strictEqual(describeSnapshotRecord({ type: 'cronTasks', object: 'CRONTASKDEF', identity: 'SFG20SYNC' }), 'cron task SFG20SYNC');
         assert.strictEqual(describeSnapshotRecord({ type: 'domains', object: 'MAXDOMAIN', identity: 'NAVIAMTEST' }), 'domain NAVIAMTEST');
+        assert.strictEqual(describeSnapshotRecord({ type: 'queries', object: 'QUERY', identity: 'WOTRACK:NAVIAMTEST:MAXADMIN' }), 'query WOTRACK:NAVIAMTEST:MAXADMIN');
+        assert.strictEqual(describeSnapshotRecord({ type: 'messages', object: 'MAXMESSAGES', identity: 'NAVIAM:TEST' }), 'message NAVIAM:TEST');
+        assert.strictEqual(describeSnapshotRecord({ type: 'properties', object: 'MAXPROP', identity: 'naviam.test' }), 'property naviam.test');
+        assert.strictEqual(describeSnapshotRecord({ type: 'loggers', object: 'MAXLOGGER', identity: 'naviamtest:null:null' }), 'logger naviamtest:null:null');
+        assert.strictEqual(describeSnapshotRecord({ type: 'actions', object: 'ACTION', identity: 'NAVIAMTEST' }), 'action NAVIAMTEST');
+        assert.strictEqual(describeSnapshotRecord({ type: 'escalations', object: 'ESCALATION', identity: 'NAVIAMTEST' }), 'escalation NAVIAMTEST');
+        assert.strictEqual(
+            describeSnapshotRecord({ type: 'integrationObjects', object: 'MAXINTOBJECT', identity: 'NAVIAMOS' }),
+            'integration object NAVIAMOS'
+        );
     });
 
     it('falls back to the Maximo object for a type adopted after this list was written', () => {
-        assert.strictEqual(describeSnapshotRecord({ type: 'escalations', object: 'ESCALATION', identity: 'NAVIAMESC' }), 'ESCALATION NAVIAMESC');
+        assert.strictEqual(describeSnapshotRecord({ type: 'workflows', object: 'WFPROCESS', identity: 'NAVIAMWF' }), 'WFPROCESS NAVIAMWF');
     });
 });

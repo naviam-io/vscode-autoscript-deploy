@@ -1,0 +1,3 @@
+{
+    "manifest": [{ "kind": "automationScript", "path": "./src/index.ts" }]
+}

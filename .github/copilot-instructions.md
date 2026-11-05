@@ -19,14 +19,13 @@ This repository has two halves that run in different places:
 They talk over REST. Changing behaviour that crosses that line usually means changing both
 sides. Node idioms do not work on the server side.
 
-## Two commands
+## One command
 
 ```bash
 npm install && npm run package    # the validation gate; ~6 s, no credentials needed
-git submodule update --init --recursive    # resources/ is a private submodule
 ```
 
-`npm test` runs lint plus the `node:test` unit tests. CI runs lint and unit tests on `develop` and pull requests. `npm run package`
+`npm test` runs lint, the `node:test` unit tests and the offline CLI tests. CI runs them all on `develop` and pull requests. `npm run package`
 is what you rely on, and `npx eslint .` must report no errors.
 
 ## Before running anything against Maximo

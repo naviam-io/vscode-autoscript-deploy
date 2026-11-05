@@ -1,5 +1,6 @@
 node_modules/
 *.vsix
+out/
 dist/
 maximo.log
 src/.DS_Store
@@ -19,6 +20,12 @@ src/.DS_Store
 
 java/src/main/resources/autoscript-debug-version.txt
 java/.jython_cache/
+
+# Build output copied or generated into resources/ (see docs/modules/maximo-scripts.md).
+resources/naviam.autoscript.library.js
+resources/autoscript-debug.jar
+resources/.version
+resources/library/.tmp-tsc-check/
 
 # Serena MCP
 .serena/

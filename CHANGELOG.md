@@ -1,4 +1,52 @@
 # Release Notes
+## 1.31.0
+### Breaking changes
+These changes may require you to update existing configuration files.
+
+- A configuration file is now validated in full before any of it is applied, so a record that fails validation stops the whole deployment before Maximo is changed. A record missing a key field, including a `_delete`, now fails with an error naming the missing property; previously a `_delete` without its keys deleted nothing and reported success.
+- A logger without a parent is now found by its `logKey` when given, otherwise by its name. A name shared by several loggers, such as `sql`, now fails and asks for `logKey` or `parentLogKey`, instead of possibly changing or deleting the wrong logger.
+- An integration object whose object has a parent outside its objects, or whose action uses a signature option not listed in `sigOption` while `useOSSecurity` is off, now fails before anything is changed.
+
+### Integration framework
+- External systems, publish channels, enterprise services and end points can now be deployed and extracted as JSON under `externalSystems`, `publishChannels`, `enterpriseServices` and `endPoints`.
+- External systems, publish channels and enterprise services are recreated on every deployment, so they always match the file. A linked publish channel, enterprise service or object structure is either referenced by name, which never changes it, or embedded, which recreates it with its parent. Records that other records still use are kept, and a predefined object structure is never changed.
+- An end point deployment only changes the properties it lists, so an update can set a single URL. Encrypted properties are deployed and extracted like encrypted system properties.
+- Integration objects with aliases, such as `MXASSET`, can be extracted and deployed again.
+- Integration object extraction now keeps the object processing order, query template owners, hidden signature options and action collection flags, and an OSLC query's `script` is now deployed.
+- Fixed redeploying a secured object structure that lists the standard signature options, such as `READ`.
+- Fixed deleting or replacing an object structure on MAS 9.2 failing with `iface#oslcloaderr` when fast OSLC cache reload is enabled.
+
+### Retaining customer values
+- `_retain` is now supported by objects, integration objects, external systems, publish channels, enterprise services, end points, queries, messages, properties, loggers, actions and escalations, so redeploying a product's configuration no longer overwrites the values the customer changed. Child records, such as attributes, rules, escalation points or property instances, take their own `_retain`, and naming a collection keeps the child records the customer added.
+
+### Configuration deployment and extraction
+- Maximo objects are now declared under `objects` in a JSON deploy file, which validates them, and can be extracted with Extract Maximo JSON. Deploying such a file runs the database configuration unless it sets `noDBConfig`. The pre-deploy file keeps working as before.
+- Escalation points now deploy and extract their action, event condition and calculation calendar, shift and organization, which a redeploy previously cleared. `GROUP` actions now deploy and extract their `objectName`, which Maximo 9 needs for an action group run by an escalation point.
+- An existing action is now updated in place instead of recreated, so an action an escalation point refers to can be redeployed.
+- Fixed redeploying an escalation renumbering its escalation points, and failing when a point keeps an existing notification.
+- Fixed redeploying a property whose online changes are disabled.
+- Fixed extracting actions and domains as JSON failing with `Cannot set property "javaType" of undefined`. Extract Maximo JSON now shows an error instead of silently doing nothing.
+- Extract Maximo JSON now lists the records available for extraction much faster on servers with thousands of objects.
+- Fixed redeploying an inspection form on a Maximo whose form statuses are translated.
+- Fixed importing a BIRT report before the report engine has been started by the UI.
+
+### Screens
+- Added `presentations` to configuration files: ordered `add`, `modify`, `move` and `remove` changes to part of an existing application or system presentation, so a product no longer deploys the whole screen to add a tab, a dialog or a button. The labels in `MAXLABELS` follow the result, and a whole screen deploy now synchronises them the same way.
+- Fixed deploying a screen whose `<metadata>` omits an attribute, such as a `sigoption` without `langcode`.
+- Fixed deploying a screen with conditional UI properties to a Maximo whose user interface had not been opened since it started.
+- Fixed redeploying a screen not saving changes to an existing signature option defined in its metadata.
+
+### Deployment manifests
+- Manifest entries can set `"createOnly": true` to deploy an automation script, inspection form, screen or report only when it does not exist in Maximo yet, so an item that may have been modified since is not overwritten.
+
+### Connections and MCP server
+- Fixed `allowUntrustedCerts` and the custom CA applying to the whole VS Code extension host. They now apply only to connections to the environment they are set for.
+- Fixed the Maximo MCP server failing to authenticate, for example with a self-signed certificate. VS Code now reaches the MCP script through a local relay in the extension, so agents never see the password or API key.
+
+### Installation and TypeScript projects
+- The extension is now also published to the Open VSX Registry, so it can be installed in IBM Bob and other editors that use Open VSX.
+- Fixed TypeScript projects created from the template building `scriptConfig` as `null` with webpack 5.107 or later.
+
 ## 1.30.1
 - Reverted the 1.30.0 changes to synonym domain fields, so configuration files extracted with 1.29 validate and deploy again. Fields such as an action type, a cron task access level, a domain type, an escalation interval unit, integration object usage, a property security level, an object level and a relationship cardinality take the localized value of the target Maximo, and extraction writes the stored localized value. Table domains use `TABLE` again on an English Maximo.
 - Synonym domain fields now also accept an internal value written as `!VALUE!`, for example `"domainType": "!MAXTABLE!"`, which deploys to the target's default localized value, so one file deploys on a Maximo of any base language. An unknown internal value fails the deployment with a message naming the value and the synonym domain, and the schemas reject a value that starts with `!` but is not written as `!VALUE!`.

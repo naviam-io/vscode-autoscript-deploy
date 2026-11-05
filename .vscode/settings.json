@@ -4,11 +4,25 @@
         "BIRT",
         "Charsets",
         "DISCARDABLE",
+        "domainid",
+        "errorgroup",
+        "errorkey",
+        "evalresult",
+        "fnames",
         "Huizen",
         "maxauth",
+        "mboname",
+        "mboset",
+        "mbovalue",
+        "Nashorn",
         "Naviam",
+        "onadd",
+        "ondelete",
         "oslc",
-        "Sharptree"
+        "Sharptree",
+        "thisvalue",
+        "typeofs",
+        "wfinstance"
     ],
     "json.schemas": [
         {
@@ -21,7 +35,7 @@
         {
             "fileMatch": [
                 "test/complete/configuration/*.json",
-                "test/integration/fixtures/*.json",
+                "test/integration/fixtures/*.json"
             ],
             "url": "./.vscode/deploy-schema.json"
         },

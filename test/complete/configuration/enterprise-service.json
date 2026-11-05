@@ -1,0 +1,46 @@
+{
+    "enterpriseServices": [
+        {
+            "ifaceName": "TESTPERSONES",
+            "_retain": ["description", "storeMsg"],
+            "description": "Complete manifest test enterprise service",
+            "objectStructure": {
+                "intObjectName": "TESTESPERSON",
+                "description": "Complete manifest test embedded object structure",
+                "maxIntObjDetail": [{ "objectName": "PERSON" }]
+            },
+            "messageType": "Sync",
+            "storeMsg": false,
+            "gatewayProperties": [{ "param": "TESTCOMPLETE", "_retain": ["value"], "value": "Complete", "isXmlTag": false }],
+            "integrationControls": [{ "control": "WOSTART" }],
+            "processingRules": [
+                {
+                    "procName": "TESTESSKIP",
+                    "_retain": ["enabled"],
+                    "action": "!SKIP!",
+                    "objectName": "PERSON",
+                    "description": "Skip inactive people",
+                    "enabled": true,
+                    "applyOnInsert": true,
+                    "applyOnUpdate": true,
+                    "conditions": [
+                        {
+                            "condition": 10,
+                            "details": [
+                                {
+                                    "condSequence": 1,
+                                    "condType": "FIELD",
+                                    "evalType": "!EQUALS!",
+                                    "changeType": "!ALWAYS!",
+                                    "compareType": "VALUE",
+                                    "columnName": "STATUS",
+                                    "value": "INACTIVE"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<systemlib id="toolbox" version="7.1.0.0">
+  <action id="ctrl_action" />
+  <appbar id="ctrl_appbar" />
+  <blankline id="ctrl_blankline" />
+  <breadcrumbs id="ctrl_breadcrumbs" />
+  <attachdoc id="ctrl_attachdoc" />
+  <attachments id="ctrl_attachments" />
+  <buttongroup id="ctrl_buttongroup">
+    <pushbutton id="ctrl_pushbutton" />
+  </buttongroup>
+  <checkbox id="ctrl_checkbox" />
+  <combobox id="ctrl_combobox" />
+  <controlcontainer id="ctrl_controlcontainer" />
+  <datasrc id="ctrl_datasrc" />
+  <defaultvalue id="ctrl_defaultvalue" />
+  <dialog id="ctrl_dialog" />
+  <displayrule id="ctrl_displayrule" />
+  <doclinkuploadbutton id="ctrl_doclinkuploadbutton" />
+  <exact id="ctrl_exact" />
+  <hyperlink id="ctrl_hyperlink" />
+  <helpgrid id="ctrl_helpgrid" />
+  <image id="ctrl_image" />
+  <include id="ctrl_include" />
+  <kpigraph id="ctrl_kpigraph" />
+  <listbox id="ctrl_listbox" />
+  <menubar id="ctrl_menubar" />
+  <multilinetextbox id="ctrl_multilinetextbox" />
+  <multiparttextbox id="ctrl_multiparttextbox" />
+  <paramvalues id="ctrl_paramvalues">
+    <paramvalue id="ctrl_paramvalue" />
+  </paramvalues>
+  <radiobuttongroup id="ctrl_radiobuttongroup">
+    <radiobutton id="ctrl_radiobutton" />
+  </radiobuttongroup>
+  <range id="ctrl_range" />
+  <recordimage id="ctrl_recordimage" />
+  <richtexteditor id="ctrl_richtexteditor" />
+  <richtextviewer id="ctrl_richtextviewer" />
+  <section id="ctrl_section" />
+  <sectionheader id="ctrl_sectionheader" />
+  <sectionrow id="ctrl_sectionrow">
+    <sectioncol id="ctrl_sectioncol" />
+  </sectionrow>
+  <statictext id="ctrl_statictext" />
+  <systemprop id="ctrl_systemprop" />
+  <tabgroup id="ctrl_tabgroup">
+    <tab id="ctrl_tab" label="New Tab" />
+  </tabgroup>
+  <table id="ctrl_table">
+    <tablebody id="ctrl_tablebody">
+      <tablecol id="ctrl_tablecol" />
+    </tablebody>
+    <tabledetails id="ctrl_tabledetails" />
+  </table>
+  <textbox id="ctrl_textbox" />
+  <tree id="ctrl_tree" />
+  <treeattribute id="ctrl_treeattribute" />
+  <treenode id="ctrl_treenode" />
+  <uploadfile id="ctrl_uploadfile" />
+  <wallcalendar id="ctrl_wallcalendar" />
+  <mapcontrol id="ctrl_mapcontrol" />
+  <presentation id="ctrl_powerapp" resultstableid="results_showlist" version="6.0.0">
+    <page id="mainrec">
+      <include id="pageHeader" />
+      <clientarea id="clientarea">
+        <tabgroup id="maintabs" style="form">
+          <tab default="true" id="results" label="List" type="list">
+            <menubar event="search" id="actiontoolbar1" sourcemethod="getAppSearchOptions" />
+            <table id="results_showlist" inputmode="readonly" label="TABLE TITLE" mboname="#{mboname}" selectmode="multiple">
+              <tablebody displayrowsperpage="20" filterable="true" filterexpanded="true" id="results_showlist_tablebody">
+                <tablecol dataattribute="#{keyattribute}" filterable="false" hidden="false" id="results_showlist_column_select" mxevent="toggleselectrow" mxevent_desc="Select Row {0}" sortable="false" type="event" />
+                <tablecol dataattribute="#{keyattribute}" id="results_showlist_column_link" mxevent="selectrecord" mxevent_desc="Go To %1" type="link" usefieldsizegroup="false" />
+                <resultscolumns id="results_showlist_column" />
+                <tablecol filterable="false" hidden="false" id="results_bookmark" mxevent="BOOKMARK" mxevent_desc="Add to Bookmarks" mxevent_icon="btn_addtobookmarks.gif" sortable="false" type="event" />
+              </tablebody>
+            </table>
+          </tab>
+          <tab id="main" label="Main" type="insert">
+            <section id="maintab_section">
+              <attributelist id="maintab_attr" />
+            </section>
+          </tab>
+        </tabgroup>
+      </clientarea>
+      <include id="pageFooter" />
+    </page>
+    <dialog beanclass="psdi.webclient.system.beans.QbeBean" id="searchmore" inputmode="query" label="More Search Fields">
+      <section id="searchmore_1">
+        <attributelist id="searchmore_attr" />
+      </section>
+      <buttongroup id="searchmore_buttongroup">
+        <pushbutton default="true" id="searchmore_buttongroup_1" label="Find" mxevent="dialogok" />
+        <pushbutton id="searchmore_buttongroup_2" label="Clear" mxevent="qbeclear" />
+        <pushbutton id="searchmore_buttongroup_3" label="Cancel" mxevent="qbecancel" />
+      </buttongroup>
+    </dialog>
+    <dialog beanclass="psdi.webclient.system.beans.ViewBookmarksBean" id="searchbook" label="My Bookmarks" mboname="#{mboname}">
+      <table id="bookmarks_table" inputmode="readonly" selectmode="single">
+        <tablebody displayrowsperpage="20" filterable="true" id="bookmarks_table_tablebody">
+          <tablecol dataattribute="#{keyattribute}" id="bookmarks_tablecolumn_1" mxevent="selectrecord" type="link" />
+          <tablecol dataattribute="description" id="bookmarks_tablecolumn_2" />
+          <tablecol filterable="false" hidden="false" id="bookmarks_tablecolumn_3" mxevent="instantdelete" mxevent_desc="Delete" mxevent_icon="btn_delete.gif" sortable="false" type="event" />
+        </tablebody>
+      </table>
+      <buttongroup id="bookmarks_2">
+        <pushbutton default="true" id="bookmarks_2_1" label="OK" mxevent="dialogok" />
+      </buttongroup>
+    </dialog>
+  </presentation>
+  <presentation id="ctrl_singlepageapp" version="6.0.0">
+    <page id="mainrec">
+      <include id="single_pageHeader" />
+      <clientarea id="clientarea">
+        <tabgroup format="carddeck" id="maintabs" style="form">
+          <tab default="true" id="results" label="List">
+            <table id="resultsTable" label="TABLE TITLE">
+              <tablebody displayrowsperpage="15" filterable="true" filterexpanded="true" id="resultsTablebody">
+                <tablecol filterable="false" id="results_col_details" mxevent="toggledetailstate" sortable="false" type="event" />
+                <resultscolumns id="results_showlist_column" />
+                <tablecol filterable="false" id="results_col_delete" mxevent="toggledeleterow" mxevent_desc="Mark Row for Delete" mxevent_icon="btn_garbage.gif" sortable="false" type="event" />
+              </tablebody>
+              <tabledetails id="resultsTabledetails">
+                <section id="resultsTable_section_1" label="Details">
+                  <attributelist id="maintab_attr" />
+                </section>
+              </tabledetails>
+              <buttongroup id="resultsButtongroup">
+                <pushbutton default="true" id="results_button_1" label="New Row" mxevent="addrow" />
+              </buttongroup>
+            </table>
+          </tab>
+        </tabgroup>
+      </clientarea>
+      <include id="pageFooter" />
+    </page>
+  </presentation>
+  <presentation id="ctrl_selfservice" version="6.0.0">
+    <page id="mainrec">
+      <include id="selfServicePageHeader" />
+      <clientarea id="clientarea">
+        <appbar id="desktopreqs" />
+        <tabgroup format="carddeck" id="maintabs">
+          <tab default="true" id="main">
+            <section id="maintab_section">
+              <attributelist id="maintab_attr" />
+            </section>
+          </tab>
+        </tabgroup>
+      </clientarea>
+      <include id="pageFooter" />
+    </page>
+  </presentation>
+</systemlib>
