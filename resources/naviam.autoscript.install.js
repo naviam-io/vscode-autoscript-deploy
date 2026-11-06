@@ -2,7 +2,7 @@
 /* eslint-disable no-unused-vars */
 // @ts-nocheck
 /*
- *   Bootstrap script that is used to install the Naviam Developer Tools.
+ *   Bootstrap script that is used to install the Maximo Developer Tools.
  */
 var RuntimeException = Java.type('java.lang.RuntimeException');
 
@@ -27,7 +27,7 @@ function main() {
                 'The user ' + userInfo.getUserName() + ' is not in the Maximo Administrators group and cannot perform the install.'
             );
         }
-        // Set up the Maximo loggers that will be used by the Naviam Developer Tools.
+        // Set up the Maximo loggers that will be used by the Maximo Developer Tools.
         setupLoggers();
 
         setupProperties();
@@ -130,9 +130,9 @@ function addOrUpdateProperty(propName, description, value, maxType, secureLevel)
     }
 }
 
-// Set up the Naviam Developer Tools loggers
+// Set up the Maximo Developer Tools loggers
 function setupLoggers() {
-    service.log_info('Setting up the Naviam Developer Tools Maximo loggers.');
+    service.log_info('Setting up the Maximo Developer Tools loggers.');
 
     var loggerSet;
 
@@ -153,7 +153,7 @@ function setupLoggers() {
         // if the out of the box root logger is missing, abort.
         if (!loggerSet.isEmpty()) {
             var naviamLogger = loggerSet.getMbo(0);
-            // Add or update the Naviam Developer Tools loggers.
+            // Add or update the Maximo Developer Tools loggers.
             addOrUpdateLogger('devtools', 'WARN', naviamLogger);
             addOrUpdateLogger('debug', 'INFO', naviamLogger);
             loggerSet.save();
@@ -161,17 +161,17 @@ function setupLoggers() {
                 MXServer.getMXServer().lookup('LOGGING').applySettings(false);
             } catch (error) {
                 if (error instanceof MXException && error.getErrorKey() == 'applySettingsForFile' && error.getErrorGroup() == 'logging') {
-                    service.log_info('Set up the Naviam Developer Tools Maximo loggers.');
+                    service.log_info('Set up the Maximo Developer Tools loggers.');
                     return;
                 } else {
                     throw error;
                 }
             }
-            service.log_info('Set up the Naviam Developer Tools Maximo loggers.');
+            service.log_info('Set up the Maximo Developer Tools loggers.');
         } else {
             service.log_warn(
                 // eslint-disable-next-line quotes
-                "The root out of the box logger 'autoscript' does not exist, skipping setting up Naviam Developer Tools Maximo loggers."
+                "The root out of the box logger 'autoscript' does not exist, skipping setting up Maximo Developer Tools loggers."
             );
         }
 
@@ -190,7 +190,7 @@ function setupLoggers() {
                 MXServer.getMXServer().lookup('LOGGING').applySettings(false);
             } catch (error) {
                 if (error instanceof MXException && error.getErrorKey() == 'applySettingsForFile' && error.getErrorGroup() == 'logging') {
-                    service.log_info('Set up the Naviam Developer Tools Maximo loggers.');
+                    service.log_info('Set up the Maximo Developer Tools loggers.');
                     return;
                 } else {
                     throw error;
@@ -202,7 +202,7 @@ function setupLoggers() {
     }
 }
 
-// Adds or updates a Naviam Developer Tools logger.
+// Adds or updates a Maximo Developer Tools logger.
 // This relies on the calling function calling save on the provided parent MboSet to save the changes.
 function addOrUpdateLogger(logger, level, parent) {
     service.log_info('Adding or updating the logger ' + logger + ' and setting the level to ' + level + '.');
@@ -260,7 +260,7 @@ function verifyIntegrationObjectSecurity() {
         if (maxIntObjectSet.isEmpty()) {
             maxIntObject = maxIntObjectSet.add();
             maxIntObject.setValue('INTOBJECTNAME', 'NAVIAM_UTILS');
-            maxIntObject.setValue('DESCRIPTION', 'Naviam Developer Tools Security');
+            maxIntObject.setValue('DESCRIPTION', 'Maximo Developer Tools Security');
             maxIntObject.setValue('USEWITH', MXServer.getMXServer().getMaximoDD().getTranslator().toExternalDefaultValue('INTUSEWITH', 'INTEGRATION', maxIntObject));
             var maxIntObjDetail = maxIntObject.getMboSet('MAXINTOBJDETAIL').add();
             maxIntObjDetail.setValue('OBJECTNAME', 'DUMMY_TABLE');
@@ -317,9 +317,9 @@ function verifyIntegrationObjectSecurity() {
     }
 }
 
-// Sets up the required signature security options for performing the Naviam Developer Tools installation.
+// Sets up the required signature security options for performing the Maximo Developer Tools installation.
 function setupSigOptions() {
-    service.log_info('Setting up deploy script security options for Naviam Developer Tools.');
+    service.log_info('Setting up deploy script security options for Maximo Developer Tools.');
     var sigOptionSet;
     try {
         sigOptionSet = MXServer.getMXServer().getMboSet('SIGOPTION', MXServer.getMXServer().getSystemUserInfo());
@@ -367,7 +367,7 @@ function setupSigOptions() {
             service.log_info('The administrative security option DEBUGSCRIPT for the NAVIAM_UTILS integration object structure already exists, skipping.');
         }
 
-        service.log_info('Set up administrative security options for Naviam Developer Tools.');
+        service.log_info('Set up administrative security options for Maximo Developer Tools.');
     } finally {
         _close(sigOptionSet);
     }

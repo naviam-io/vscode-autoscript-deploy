@@ -8,6 +8,7 @@
 .prettierrc
 **/*.map
 AGENTS.md
+product_anatomy*.md
 app-icon.pxd/**
 azure-pipelines-ci.yml
 azure-pipelines-release.yml

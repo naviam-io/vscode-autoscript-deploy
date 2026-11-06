@@ -54,19 +54,18 @@ export function requireKeys(model: any, input: any, label: string): void {
  * is added, which for a recreated record is after the existing one is deleted and saved.
  */
 export function rejectDuplicates(owner: string, label: string, rows: any[], keys: string[]): void {
-    const seen: Record<string, boolean> = {};
+    const HashSet = Java.type('java.util.HashSet');
+    const seen = new HashSet();
     rows.forEach(function (row: any): void {
         const parts = keys.map(function (key: string): string {
             return row[key] === undefined || row[key] === null ? '' : String(row[key]);
         });
-        const id = parts.join('\u0000');
-        if (seen[id]) {
+        if (!seen.add(parts.join('\u0000'))) {
             const value = parts.filter(function (part: string): boolean {
                 return part !== '';
             });
             throw new Error(owner + ' lists the ' + label + ' ' + value.join(' ') + ' more than once.');
         }
-        seen[id] = true;
     });
 }
 

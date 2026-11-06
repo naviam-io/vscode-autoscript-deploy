@@ -26,7 +26,7 @@ export function captureExistingState(objectType: string, uniqueId: any): any {
         throw new Error(
             'Cannot preserve existing values because the ' +
                 EXTRACT_SCRIPT +
-                ' script is not installed. Deploy the Maximo Development Tools scripts, then try again.'
+                ' script is not installed. Deploy the Maximo Developer Tools scripts, then try again.'
         );
     }
 

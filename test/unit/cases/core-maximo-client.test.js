@@ -207,6 +207,6 @@ describe('core MaximoClient create-only requests', () => {
 
     it('requires the server scripts that understand createOnly', () => {
         const client = connectedClient({});
-        assert.deepStrictEqual([client.requiredScriptVersion, client.currentScriptVersion], ['1.70.0', '1.70.0']);
+        assert.deepStrictEqual([client.requiredScriptVersion, client.currentScriptVersion], ['1.70.1', '1.70.1']);
     });
 });

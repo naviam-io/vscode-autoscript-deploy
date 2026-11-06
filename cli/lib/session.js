@@ -78,7 +78,7 @@ export async function openSession(client, config, out = () => {}) {
         if (!config.install) {
             throw new Error(`The server ${config.host} does not have the required scripts installed and automatic install is turned off.`);
         }
-        out(`Installing the Maximo Development Tools scripts on ${config.host}.`);
+        out(`Installing the Maximo Developer Tools scripts on ${config.host}.`);
         await installOrUpgrade(client, progress, true);
     }
 
@@ -86,7 +86,7 @@ export async function openSession(client, config, out = () => {}) {
         if (!config.install) {
             throw new Error(`The server ${config.host} has the required scripts but they are out of date and automatic install is turned off.`);
         }
-        out(`Upgrading the Maximo Development Tools scripts on ${config.host}.`);
+        out(`Upgrading the Maximo Developer Tools scripts on ${config.host}.`);
         await installOrUpgrade(client, progress, false);
     }
 }

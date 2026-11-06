@@ -98,17 +98,65 @@ function extractStaticAssignments(source, names) {
     return statics;
 }
 
+/* The java.util collections the library uses as dictionaries, backed by Map and Set. */
+class JavaHashMap {
+    constructor() {
+        this.map = new Map();
+    }
+    containsKey(key) {
+        return this.map.has(key);
+    }
+    get(key) {
+        return this.map.has(key) ? this.map.get(key) : null;
+    }
+    put(key, value) {
+        const previous = this.get(key);
+        this.map.set(key, value);
+        return previous;
+    }
+    remove(key) {
+        const previous = this.get(key);
+        this.map.delete(key);
+        return previous;
+    }
+}
+
+class JavaHashSet {
+    constructor() {
+        this.set = new Set();
+    }
+    add(value) {
+        const added = !this.set.has(value);
+        this.set.add(value);
+        return added;
+    }
+    contains(value) {
+        return this.set.has(value);
+    }
+}
+
+const JAVA_COLLECTIONS = {
+    type: (name) => {
+        const types = { 'java.util.HashMap': JavaHashMap, 'java.util.HashSet': JavaHashSet };
+        if (!types[name]) {
+            throw new Error('No unit test stub for Java type ' + name + '.');
+        }
+        return types[name];
+    }
+};
+
 /*
  * Loads the named functions from a Maximo side script and returns them as an object.
  *
  * The functions must be self contained: anything they reference that is provided by Nashorn or
  * Maximo has to be supplied through the stubs argument, whose keys become parameters of the
- * wrapper. The wrapper is evaluated in the current realm so the values the functions return are
+ * wrapper. Java defaults to a stub providing the java.util collections above. The wrapper is evaluated in the current realm so the values the functions return are
  * ordinary host objects that assert.deepStrictEqual can compare.
  */
 function loadScriptFunctions(relativeScriptPath, names, stubs) {
     const source = fs.readFileSync(path.join(REPO_ROOT, relativeScriptPath), 'utf8');
-    const stubNames = Object.keys(stubs || {});
+    stubs = Object.assign({ Java: JAVA_COLLECTIONS }, stubs);
+    const stubNames = Object.keys(stubs);
     const exported = names.map((name) => name + ': ' + name).join(', ');
     const bodies = extractFunctionSources(source, names).concat(extractStaticAssignments(source, names));
 

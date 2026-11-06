@@ -15,7 +15,7 @@ var libraryExports = null;
 /** Runs the library script with the given context, which it reads its input from and writes its output to. */
 function runLibrary(context) {
     if (!ScriptCache.getInstance().getScriptInfo(LIBRARY_SCRIPT)) {
-        throw new Error('The ' + LIBRARY_SCRIPT + ' script is not installed. Deploy the Maximo Development Tools scripts, then try again.');
+        throw new Error('The ' + LIBRARY_SCRIPT + ' script is not installed. Deploy the Maximo Developer Tools scripts, then try again.');
     }
     ScriptDriverFactory.getInstance().getScriptDriver(LIBRARY_SCRIPT).runScript(LIBRARY_SCRIPT, context);
     return context;

@@ -112,7 +112,7 @@ export function writeSnapshot(key: string, snapshot: any): void {
             docInfo.setValue('DOCTYPE', SNAPSHOT_DOCTYPE, MboConstants.NOACCESSCHECK);
         }
 
-        docInfo.setValue('DESCRIPTION', 'Maximo Development Tools retained values: ' + key, MboConstants.NOACCESSCHECK);
+        docInfo.setValue('DESCRIPTION', 'Maximo Developer Tools retained values: ' + key, MboConstants.NOACCESSCHECK);
         docInfo.setValue('TEXTCONTENT', JSON.stringify(snapshot), MboConstants.NOACCESSCHECK);
         docInfoSet.save();
     } finally {

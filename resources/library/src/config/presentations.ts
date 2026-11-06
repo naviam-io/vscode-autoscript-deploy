@@ -73,10 +73,13 @@ interface PresentationAnchor<E> {
     element: E;
 }
 
-/** A presentation tree with its elements by id, kept current as changes add and remove content. */
+/**
+ * A presentation tree with its elements by id, kept current as changes add and remove content. The
+ * index is a java.util.HashMap, see docs/modules/nashorn-library.md.
+ */
 export interface PresentationDocument<E> {
     tree: PresentationTree<E>;
-    elements: Record<string, E>;
+    elements: any;
 }
 
 /** Ordered changes to one MAXPRESENTATION document. See docs/modules/nashorn-library.md. */
@@ -225,7 +228,8 @@ export function visitPresentationDefinitions(definition: PresentationElement, vi
 }
 
 export function indexPresentation<E>(tree: PresentationTree<E>): PresentationDocument<E> {
-    const doc: PresentationDocument<E> = { tree: tree, elements: Object.create(null) };
+    const HashMap = Java.type('java.util.HashMap');
+    const doc: PresentationDocument<E> = { tree: tree, elements: new HashMap() };
     indexPresentationElements(doc, tree.root());
     return doc;
 }
@@ -233,8 +237,8 @@ export function indexPresentation<E>(tree: PresentationTree<E>): PresentationDoc
 export function indexPresentationElements<E>(doc: PresentationDocument<E>, element: E): void {
     visitPresentationElements(doc.tree, element, function (current: E): void {
         const id = doc.tree.attribute(current, 'id');
-        if (id !== null && !(id in doc.elements)) {
-            doc.elements[id] = current;
+        if (id !== null && !doc.elements.containsKey(id)) {
+            doc.elements.put(id, current);
         }
     });
 }
@@ -242,15 +246,15 @@ export function indexPresentationElements<E>(doc: PresentationDocument<E>, eleme
 export function detachPresentationElement<E>(doc: PresentationDocument<E>, element: E): void {
     visitPresentationElements(doc.tree, element, function (current: E): void {
         const id = doc.tree.attribute(current, 'id');
-        if (id !== null && doc.elements[id] === current) {
-            delete doc.elements[id];
+        if (id !== null && doc.elements.get(id) === current) {
+            doc.elements.remove(id);
         }
     });
     doc.tree.detach(element);
 }
 
 export function findPresentationElement<E>(doc: PresentationDocument<E>, id: string): E | null {
-    return id in doc.elements ? doc.elements[id] : null;
+    return doc.elements.get(id);
 }
 
 /**
@@ -357,22 +361,22 @@ export function addPresentationElement<E>(doc: PresentationDocument<E>, app: str
     }
 
     // The content of a replaced control is removed with it, so its ids may be used again.
-    const replacedIds: Record<string, boolean> = {};
+    const HashSet = Java.type('java.util.HashSet');
+    const replacedIds = new HashSet();
     if (existing !== null) {
         visitPresentationElements(doc.tree, existing, function (element: E): void {
-            replacedIds[doc.tree.attribute(element, 'id')] = true;
+            replacedIds.add(doc.tree.attribute(element, 'id'));
         });
     }
 
-    const addedIds: Record<string, boolean> = {};
+    const addedIds = new HashSet();
     visitPresentationDefinitions(definition, function (element: PresentationElement): void {
-        if (addedIds[element.id]) {
+        if (!addedIds.add(element.id)) {
             throw presentationChangeError(app, index, 'add', 'id "' + element.id + '" is declared more than once in the added content.');
         }
-        if (!replacedIds[element.id] && findPresentationElement(doc, element.id) !== null) {
+        if (!replacedIds.contains(element.id) && findPresentationElement(doc, element.id) !== null) {
             throw presentationChangeError(app, index, 'add', 'id "' + element.id + '" already exists in the presentation.');
         }
-        addedIds[element.id] = true;
         if (isPresentationName(element.sigoption)) {
             result.sigoptions.push({ sigoption: element.sigoption, index: index, operation: 'add' });
         }

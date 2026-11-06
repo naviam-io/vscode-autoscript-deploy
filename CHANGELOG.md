@@ -1,4 +1,9 @@
 # Release Notes
+## 1.31.1
+- Fixed redeploying a screen failing with `BMXAA4129E` for a label that already exists, such as on `WOTRACK`. The first deployment worked, every later one could fail.
+- Fixed the duplicate row check of integration framework records and end points, and finding controls for screen changes, possibly giving wrong results from the second deployment on when there are more than 500 rows or controls.
+- The extension is now named Maximo Developer Tools everywhere, including the Visual Studio Code Marketplace, instead of Maximo Development Tools or Naviam Developer Tools in some places.
+
 ## 1.31.0
 ### Breaking changes
 These changes may require you to update existing configuration files.

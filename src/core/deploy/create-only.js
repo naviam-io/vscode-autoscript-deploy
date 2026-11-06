@@ -6,7 +6,7 @@ import { MaximoError } from '../maximo/errors.js';
 
 const SKIPPED = 'skipped';
 
-const OUTDATED_SERVER_MESSAGE = 'The Maximo Development Tools scripts on the server are too old for create-only deployment. Upgrade them, then deploy again.';
+const OUTDATED_SERVER_MESSAGE = 'The Maximo Developer Tools scripts on the server are too old for create-only deployment. Upgrade them, then deploy again.';
 
 function createOnlyParams(options) {
     return options && options.createOnly === true ? { createOnly: 'true' } : undefined;

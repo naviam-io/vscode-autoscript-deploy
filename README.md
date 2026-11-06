@@ -1,11 +1,11 @@
-# VS Code Maximo Development Tools
+# VS Code Maximo Developer Tools
 
 Deploy [Maximo Automation Scripts](https://www.ibm.com/docs/en/masv-and-l/maximo-manage/cd?topic=developing-automation-scripts), inspection forms, reports, screen definitions and Maximo configuration directly from Visual Studio Code. Scripts may be written in JavaScript, Python or TypeScript, and several resources can be deployed together in order with a deployment manifest.
 
 The extension allows developers to describe the automation script through the use of a `scriptConfig` variable and then deploy the script directly to Maximo from Visual Studio Code. The provided `NAVIAM.AUTOSCRIPT.DEPLOY` automation script provides support for build pipelines and automated deployment of automation scripts from a Git repository.
 
 # Table of Contents
-- [VS Code Maximo Development Tools](#vs-code-maximo-development-tools)
+- [VS Code Maximo Developer Tools](#vs-code-maximo-developer-tools)
 - [Table of Contents](#table-of-contents)
 - [Configuration](#configuration)
   - [Visual Studio Code Settings](#visual-studio-code-settings)
@@ -733,7 +733,7 @@ To insert or update the `id` attribute of a tag to the unique value of the curre
 
 ## Snippets
 
-The Maximo Development Tools extension provides snippets for all the built in classes including the majority of methods on the `mbo`, `service` and `userInfo` built in objects. While not providing a full language server it should provide a majority of common methods on the implicit variables.
+The Maximo Developer Tools extension provides snippets for all the built in classes including the majority of methods on the `mbo`, `service` and `userInfo` built in objects. While not providing a full language server it should provide a majority of common methods on the implicit variables.
 
 There are also snippets for common functions such as a `close` function or the `scriptConfig` variable. If there are any additional snippets you would like added please contact us at [support@naviam.io](mailto:support@naviam.io).
 

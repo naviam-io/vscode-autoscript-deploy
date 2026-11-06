@@ -1,6 +1,6 @@
 {
     "name": "@naviam/maximo-dev-tools",
-    "version": "1.31.0",
+    "version": "1.31.1",
     "description": "Tools used with the development of Maximo projects",
     "main": "dist/index.js",
     "type": "module",

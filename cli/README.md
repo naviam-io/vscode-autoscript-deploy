@@ -1,8 +1,8 @@
-> The CLI is developed in the [Maximo Development Tools repository](https://github.com/naviam-io/vscode-autoscript-deploy/tree/main/cli) and released together with the VS Code extension, so its version matches the extension's.
+> The CLI is developed in the [Maximo Developer Tools repository](https://github.com/naviam-io/vscode-autoscript-deploy/tree/main/cli) and released together with the VS Code extension, so its version matches the extension's.
 
 # Introduction
 
-The Maximo Development Tools command line, by [Naviam](https://www.naviam.io), develops and deploys Maximo automation scripts and other customizations from a terminal or a pipeline. It is the command line companion to the Maximo Development Tools Visual Studio Code extension: [https://marketplace.visualstudio.com/items?itemName=sharptree.maximo-script-deploy](https://marketplace.visualstudio.com/items?itemName=sharptree.maximo-script-deploy).
+The Maximo Developer Tools command line, by [Naviam](https://www.naviam.io), develops and deploys Maximo automation scripts and other customizations from a terminal or a pipeline. It is the command line companion to the Maximo Developer Tools Visual Studio Code extension: [https://marketplace.visualstudio.com/items?itemName=sharptree.maximo-script-deploy](https://marketplace.visualstudio.com/items?itemName=sharptree.maximo-script-deploy).
 
 # Install
 

@@ -119,7 +119,7 @@ class ReplaceGlobalSelfPlugin {
     }
 }
 
-// Copies the files the Maximo Development Tools extension expects beside a deployed bundle, such
+// Copies the files the Maximo Developer Tools extension expects beside a deployed bundle, such
 // as <name>.predeploy.json, renaming them from the name they carry next to the source to the name
 // the bundle is deployed under.
 class CopyScriptSidecarsPlugin {

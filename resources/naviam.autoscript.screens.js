@@ -192,7 +192,7 @@ function runLibrary(context) {
     if (!ScriptCache.getInstance().getScriptInfo(LIBRARY_SCRIPT)) {
         throw new ScreenError(
             'no_library_script',
-            'The ' + LIBRARY_SCRIPT + ' script is not installed. Deploy the Maximo Development Tools scripts, then try again.'
+            'The ' + LIBRARY_SCRIPT + ' script is not installed. Deploy the Maximo Developer Tools scripts, then try again.'
         );
     }
     ScriptDriverFactory.getInstance().getScriptDriver(LIBRARY_SCRIPT).runScript(LIBRARY_SCRIPT, context);

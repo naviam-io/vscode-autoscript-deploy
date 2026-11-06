@@ -142,7 +142,7 @@ function _close(mboSet) {
 // eslint-disable-next-line no-unused-vars
 var scriptConfig = {
     autoscript: 'NAVIAM.AUTOSCRIPT.MIGRATE',
-    description: 'Naviam to script to migrate to Naviam Developer Tools',
+    description: 'Naviam to script to migrate to Maximo Developer Tools',
     version: '1.0.0',
     active: true,
     logLevel: 'INFO',

@@ -3,62 +3,12 @@
 
 import { close } from './util';
 
-export interface PresentationLabel {
-    id: string;
-    property: string;
-    value: string;
-}
-
-export interface PresentationLabelPlan {
-    inserts: PresentationLabel[];
-    updates: { index: number; value: string }[];
-    deletes: number[];
-}
-
-/** A presentation ready to write: the XML to store and the MAXLABELS rows it implies. */
+/** A presentation ready to write: the XML to store and the parser's label map, keyed by IdProperty, for MAXLABELS. */
 export interface PreparedPresentation {
     app: string;
     labelApp: string;
     xml: string;
-    labels: PresentationLabel[] | null;
-}
-
-export function presentationLabelKey(label: { id: string; property: string }): string {
-    return label.id + '\u0000' + label.property;
-}
-
-/**
- * The MAXLABELS changes that make the existing rows match the desired ones. Indexes refer to the
- * existing rows; a second row for the same id and property is deleted.
- */
-export function planPresentationLabels(existing: PresentationLabel[], desired: PresentationLabel[]): PresentationLabelPlan {
-    const wanted: Record<string, PresentationLabel> = {};
-    desired.forEach(function (label: PresentationLabel): void {
-        wanted[presentationLabelKey(label)] = label;
-    });
-
-    const plan: PresentationLabelPlan = { inserts: [], updates: [], deletes: [] };
-    const seen: Record<string, boolean> = {};
-    existing.forEach(function (label: PresentationLabel, index: number): void {
-        const key = presentationLabelKey(label);
-        if (seen[key] || !Object.prototype.hasOwnProperty.call(wanted, key)) {
-            plan.deletes.push(index);
-            return;
-        }
-        seen[key] = true;
-        if (label.value !== wanted[key].value) {
-            plan.updates.push({ index: index, value: wanted[key].value });
-        }
-    });
-
-    desired.forEach(function (label: PresentationLabel): void {
-        const key = presentationLabelKey(label);
-        if (!seen[key]) {
-            seen[key] = true;
-            plan.inserts.push(label);
-        }
-    });
-    return plan;
+    labels: any;
 }
 
 export function readPresentationXml(app: string): string {
@@ -126,13 +76,7 @@ export function preparePresentationWrite(app: string, xml: string): PreparedPres
     }
 
     const parser = new PresentationParser(xml);
-    const labels: PresentationLabel[] = [];
-    const iterator = parser.getLabels().entrySet().iterator();
-    while (iterator.hasNext()) {
-        const entry = iterator.next();
-        labels.push({ id: String(entry.getKey().getId()), property: String(entry.getKey().getProperty()), value: String(entry.getValue()) });
-    }
-    return { app: app, labelApp: String(parser.getApplication()), xml: String(parser.getTrimmedXML()), labels: labels };
+    return { app: app, labelApp: String(parser.getApplication()), xml: String(parser.getTrimmedXML()), labels: parser.getLabels() };
 }
 
 export function writePresentation(prepared: PreparedPresentation): void {
@@ -161,11 +105,15 @@ export function writePresentation(prepared: PreparedPresentation): void {
     }
 }
 
-export function syncPresentationLabels(labelApp: string, desired: PresentationLabel[]): void {
+/**
+ * Makes the MAXLABELS rows match the parser's labels. Matching uses the Java map rather than a
+ * JavaScript object, see docs/modules/nashorn-library.md.
+ */
+export function syncPresentationLabels(labelApp: string, labels: any): void {
     const MXServer = Java.type('psdi.server.MXServer');
     const MboConstants = Java.type('psdi.mbo.MboConstants');
+    const IdProperty = Java.type('psdi.webclient.system.controller.IdProperty');
     const maximo = MXServer.getMXServer();
-    const flags = MboConstants.NOACCESSCHECK | MboConstants.NOVALIDATION_AND_NOACTION;
     let labelSet: any = null;
     try {
         labelSet = maximo.getMboSet('MAXLABELS', maximo.getSystemUserInfo());
@@ -174,29 +122,28 @@ export function syncPresentationLabels(labelApp: string, desired: PresentationLa
         labelSet.reset();
         labelSet.setLogLargFetchResultDisabled(true);
 
-        const rows: any[] = [];
-        const existing: PresentationLabel[] = [];
+        // Removing each matched label from the map leaves the ones to insert.
         let row = labelSet.moveFirst();
         while (row) {
-            rows.push(row);
-            existing.push({ id: String(row.getString('ID')), property: String(row.getString('PROPERTY')), value: String(row.getString('VALUE')) });
+            const key = new IdProperty(row.getString('ID'), row.getString('PROPERTY'));
+            const value = labels.remove(key);
+            if (value === null) {
+                row.delete();
+            } else if (String(row.getString('VALUE')) !== String(value)) {
+                row.setValue('VALUE', value, MboConstants.NOACCESSCHECK | MboConstants.NOVALIDATION_AND_NOACTION);
+            }
             row = labelSet.moveNext();
         }
 
-        const plan = planPresentationLabels(existing, desired);
-        plan.deletes.forEach(function (index: number): void {
-            rows[index].delete();
-        });
-        plan.updates.forEach(function (update: { index: number; value: string }): void {
-            rows[update.index].setValue('VALUE', update.value, flags);
-        });
-        plan.inserts.forEach(function (label: PresentationLabel): void {
+        const iterator = labels.entrySet().iterator();
+        while (iterator.hasNext()) {
+            const entry = iterator.next();
             const added = labelSet.add();
             added.setValue('APP', labelApp, MboConstants.NOVALIDATION_AND_NOACTION);
-            added.setValue('ID', label.id);
-            added.setValue('PROPERTY', label.property);
-            added.setValue('VALUE', label.value);
-        });
+            added.setValue('ID', entry.getKey().getId());
+            added.setValue('PROPERTY', entry.getKey().getProperty());
+            added.setValue('VALUE', entry.getValue());
+        }
         labelSet.save();
     } finally {
         close(labelSet);

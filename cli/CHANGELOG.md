@@ -1,6 +1,10 @@
 # Release Notes
+## 1.31.1
+- Changes in the core logic: see the [Maximo Developer Tools release notes](https://github.com/naviam-io/vscode-autoscript-deploy/blob/main/CHANGELOG.md#1311).
+- The product is now named Maximo Developer Tools everywhere, including in the CLI output, instead of Maximo Development Tools or Naviam Developer Tools in some places.
+
 ## 1.31.0
-- Manifests support `"createOnly": true` on `automationScript`, `inspectionForm`, `screen` and `report` entries: the item is deployed only when it does not exist in Maximo yet. A manifest with such an entry stops before deploying anything when the server scripts are outdated, for example with `--install false`.
+- Changes in the core logic: see the [Maximo Developer Tools release notes](https://github.com/naviam-io/vscode-autoscript-deploy/blob/main/CHANGELOG.md#1310).
 - The CLI is now published as `@naviam/maximo-dev-tools`. The unscoped `maximo-dev-tools` package is deprecated; run `npm uninstall -g maximo-dev-tools && npm install -g @naviam/maximo-dev-tools`. The command is still `maximo-dev-tools`.
 - The CLI is now developed in the Maximo Development Tools repository and released together with the VS Code extension, so its version jumps from 1.22.1 to match the extension's.
 - The published package now includes the generated Nashorn library, which 1.22.1 omitted, and installs the same server scripts as the extension.
